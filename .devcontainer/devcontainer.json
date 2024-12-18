@@ -5,8 +5,7 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/javascript-node:1-18-bullseye",
 	"forwardPorts": [
-		4321,
-		35729
+		5173
 	],
 	"portsAttributes": {
 		"4321": {
