@@ -1,8 +1,11 @@
 import { Bell, User } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { MobileNav } from './MobileNav';
+import { useAuth } from '@/lib/auth'; // Updated import
 
 export function Navbar() {
+  const { user, signOut } = useAuth();
+
   return (
     <nav className="fixed top-0 z-40 w-full bg-white border-b border-gray-200">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -27,12 +30,12 @@ export function Navbar() {
                 </div>
                 <div className="hidden lg:flex lg:items-center lg:gap-x-6">
                   <span className="text-sm font-semibold leading-6 text-gray-900">
-                    John Doe
+                    {user?.name || user?.email}
                   </span>
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => console.log('logout')}
+                    onClick={() => signOut()}
                   >
                     Log out
                   </Button>

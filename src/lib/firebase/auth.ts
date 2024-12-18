@@ -7,7 +7,7 @@ import {
   onAuthStateChanged,
   type User as FirebaseUser
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { auth } from './config';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -16,8 +16,7 @@ export const signInWithGoogle = async () => {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error: any) {
-    const errorMessage = getAuthErrorMessage(error.code);
-    throw new Error(errorMessage);
+    throw new Error(getAuthErrorMessage(error.code));
   }
 };
 
@@ -26,8 +25,7 @@ export const signInWithEmail = async (email: string, password: string) => {
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
   } catch (error: any) {
-    const errorMessage = getAuthErrorMessage(error.code);
-    throw new Error(errorMessage);
+    throw new Error(getAuthErrorMessage(error.code));
   }
 };
 
@@ -36,8 +34,7 @@ export const createAccount = async (email: string, password: string) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     return result.user;
   } catch (error: any) {
-    const errorMessage = getAuthErrorMessage(error.code);
-    throw new Error(errorMessage);
+    throw new Error(getAuthErrorMessage(error.code));
   }
 };
 
@@ -47,7 +44,6 @@ export const onAuthChange = (callback: (user: FirebaseUser | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
 
-// Helper function to get user-friendly error messages
 const getAuthErrorMessage = (errorCode: string): string => {
   switch (errorCode) {
     case 'auth/user-not-found':

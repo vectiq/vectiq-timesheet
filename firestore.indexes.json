@@ -16,5 +16,6 @@
         { "fieldPath": "startDate", "order": "DESCENDING" }
       ]
     }
-  ]
+  ],
+  "fieldOverrides": []
 }

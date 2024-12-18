@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "deploy": "firebase deploy"
+    "setup": "firebase deploy --only firestore:rules,firestore:indexes && node scripts/setup.js",
+    "deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -20,6 +21,7 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "firebase": "^10.8.0",
+    "firebase-admin": "^12.0.0",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -30,6 +32,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/node": "^20.11.24",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
