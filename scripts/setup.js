@@ -51,9 +51,9 @@ async function setupFirebase() {
   try {
     console.log('\n🔥 Starting Firebase setup...\n');
 
-    // Initialize Firebase Admin with service account
+    // Initialize Firebase Admin
     initializeApp({
-      credential: cert('./firebase-credentials.json'),
+      credential: cert(process.env.GOOGLE_APPLICATION_CREDENTIALS),
       projectId: 'vectiq-timesheeting'
     });
     

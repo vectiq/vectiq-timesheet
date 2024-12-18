@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc --noEmit && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "setup": "firebase deploy --only firestore:rules,firestore:indexes && node scripts/setup.js",
-    "deploy": "npm run build && firebase deploy"
+    "setup": "node scripts/setup.js",
+    "deploy": "firebase deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -21,7 +21,6 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "firebase": "^10.8.0",
-    "firebase-admin": "^12.0.0",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
