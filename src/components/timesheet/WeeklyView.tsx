@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react';
-import { format, subWeeks, isSameWeek } from 'date-fns';
+import { useMemo, useCallback } from 'react';
+import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
-import { Plus, Copy } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
-import { useFilteredTimeEntries } from '@/lib/hooks/useFilteredTimeEntries';
-import { TimesheetRow } from './TimesheetRow';
-import type { Project } from '@/types';
+import { useClients } from '@/lib/hooks/useClients';
+import { auth } from '@/lib/firebase';
+import type { Project, TimeEntry } from '@/types';
 
 interface WeeklyViewProps {
   projects: Project[];
@@ -17,45 +17,27 @@ interface WeeklyViewProps {
   };
 }
 
-interface TimesheetRowData {
-  id: string;
-  clientId: string;
-  projectId: string;
-  roleId: string;
-  hours: Record<string, number | null>;
-}
-
 export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
-  const { timeEntries, createTimeEntry, updateTimeEntry, deleteTimeEntry } = useTimeEntries();
-  const weekKey = format(dateRange.start, 'yyyy-MM-dd');
-  
-  // Store rows in a map keyed by week start date
-  const [weekRows, setWeekRows] = useState<Record<string, TimesheetRowData[]>>({
-    [weekKey]: [{
-      id: crypto.randomUUID(),
-      clientId: '',
-      projectId: '',
-      roleId: '',
-      hours: {},
-    }]
-  });
+  const userId = auth.currentUser?.uid;
+  const { timeEntries, createTimeEntry, updateTimeEntry, deleteTimeEntry } = useTimeEntries({ userId });
+  const { clients } = useClients();
 
-  const currentWeekEntries = useFilteredTimeEntries({
-    timeEntries,
-    dateRange
-  });
+  // Get projects for a client
+  const getProjectsForClient = useCallback((clientId: string) => 
+    projects.filter(p => p.clientId === clientId),
+    [projects]
+  );
 
-  // Get previous week's entries
-  const previousWeekRange = {
-    start: subWeeks(dateRange.start, 1),
-    end: subWeeks(dateRange.end, 1)
-  };
-  const previousWeekEntries = useFilteredTimeEntries({
-    timeEntries,
-    dateRange: previousWeekRange
-  });
-
-  const [editingCell, setEditingCell] = useState<string | null>(null);
+  // Get roles for a project
+  const getRolesForProject = useCallback((projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return [];
+    
+    return project.roles.map(projectRole => ({
+      role: { id: projectRole.roleId, name: projectRole.roleId },
+      rates: projectRole
+    }));
+  }, [projects]);
 
   const weekDays = useMemo(() => {
     const days: Date[] = [];
@@ -67,151 +49,51 @@ export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
     return days;
   }, [dateRange]);
 
-  // Check if current view is the current week
-  const isCurrentWeek = useMemo(() => {
-    const today = new Date();
-    return isSameWeek(dateRange.start, today, { weekStartsOn: 1 });
-  }, [dateRange.start]);
+  // Group time entries by project and role
+  const groupedEntries = useMemo(() => {
+    const groups: Record<string, TimeEntry[]> = {};
+    
+    timeEntries.forEach(entry => {
+      const key = `${entry.projectId}-${entry.roleId}`;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(entry);
+    });
+    
+    return groups;
+  }, [timeEntries]);
 
-  // Get rows for current week, initialize if not exists
-  const rows = useMemo(() => {
-    if (!weekRows[weekKey]) {
-      setWeekRows(prev => ({
-        ...prev,
-        [weekKey]: [{
-          id: crypto.randomUUID(),
-          clientId: '',
-          projectId: '',
-          roleId: '',
-          hours: {},
-        }]
-      }));
-      return [{
-        id: crypto.randomUUID(),
-        clientId: '',
-        projectId: '',
-        roleId: '',
-        hours: {},
-      }];
-    }
-    return weekRows[weekKey];
-  }, [weekKey, weekRows]);
+  const handleAddEntry = useCallback(async (date: string) => {
+    if (!userId) return;
+    
+    await createTimeEntry({
+      userId,
+      date,
+      projectId: '',
+      roleId: '',
+      clientId: '',
+      hours: 0,
+      description: '',
+    });
+  }, [userId, createTimeEntry]);
+
+  const handleUpdateEntry = useCallback(async (
+    entryId: string,
+    updates: Partial<TimeEntry>
+  ) => {
+    await updateTimeEntry(entryId, updates);
+  }, [updateTimeEntry]);
+
+  const handleDeleteEntry = useCallback(async (entryId: string) => {
+    await deleteTimeEntry(entryId);
+  }, [deleteTimeEntry]);
 
   // Calculate weekly total
   const weeklyTotal = useMemo(() => 
-    rows.reduce((total, row) => 
-      total + Object.values(row.hours).reduce((sum, hours) => 
-        sum + (hours || 0), 
-        0
-      ), 
-      0
-    ),
-    [rows]
+    timeEntries.reduce((total, entry) => total + entry.hours, 0),
+    [timeEntries]
   );
-
-  const handleAddRow = () => {
-    setWeekRows(prev => ({
-      ...prev,
-      [weekKey]: [...prev[weekKey], {
-        id: crypto.randomUUID(),
-        clientId: '',
-        projectId: '',
-        roleId: '',
-        hours: {},
-      }]
-    }));
-  };
-
-  const handleRemoveRow = (rowId: string) => {
-    setWeekRows(prev => ({
-      ...prev,
-      [weekKey]: prev[weekKey].filter(row => row.id !== rowId)
-    }));
-  };
-
-  const handleHoursChange = async (rowId: string, date: string, hours: number | null) => {
-    const row = rows.find(r => r.id === rowId);
-    if (!row || !row.projectId || !row.roleId) return;
-
-    setWeekRows(prev => ({
-      ...prev,
-      [weekKey]: prev[weekKey].map(r => 
-        r.id === rowId 
-          ? { ...r, hours: { ...r.hours, [date]: hours } }
-          : r
-      )
-    }));
-
-    const existingEntry = currentWeekEntries.find(e => 
-      e.date === date && 
-      e.projectId === row.projectId && 
-      e.roleId === row.roleId
-    );
-
-    if (hours === null && existingEntry) {
-      await deleteTimeEntry(existingEntry.id);
-    } else if (hours !== null) {
-      if (existingEntry) {
-        await updateTimeEntry({
-          ...existingEntry,
-          hours,
-        });
-      } else {
-        await createTimeEntry({
-          projectId: row.projectId,
-          roleId: row.roleId,
-          clientId: row.clientId,
-          date,
-          hours,
-          userId: 'user_1',
-          description: '',
-        });
-      }
-    }
-  };
-
-  const handleCopyPreviousWeek = () => {
-    // Group previous week entries by project and role
-    const groupedEntries = previousWeekEntries.reduce((acc, entry) => {
-      const key = `${entry.clientId}-${entry.projectId}-${entry.roleId}`;
-      if (!acc[key]) {
-        acc[key] = {
-          clientId: entry.clientId,
-          projectId: entry.projectId,
-          roleId: entry.roleId,
-          hours: {},
-        };
-      }
-      acc[key].hours[entry.date] = entry.hours;
-      return acc;
-    }, {} as Record<string, Omit<TimesheetRowData, 'id'>>);
-
-    // Create new rows from grouped entries
-    const newRows = Object.values(groupedEntries).map(row => ({
-      ...row,
-      id: crypto.randomUUID(),
-      // Shift dates forward by one week
-      hours: Object.entries(row.hours).reduce((acc, [date, hours]) => {
-        const newDate = format(
-          new Date(new Date(date).getTime() + 7 * 24 * 60 * 60 * 1000),
-          'yyyy-MM-dd'
-        );
-        acc[newDate] = hours;
-        return acc;
-      }, {} as Record<string, number>),
-    }));
-
-    setWeekRows(prev => ({
-      ...prev,
-      [weekKey]: newRows.length > 0 ? newRows : [{
-        id: crypto.randomUUID(),
-        clientId: '',
-        projectId: '',
-        roleId: '',
-        hours: {},
-      }]
-    }));
-  };
 
   return (
     <Card>
@@ -219,76 +101,142 @@ export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
         <Table>
           <TableHeader>
             <tr className="border-b border-gray-200">
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[200px]">Client</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[200px]">Project</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[200px]">Role</th>
+              <Th className="w-[200px]">Client</Th>
+              <Th className="w-[200px]">Project</Th>
+              <Th className="w-[200px]">Role</Th>
               {weekDays.map(day => (
-                <th key={day.toISOString()} scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 w-[100px]">
+                <Th key={day.toISOString()} className="w-[100px] text-center">
                   <div>{format(day, 'EEE')}</div>
                   <div className="text-gray-500">{format(day, 'MMM d')}</div>
-                </th>
+                </Th>
               ))}
-              <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 w-[100px]">Total</th>
-              <th scope="col" className="px-3 py-3.5 w-[50px]"></th>
+              <Th className="w-[100px] text-center">Total</Th>
+              <Th className="w-[50px]"></Th>
             </tr>
           </TableHeader>
           <TableBody>
-            {rows.map(row => (
-              <TimesheetRow
-                key={row.id}
-                dates={weekDays}
-                selectedClientId={row.clientId}
-                selectedProjectId={row.projectId}
-                selectedRoleId={row.roleId}
-                hours={row.hours}
-                onClientChange={(clientId) => setWeekRows(prev => ({
-                  ...prev,
-                  [weekKey]: prev[weekKey].map(r =>
-                    r.id === row.id ? { ...r, clientId, projectId: '', roleId: '' } : r
-                  )
-                }))}
-                onProjectChange={(projectId) => setWeekRows(prev => ({
-                  ...prev,
-                  [weekKey]: prev[weekKey].map(r =>
-                    r.id === row.id ? { ...r, projectId, roleId: '' } : r
-                  )
-                }))}
-                onRoleChange={(roleId) => setWeekRows(prev => ({
-                  ...prev,
-                  [weekKey]: prev[weekKey].map(r =>
-                    r.id === row.id ? { ...r, roleId } : r
-                  )
-                }))}
-                onHoursChange={(date, hours) => handleHoursChange(row.id, date, hours)}
-                onRemove={() => handleRemoveRow(row.id)}
-                editingCell={editingCell}
-                onStartEdit={setEditingCell}
-                onEndEdit={() => setEditingCell(null)}
-              />
-            ))}
+            {Object.entries(groupedEntries).map(([key, entries]) => {
+              const [projectId, roleId] = key.split('-');
+              const project = projects.find(p => p.id === projectId);
+              const client = project ? clients.find(c => c.id === project.clientId) : null;
+              
+              const availableProjects = client
+                ? getProjectsForClient(client.id)
+                : [];
+
+              const availableRoles = projectId
+                ? getRolesForProject(projectId)
+                : [];
+
+              // Calculate row total
+              const rowTotal = entries.reduce(
+                (sum, entry) => sum + entry.hours,
+                0
+              );
+
+              return (
+                <tr key={key}>
+                  <Td>
+                    <select
+                      value={client?.id || ''}
+                      onChange={(e) => {
+                        // Handle client change
+                      }}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    >
+                      <option value="">Select Client</option>
+                      {clients.map(client => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Td>
+                  <Td>
+                    <select
+                      value={projectId}
+                      onChange={(e) => {
+                        // Handle project change
+                      }}
+                      disabled={!client}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    >
+                      <option value="">Select Project</option>
+                      {availableProjects.map(project => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Td>
+                  <Td>
+                    <select
+                      value={roleId}
+                      onChange={(e) => {
+                        // Handle role change
+                      }}
+                      disabled={!projectId}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    >
+                      <option value="">Select Role</option>
+                      {availableRoles.map(({ role, rates }) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name} ({rates.costRate}/{rates.sellRate})
+                        </option>
+                      ))}
+                    </select>
+                  </Td>
+                  {weekDays.map(date => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const entry = entries.find(e => e.date === dateStr);
+                    
+                    return (
+                      <Td key={dateStr} className="text-center p-0">
+                        <div
+                          onClick={() => {
+                            if (entry) {
+                              handleUpdateEntry(entry.id, {
+                                hours: entry.hours + 1
+                              });
+                            } else {
+                              handleAddEntry(dateStr);
+                            }
+                          }}
+                          className="w-16 py-2 text-center cursor-pointer rounded hover:bg-gray-50"
+                        >
+                          {entry ? entry.hours.toFixed(2) : '-'}
+                        </div>
+                      </Td>
+                    );
+                  })}
+                  <Td className="text-center font-medium">
+                    {rowTotal.toFixed(2)}
+                  </Td>
+                  <Td>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => entries.forEach(e => handleDeleteEntry(e.id))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </Td>
+                </tr>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
       <div className="p-4 border-t space-y-4">
         <div className="flex justify-between items-center">
-          {isCurrentWeek && (
-            <Button
-              variant="secondary"
-              onClick={handleCopyPreviousWeek}
-              className="flex items-center gap-2"
-            >
-              <Copy className="h-4 w-4" />
-              Copy Previous Week
-            </Button>
-          )}
-          <div className={`text-sm ${!isCurrentWeek ? 'ml-auto' : ''}`}>
+          <div className="text-sm">
             <span className="font-medium text-gray-700">Weekly Total:</span>
             <span className="ml-2 font-semibold text-gray-900">{weeklyTotal.toFixed(2)} hours</span>
           </div>
         </div>
         <Button
           variant="secondary"
-          onClick={handleAddRow}
+          onClick={() => handleAddEntry(format(new Date(), 'yyyy-MM-dd'))}
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Layout } from '@/components/layout/Layout';
-import { useStore } from '@/lib/store';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
 import Reports from '@/pages/Reports';
@@ -14,10 +13,22 @@ import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
 import TestData from '@/pages/TestData';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Disable automatic refetching
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: false,
+      refetchOnMount: true,
+      // Cache data for 5 minutes
+      staleTime: 5 * 60 * 1000,
+      // Keep unused data in cache for 10 minutes
+      gcTime: 10 * 60 * 1000,
+    },
+  },
+});
 
 export default function App() {
-  const store = useStore();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
