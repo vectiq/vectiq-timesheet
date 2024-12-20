@@ -1,42 +1,44 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useStore } from '@/lib/store';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getClients,
+  createClient,
+  updateClient,
+  deleteClient,
+} from '@/lib/services/clients';
 import type { Client } from '@/types';
 
 export function useClients() {
-  const store = useStore();
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ['clients'],
-    queryFn: () => store.clients,
-    initialData: [],
+    queryFn: getClients
   });
 
   const createMutation = useMutation({
-    mutationFn: (client: Omit<Client, 'id'>) => {
-      const newClient = {
-        ...client,
-        id: `client_${Date.now()}`,
-      };
-      store.addClient(newClient);
-      return newClient;
-    },
+    mutationFn: createClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    }
   });
 
   const updateMutation = useMutation({
-    mutationFn: (client: Client) => {
-      store.updateClient(client.id, client);
-      return client;
-    },
+    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
+      updateClient(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      store.deleteClient(id);
-    },
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    }
   });
 
   return {
-    clients: query.data,
+    clients: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
     createClient: createMutation.mutate,

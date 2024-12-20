@@ -1,97 +1,73 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
-import { useStore } from '@/lib/store';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getProjectAssignments,
+  createProjectAssignment,
+  deleteProjectAssignment
+} from '@/lib/services/users';
 import type { User, ProjectAssignment } from '@/types';
 
 export function useUsers() {
-  const store = useStore();
-  const db = getFirestore();
+  const queryClient = useQueryClient();
 
-  const query = useQuery({
+  const usersQuery = useQuery({
     queryKey: ['users'],
-    queryFn: async () => {
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      const users = usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as User[];
-      store.setUsers(users);
-      return users;
-    },
-    initialData: [],
+    queryFn: getUsers
   });
 
   const assignmentsQuery = useQuery({
     queryKey: ['projectAssignments'],
-    queryFn: () => store.projectAssignments,
-    initialData: [],
+    queryFn: getProjectAssignments
   });
 
-  const createMutation = useMutation({
-    mutationFn: (user: Omit<User, 'id'>) => {
-      const newUser = {
-        id: `user_${Date.now()}`,
-        ...user,
-      };
-      store.addUser(newUser);
-      return newUser;
-    },
+  const createUserMutation = useMutation({
+    mutationFn: createUser,
     onSuccess: () => {
-      query.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (user: User) => {
-      store.updateUser(user.id, user);
-      return user;
-    },
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) =>
+      updateUser(id, data),
     onSuccess: () => {
-      query.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      store.deleteUser(id);
-    },
+  const deleteUserMutation = useMutation({
+    mutationFn: deleteUser,
     onSuccess: () => {
-      query.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['projectAssignments'] });
+    }
   });
 
-  const assignToProjectMutation = useMutation({
-    mutationFn: (assignment: Omit<ProjectAssignment, 'id'>) => {
-      const newAssignment = {
-        id: `assignment_${Date.now()}`,
-        ...assignment,
-      };
-      store.addProjectAssignment(newAssignment);
-      return newAssignment;
-    },
+  const createAssignmentMutation = useMutation({
+    mutationFn: createProjectAssignment,
     onSuccess: () => {
-      assignmentsQuery.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['projectAssignments'] });
+    }
   });
 
-  const removeFromProjectMutation = useMutation({
-    mutationFn: (assignmentId: string) => {
-      store.deleteProjectAssignment(assignmentId);
-    },
+  const deleteAssignmentMutation = useMutation({
+    mutationFn: deleteProjectAssignment,
     onSuccess: () => {
-      assignmentsQuery.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['projectAssignments'] });
+    }
   });
 
   return {
-    users: query.data,
-    assignments: assignmentsQuery.data,
-    isLoading: query.isLoading || assignmentsQuery.isLoading,
-    createUser: createMutation.mutate,
-    updateUser: updateMutation.mutate,
-    deleteUser: deleteMutation.mutate,
-    assignToProject: assignToProjectMutation.mutate,
-    removeFromProject: removeFromProjectMutation.mutate,
+    users: usersQuery.data ?? [],
+    assignments: assignmentsQuery.data ?? [],
+    isLoading: usersQuery.isLoading || assignmentsQuery.isLoading,
+    createUser: createUserMutation.mutate,
+    updateUser: updateUserMutation.mutate,
+    deleteUser: deleteUserMutation.mutate,
+    assignToProject: createAssignmentMutation.mutate,
+    removeFromProject: deleteAssignmentMutation.mutate,
   };
 }

@@ -1,7 +1,9 @@
 import { format, parseISO } from 'date-fns';
 
-export const formatDate = (date: string) => {
-  return format(parseISO(date), 'MMM dd, yyyy');
+export const formatDate = (date: string | Date) => {
+  if (!date) return '';
+  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  return format(dateObj, 'MMM dd, yyyy');
 };
 
 export const getCurrentWeekDates = () => {

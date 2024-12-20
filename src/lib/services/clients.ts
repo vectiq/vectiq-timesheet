@@ -1,36 +1,44 @@
-import { mockClients } from './mockData';
+import { 
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import type { Client } from '@/types';
 
 export async function getClients(): Promise<Client[]> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockClients;
+  const snapshot = await getDocs(collection(db, 'clients'));
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Client[];
 }
 
-export async function createClient(client: Omit<Client, 'id'>): Promise<Client> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newClient = {
-    ...client,
-    id: `client_${Date.now()}`,
+export async function createClient(clientData: Omit<Client, 'id'>): Promise<Client> {
+  const clientRef = doc(collection(db, 'clients'));
+  const client: Client = {
+    id: clientRef.id,
+    ...clientData,
+    createdAt: serverTimestamp(),
   };
-  mockClients.push(newClient);
-  return newClient;
-}
-
-export async function updateClient(id: string, client: Partial<Client>): Promise<Client> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = mockClients.findIndex(c => c.id === id);
-  if (index === -1) throw new Error('Client not found');
   
-  mockClients[index] = {
-    ...mockClients[index],
-    ...client,
-  };
-  return mockClients[index];
+  await setDoc(clientRef, client);
+  return client;
+}
+
+export async function updateClient(id: string, clientData: Partial<Client>): Promise<void> {
+  const clientRef = doc(db, 'clients', id);
+  await updateDoc(clientRef, {
+    ...clientData,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function deleteClient(id: string): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = mockClients.findIndex(c => c.id === id);
-  if (index === -1) throw new Error('Client not found');
-  mockClients.splice(index, 1);
+  const clientRef = doc(db, 'clients', id);
+  await deleteDoc(clientRef);
 }

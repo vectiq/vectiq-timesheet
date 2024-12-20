@@ -1,4 +1,4 @@
-import { Clock, Users, FolderKanban, BarChart2, Briefcase, UserCircle } from 'lucide-react';
+import { Clock, Users, FolderKanban, BarChart2, Briefcase, UserCircle, Database } from 'lucide-react';
 
 export const navigationItems = [
   { name: 'Timesheet', href: '/', icon: Clock },
@@ -7,4 +7,5 @@ export const navigationItems = [
   { name: 'Roles', href: '/roles', icon: Briefcase },
   { name: 'Clients', href: '/clients', icon: Users },
   { name: 'Users', href: '/users', icon: UserCircle },
+  { name: 'Test Data', href: '/test-data', icon: Database },
 ] as const;

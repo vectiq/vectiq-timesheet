@@ -1,51 +1,44 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useStore } from '@/lib/store';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+} from '@/lib/services/projects';
 import type { Project } from '@/types';
 
 export function useProjects() {
-  const store = useStore();
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ['projects'],
-    queryFn: () => store.projects,
-    initialData: [],
+    queryFn: getProjects
   });
 
   const createMutation = useMutation({
-    mutationFn: (project: Omit<Project, 'id'>) => {
-      const newProject = {
-        ...project,
-        id: `proj_${Date.now()}`,
-      };
-      store.addProject(newProject);
-      return newProject;
-    },
+    mutationFn: createProject,
     onSuccess: () => {
-      query.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    }
   });
 
   const updateMutation = useMutation({
-    mutationFn: (project: Project) => {
-      store.updateProject(project.id, project);
-      return project;
-    },
+    mutationFn: ({ id, data }: { id: string; data: Partial<Project> }) =>
+      updateProject(id, data),
     onSuccess: () => {
-      query.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      store.deleteProject(id);
-    },
+    mutationFn: deleteProject,
     onSuccess: () => {
-      query.refetch();
-    },
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    }
   });
 
   return {
-    projects: query.data,
+    projects: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
     createProject: createMutation.mutate,

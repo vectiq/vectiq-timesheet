@@ -6,7 +6,7 @@ import { UsersTable } from '@/components/users/UsersTable';
 import { UserDialog } from '@/components/users/UserDialog';
 import { ProjectAssignmentDialog } from '@/components/users/ProjectAssignmentDialog';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import type { User } from '@/types';
+import type { User, ProjectAssignment } from '@/types';
 
 export default function Users() {
   const { 
@@ -24,17 +24,18 @@ export default function Users() {
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
 
-  const handleCreate = () => {
+  const handleOpenCreateDialog = () => {
     setSelectedUser(null);
     setIsUserDialogOpen(true);
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Omit<User, 'id'>) => {
     if (selectedUser) {
-      await updateUser(data);
+      await updateUser({ id: selectedUser.id, data });
     } else {
       await createUser(data);
     }
+    setIsUserDialogOpen(false);
   };
 
   const handleEdit = (user: User) => {
@@ -53,6 +54,11 @@ export default function Users() {
     setIsAssignmentDialogOpen(true);
   };
 
+  const handleProjectAssignment = async (data: Omit<ProjectAssignment, 'id'>) => {
+    await assignToProject(data);
+    setIsAssignmentDialogOpen(false);
+  };
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -61,7 +67,7 @@ export default function Users() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleOpenCreateDialog}>
           <Plus className="h-4 w-4 mr-2" />
           New User
         </Button>
@@ -90,7 +96,7 @@ export default function Users() {
           open={isAssignmentDialogOpen}
           onOpenChange={setIsAssignmentDialogOpen}
           user={selectedUser}
-          onSubmit={assignToProject}
+          onSubmit={handleProjectAssignment}
         />
       )}
     </div>

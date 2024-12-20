@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { createUserProfile } from '@/lib/services/users';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Briefcase } from 'lucide-react';
@@ -21,15 +20,8 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
-        const { user } = await createUserWithEmailAndPassword(auth, email, password);
-        await createUserProfile(user.uid, {
-          email: user.email,
-          name: email.split('@')[0], // Simple default name
-        });
-      } else {
+
         await signInWithEmailAndPassword(auth, email, password);
-      }
       navigate('/');
     } catch (err) {
       setError(isSignUp ? 'Failed to create account' : 'Invalid email or password');
@@ -85,18 +77,8 @@ export default function Login() {
               className="w-full flex justify-center py-2 px-4"
               disabled={isLoading}
             >
-              {isLoading ? 'Processing...' : (isSignUp ? 'Sign up' : 'Sign in')}
+              {isLoading ? 'Processing...' : 'Sign in'}
             </Button>
-
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-indigo-600 hover:text-indigo-500"
-              >
-                {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
-              </button>
-            </div>
           </form>
         </div>
       </div>

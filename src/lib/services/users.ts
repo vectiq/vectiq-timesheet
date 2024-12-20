@@ -1,39 +1,87 @@
-import { db } from '@/lib/firebase';
 import { 
   collection,
   doc,
+  getDocs,
   setDoc,
   updateDoc,
-  getDoc,
-  getDocs,
-  deleteDoc
+  deleteDoc,
+  serverTimestamp,
+  query,
+  where
 } from 'firebase/firestore';
-import type { User } from '@/types';
+import { db } from '@/lib/firebase';
+import type { User, ProjectAssignment } from '@/types';
 
-export async function createUserProfile(uid: string, userData: Partial<User>) {
-  const userRef = doc(db, 'users', uid);
-  await setDoc(userRef, {
+// User Operations
+export async function getUsers(): Promise<User[]> {
+  const snapshot = await getDocs(collection(db, 'users'));
+  console.log(snapshot);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as User[];
+}
+
+export async function createUser(userData: Omit<User, 'id'>): Promise<User> {
+  const userRef = doc(collection(db, 'users'));
+  const user: User = {
+    id: userRef.id,
     ...userData,
-    role: 'user', // Default role
-    isActive: true,
-    createdAt: new Date().toISOString(),
+    createdAt: serverTimestamp(),
+  };
+  
+  await setDoc(userRef, user);
+  return user;
+}
+
+export async function updateUser(id: string, userData: Partial<User>): Promise<void> {
+  const userRef = doc(db, 'users', id);
+  await updateDoc(userRef, {
+    ...userData,
+    updatedAt: serverTimestamp(),
   });
 }
 
-export async function updateUserProfile(uid: string, data: Partial<User>) {
-  const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, data);
+export async function deleteUser(id: string): Promise<void> {
+  const userRef = doc(db, 'users', id);
+  await deleteDoc(userRef);
 }
 
-export async function getUserProfile(uid: string) {
-  const userRef = doc(db, 'users', uid);
-  const userSnap = await getDoc(userRef);
-  return userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } as User : null;
+// Project Assignment Operations
+export async function getProjectAssignments(): Promise<ProjectAssignment[]> {
+  const snapshot = await getDocs(collection(db, 'projectAssignments'));
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as ProjectAssignment[];
 }
 
-export async function getAllUsers() {
-  const usersCollection = collection(db, 'users');
-  const usersSnapshot = await getDocs(usersCollection);
-  const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
-  return usersList;
+export async function getUserProjectAssignments(userId: string): Promise<ProjectAssignment[]> {
+  const q = query(
+    collection(db, 'projectAssignments'),
+    where('userId', '==', userId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as ProjectAssignment[];
+}
+
+export async function createProjectAssignment(
+  assignment: Omit<ProjectAssignment, 'id'>
+): Promise<ProjectAssignment> {
+  const assignmentRef = doc(collection(db, 'projectAssignments'));
+  const newAssignment: ProjectAssignment = {
+    id: assignmentRef.id,
+    ...assignment,
+  };
+  
+  await setDoc(assignmentRef, newAssignment);
+  return newAssignment;
+}
+
+export async function deleteProjectAssignment(id: string): Promise<void> {
+  const assignmentRef = doc(db, 'projectAssignments', id);
+  await deleteDoc(assignmentRef);
 }

@@ -12,9 +12,18 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleCreate = () => {
+  const handleOpenCreateDialog = () => {
     setSelectedClient(null);
     setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (data: Omit<Client, 'id'>) => {
+    if (selectedClient) {
+      await updateClient({ id: selectedClient.id, data });
+    } else {
+      await createClient(data);
+    }
+    setIsDialogOpen(false);
   };
 
   const handleEdit = (client: Client) => {
@@ -23,9 +32,7 @@ export default function Clients() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this client?')) {
-      await deleteClient(id);
-    }
+    await deleteClient(id);
   };
 
   if (isLoading) {
@@ -36,7 +43,7 @@ export default function Clients() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleOpenCreateDialog}>
           <Plus className="h-4 w-4 mr-2" />
           New Client
         </Button>
@@ -54,7 +61,7 @@ export default function Clients() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         client={selectedClient}
-        onSubmit={selectedClient ? updateClient : createClient}
+        onSubmit={handleSubmit}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import Projects from '@/pages/Projects';
 import Roles from '@/pages/Roles';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
+import TestData from '@/pages/TestData';
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="roles" element={<Roles />} />
               <Route path="clients" element={<Clients />} />
               <Route path="users" element={<Users />} />
+              <Route path="test-data" element={<TestData />} />
             </Route>
           ) : (
             <Route path="*" element={<Navigate to="/login" />} />
