@@ -3,6 +3,7 @@ import { collection, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { startOfMonth, endOfMonth, eachWeekOfInterval, eachDayOfInterval, subMonths, format } from 'date-fns';
 
 const dummyData = {
   roles: [
@@ -98,6 +99,75 @@ const dummyData = {
     { id: 'asgmt_3', userId: 'user_1', projectId: 'proj_2', roleId: 'role_1' },
     { id: 'asgmt_4', userId: 'user_3', projectId: 'proj_3', roleId: 'role_4' },
   ],
+  timeEntries: (() => {
+    const entries = [];
+    const users = [
+      'CiTh7bxq9nY8RroV02e4hlDeAaf1',
+      'iaRKbjbR8gMX9kXCnXkggWCPl4A3'
+    ];
+    
+    // Get current and previous month date ranges
+    const today = new Date();
+    const currentMonth = {
+      start: startOfMonth(today),
+      end: endOfMonth(today)
+    };
+    const previousMonth = {
+      start: startOfMonth(subMonths(today, 1)),
+      end: endOfMonth(subMonths(today, 1))
+    };
+
+    // Common project assignments
+    const assignments = [
+      { projectId: 'proj_1', roleId: 'role_1', clientId: 'client_1', hours: 8 },
+      { projectId: 'proj_2', roleId: 'role_1', clientId: 'client_2', hours: 6 },
+      { projectId: 'proj_3', roleId: 'role_2', clientId: 'client_3', hours: 7 }
+    ];
+
+    // Generate entries for both months
+    [previousMonth, currentMonth].forEach(month => {
+      // Get all weeks in the month
+      const weeks = eachWeekOfInterval(month, { weekStartsOn: 1 });
+      
+      weeks.forEach(weekStart => {
+        // Get workdays (Monday to Friday)
+        const days = eachDayOfInterval({
+          start: weekStart,
+          end: new Date(Math.min(
+            weekStart.getTime() + 4 * 24 * 60 * 60 * 1000,
+            month.end.getTime()
+          ))
+        });
+
+        // Generate entries for each user
+        users.forEach(userId => {
+          // Randomly select 1-2 assignments for each day
+          days.forEach(date => {
+            if (date <= month.end && date >= month.start) {
+              const dayAssignments = assignments
+                .filter(() => Math.random() > 0.3)
+                .slice(0, 2);
+
+              dayAssignments.forEach(assignment => {
+                entries.push({
+                  id: `entry_${userId}_${format(date, 'yyyy-MM-dd')}_${assignment.projectId}`,
+                  userId,
+                  clientId: assignment.clientId,
+                  projectId: assignment.projectId,
+                  roleId: assignment.roleId,
+                  date: format(date, 'yyyy-MM-dd'),
+                  hours: assignment.hours + (Math.random() * 2 - 1), // Add some variation
+                  description: 'Regular work',
+                });
+              });
+            }
+          });
+        });
+      });
+    });
+
+    return entries;
+  })(),
 };
 
 export default function TestData() {
@@ -134,6 +204,12 @@ export default function TestData() {
         await setDoc(doc(db, 'projectRoles', id), projectRole);
       }
 
+      // Generate time entries
+      setStatus('Creating time entries...');
+      for (const entry of dummyData.timeEntries) {
+        await setDoc(doc(db, 'timeEntries', entry.id), entry);
+      }
+
       // Generate users
     //   setStatus('Creating users...');
     //   for (const user of dummyData.users) {
@@ -166,6 +242,7 @@ export default function TestData() {
         'projects',
         'projectRoles',
         'projectAssignments',
+        'timeEntries',
       ];
 
       for (const collectionName of collections) {
@@ -216,6 +293,7 @@ export default function TestData() {
             <li>{dummyData.clients.length} Clients</li>
             <li>{dummyData.projects.length} Projects</li>
             <li>{dummyData.projectRoles.length} Project Roles</li>
+            <li>{dummyData.timeEntries.length} Time Entries</li>
             {/* <li>{dummyData.users.length} Users</li> */}
             <li>{dummyData.projectAssignments.length} Project Assignments</li>
           </ul>

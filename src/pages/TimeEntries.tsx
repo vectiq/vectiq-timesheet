@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ViewSwitcher } from '@/components/timesheet/ViewSwitcher';
 import { WeeklyView } from '@/components/timesheet/WeeklyView';
 import { MonthlyView } from '@/components/timesheet/MonthlyView';
@@ -17,6 +17,10 @@ export default function TimeEntries() {
     type: view === 'weekly' ? 'week' : 'month',
   });
 
+  const handleViewChange = useCallback((newView: 'weekly' | 'monthly') => {
+    setView(newView);
+  }, []);
+
   if (isLoadingEntries || isLoadingProjects) {
     return <LoadingScreen />;
   }
@@ -33,7 +37,7 @@ export default function TimeEntries() {
             onToday={dateNav.goToToday}
             formatString={view === 'weekly' ? 'MMMM d, yyyy' : 'MMMM yyyy'}
           />
-          <ViewSwitcher view={view} onViewChange={setView} />
+          <ViewSwitcher view={view} onViewChange={handleViewChange} />
         </div>
       </div>
 

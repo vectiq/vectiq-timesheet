@@ -1,90 +1,67 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useStore } from '@/lib/store';
-import { isWithinInterval, parseISO } from 'date-fns';
+import { useCallback } from 'react';
+import {
+  getTimeEntries,
+  createTimeEntry,
+  updateTimeEntry,
+  deleteTimeEntry,
+} from '@/lib/services/timeEntries';
 import type { TimeEntry } from '@/types';
 
-interface TimeEntryFilters {
-  dateRange?: { start: Date; end: Date };
-  projectId?: string;
-  roleId?: string;
+const QUERY_KEY = 'timeEntries';
+
+interface UseTimeEntriesOptions {
+  userId?: string;
 }
 
-export function useTimeEntries(filters?: TimeEntryFilters) {
-  const store = useStore();
+export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   const queryClient = useQueryClient();
 
-  // Query for fetching time entries
   const query = useQuery({
-    queryKey: ['timeEntries', filters],
-    queryFn: () => {
-      let entries = store.timeEntries;
-
-      if (filters) {
-        entries = entries.filter(entry => {
-          // Date range filter
-          if (filters.dateRange) {
-            const entryDate = parseISO(entry.date);
-            if (!isWithinInterval(entryDate, filters.dateRange)) {
-              return false;
-            }
-          }
-
-          // Project filter
-          if (filters.projectId && entry.projectId !== filters.projectId) {
-            return false;
-          }
-
-          // Role filter
-          if (filters.roleId && entry.roleId !== filters.roleId) {
-            return false;
-          }
-
-          return true;
-        });
-      }
-
-      return entries.sort((a, b) => b.date.localeCompare(a.date));
-    },
+    queryKey: [QUERY_KEY, options.userId],
+    queryFn: () => getTimeEntries(options.userId)
   });
 
-  // Mutations
   const createMutation = useMutation({
-    mutationFn: async (entry: Omit<TimeEntry, 'id'>) => {
-      const newEntry = { ...entry, id: `entry_${Date.now()}` };
-      store.addTimeEntry(newEntry);
-      return newEntry;
-    },
+    mutationFn: createTimeEntry,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
-    },
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (entry: TimeEntry) => {
-      store.updateTimeEntry(entry.id, entry);
-      return entry;
-    },
+    mutationFn: updateTimeEntry,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
-    },
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      store.deleteTimeEntry(id);
-    },
+    mutationFn: deleteTimeEntry,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
-    },
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
   });
 
+  const handleCreateEntry = useCallback(async (data: Omit<TimeEntry, 'id'>) => {
+    return createMutation.mutateAsync(data);
+  }, [createMutation]);
+
+  const handleUpdateEntry = useCallback(async (id: string, data: Partial<TimeEntry>) => {
+    return updateMutation.mutateAsync(id, data);
+  }, [updateMutation]);
+
+  const handleDeleteEntry = useCallback(async (id: string) => {
+    return deleteMutation.mutateAsync(id);
+  }, [deleteMutation]);
+
   return {
-    timeEntries: query.data || [],
+    timeEntries: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
-    createTimeEntry: createMutation.mutate,
-    updateTimeEntry: updateMutation.mutate,
-    deleteTimeEntry: deleteMutation.mutate,
+    createTimeEntry: handleCreateEntry,
+    updateTimeEntry: handleUpdateEntry,
+    deleteTimeEntry: handleDeleteEntry,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,

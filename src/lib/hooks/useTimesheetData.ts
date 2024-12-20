@@ -1,30 +1,33 @@
-import { useMemo } from 'react';
-import { useStore } from '@/lib/store';
+import { useCallback } from 'react';
+import { useClients } from './useClients';
+import { useProjects } from './useProjects';
+import { useRoles } from './useRoles';
 import { getClientProjects, getProjectRoles, getProjectRole } from '@/lib/store/selectors';
 
 export function useTimesheetData() {
-  const store = useStore();
+  const { clients } = useClients();
+  const { projects } = useProjects();
+  const { roles } = useRoles();
 
-  const clients = useMemo(() => 
-    store.clients.slice().sort((a, b) => a.name.localeCompare(b.name)),
-    [store.clients]
+  const sortedClients = clients.slice().sort((a, b) => a.name.localeCompare(b.name));
+
+  const getProjectsForClient = useCallback((clientId: string) => 
+    getClientProjects(projects, clientId),
+    [projects]
   );
 
-  const getProjectsForClient = (clientId: string) => 
-    getClientProjects(store.projects, clientId);
+  const getRolesForProject = useCallback((projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    return getProjectRoles(roles, project);
+  }, [projects, roles]);
 
-  const getRolesForProject = (projectId: string) => {
-    const project = store.projects.find(p => p.id === projectId);
-    return getProjectRoles(store.roles, project);
-  };
-
-  const getProjectRoleDetails = (projectId: string, roleId: string) => {
-    const project = store.projects.find(p => p.id === projectId);
-    return getProjectRole(store.roles, project, roleId);
-  };
+  const getProjectRoleDetails = useCallback((projectId: string, roleId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    return getProjectRole(roles, project, roleId);
+  }, [projects, roles]);
 
   return {
-    clients,
+    clients: sortedClients,
     getProjectsForClient,
     getRolesForProject,
     getProjectRoleDetails,

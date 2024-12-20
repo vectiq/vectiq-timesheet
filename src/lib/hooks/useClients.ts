@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import {
   getClients,
   createClient,
@@ -7,42 +8,58 @@ import {
 } from '@/lib/services/clients';
 import type { Client } from '@/types';
 
+const QUERY_KEY = 'clients';
+
 export function useClients() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['clients'],
+    queryKey: [QUERY_KEY],
     queryFn: getClients
   });
 
   const createMutation = useMutation({
     mutationFn: createClient,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
-      updateClient(id, data),
+    mutationFn: updateClient,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
+
+  const handleCreateClient = useCallback(async (data: Omit<Client, 'id'>) => {
+    return createMutation.mutateAsync(data);
+  }, [createMutation]);
+
+  const handleUpdateClient = useCallback(async (id: string, data: Partial<Client>) => {
+    return updateMutation.mutateAsync(id, data);
+  }, [updateMutation]);
+
+  const handleDeleteClient = useCallback(async (id: string) => {
+    return deleteMutation.mutateAsync(id);
+  }, [deleteMutation]);
 
   return {
     clients: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
-    createClient: createMutation.mutate,
-    updateClient: updateMutation.mutate,
-    deleteClient: deleteMutation.mutate,
+    createClient: handleCreateClient,
+    updateClient: handleUpdateClient,
+    deleteClient: handleDeleteClient,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
   };
 }

@@ -1,46 +1,65 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useStore } from '@/lib/store';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import {
+  getRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+} from '@/lib/services/roles';
 import type { Role } from '@/types';
 
+const QUERY_KEY = 'roles';
+
 export function useRoles() {
-  const store = useStore();
+  const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => store.roles,
-    initialData: [],
+    queryKey: [QUERY_KEY],
+    queryFn: getRoles
   });
 
   const createMutation = useMutation({
-    mutationFn: (role: Omit<Role, 'id'>) => {
-      const newRole = {
-        ...role,
-        id: `role_${Date.now()}`,
-      };
-      store.addRole(newRole);
-      return newRole;
-    },
+    mutationFn: createRole,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
   });
 
   const updateMutation = useMutation({
-    mutationFn: (role: Role) => {
-      store.updateRole(role.id, role);
-      return role;
-    },
+    mutationFn: updateRole,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      store.deleteRole(id);
-    },
+    mutationFn: deleteRole,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
   });
 
+  const handleCreateRole = useCallback(async (data: Omit<Role, 'id'>) => {
+    return createMutation.mutateAsync(data);
+  }, [createMutation]);
+
+  const handleUpdateRole = useCallback(async (id: string, data: Partial<Role>) => {
+    return updateMutation.mutateAsync(id, data);
+  }, [updateMutation]);
+
+  const handleDeleteRole = useCallback(async (id: string) => {
+    return deleteMutation.mutateAsync(id);
+  }, [deleteMutation]);
+
   return {
-    roles: query.data,
+    roles: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
-    createRole: createMutation.mutate,
-    updateRole: updateMutation.mutate,
-    deleteRole: deleteMutation.mutate,
+    createRole: handleCreateRole,
+    updateRole: handleUpdateRole,
+    deleteRole: handleDeleteRole,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
   };
 }

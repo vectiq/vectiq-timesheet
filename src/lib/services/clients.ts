@@ -1,7 +1,7 @@
 import { 
   collection,
   doc,
-  getDocs,
+  getDocs, 
   setDoc,
   updateDoc,
   deleteDoc,
@@ -10,8 +10,10 @@ import {
 import { db } from '@/lib/firebase';
 import type { Client } from '@/types';
 
+const COLLECTION = 'clients';
+
 export async function getClients(): Promise<Client[]> {
-  const snapshot = await getDocs(collection(db, 'clients'));
+  const snapshot = await getDocs(collection(db, COLLECTION));
   return snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
@@ -19,11 +21,12 @@ export async function getClients(): Promise<Client[]> {
 }
 
 export async function createClient(clientData: Omit<Client, 'id'>): Promise<Client> {
-  const clientRef = doc(collection(db, 'clients'));
+  const clientRef = doc(collection(db, COLLECTION));
   const client: Client = {
     id: clientRef.id,
     ...clientData,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
   
   await setDoc(clientRef, client);
@@ -31,7 +34,7 @@ export async function createClient(clientData: Omit<Client, 'id'>): Promise<Clie
 }
 
 export async function updateClient(id: string, clientData: Partial<Client>): Promise<void> {
-  const clientRef = doc(db, 'clients', id);
+  const clientRef = doc(db, COLLECTION, id);
   await updateDoc(clientRef, {
     ...clientData,
     updatedAt: serverTimestamp(),
@@ -39,6 +42,6 @@ export async function updateClient(id: string, clientData: Partial<Client>): Pro
 }
 
 export async function deleteClient(id: string): Promise<void> {
-  const clientRef = doc(db, 'clients', id);
+  const clientRef = doc(db, COLLECTION, id);
   await deleteDoc(clientRef);
 }

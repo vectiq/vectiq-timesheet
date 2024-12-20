@@ -1,8 +1,7 @@
 import { 
   collection,
   doc,
-  getDocs,
-  getDoc,
+  getDocs, 
   setDoc,
   updateDoc,
   deleteDoc,
@@ -14,13 +13,16 @@ import {
 import { db } from '@/lib/firebase';
 import type { Project, ProjectRole } from '@/types';
 
+const COLLECTION = 'projects';
+const ROLES_COLLECTION = 'projectRoles';
+
 export async function getProjects(): Promise<Project[]> {
-  const projectsSnapshot = await getDocs(collection(db, 'projects'));
+  const projectsSnapshot = await getDocs(collection(db, COLLECTION));
   const projects = await Promise.all(
     projectsSnapshot.docs.map(async (projectDoc) => {
       // Get project roles for this project
       const rolesSnapshot = await getDocs(
-        query(collection(db, 'projectRoles'), 
+        query(collection(db, ROLES_COLLECTION), 
         where('projectId', '==', projectDoc.id))
       );
       
@@ -44,7 +46,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   const batch = writeBatch(db);
   
   // Create project document
-  const projectRef = doc(collection(db, 'projects'));
+  const projectRef = doc(collection(db, COLLECTION));
   const project: Omit<Project, 'roles'> = {
     id: projectRef.id,
     name: projectData.name,
@@ -54,6 +56,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
     endDate: projectData.endDate,
     requiresApproval: projectData.requiresApproval,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
   
   batch.set(projectRef, project);
@@ -68,7 +71,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   }));
 
   for (const role of projectRoles) {
-    const roleRef = doc(collection(db, 'projectRoles'));
+    const roleRef = doc(collection(db, ROLES_COLLECTION));
     batch.set(roleRef, role);
   }
 
@@ -84,7 +87,7 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
   const batch = writeBatch(db);
   
   // Update project document
-  const projectRef = doc(db, 'projects', id);
+  const projectRef = doc(db, COLLECTION, id);
   const { roles, ...projectUpdate } = projectData;
   
   batch.update(projectRef, {
@@ -95,7 +98,7 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
   if (roles) {
     // Delete existing project roles
     const existingRolesSnapshot = await getDocs(
-      query(collection(db, 'projectRoles'), where('projectId', '==', id))
+      query(collection(db, ROLES_COLLECTION), where('projectId', '==', id))
     );
     existingRolesSnapshot.docs.forEach(doc => {
       batch.delete(doc.ref);
@@ -103,7 +106,7 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
 
     // Create new project roles
     for (const role of roles) {
-      const roleRef = doc(collection(db, 'projectRoles'));
+      const roleRef = doc(collection(db, ROLES_COLLECTION));
       batch.set(roleRef, {
         projectId: id,
         roleId: role.roleId,
@@ -120,22 +123,14 @@ export async function deleteProject(id: string): Promise<void> {
   const batch = writeBatch(db);
   
   // Delete project document
-  const projectRef = doc(db, 'projects', id);
+  const projectRef = doc(db, COLLECTION, id);
   batch.delete(projectRef);
 
   // Delete associated project roles
   const rolesSnapshot = await getDocs(
-    query(collection(db, 'projectRoles'), where('projectId', '==', id))
+    query(collection(db, ROLES_COLLECTION), where('projectId', '==', id))
   );
   rolesSnapshot.docs.forEach(doc => {
-    batch.delete(doc.ref);
-  });
-
-  // Delete associated project assignments
-  const assignmentsSnapshot = await getDocs(
-    query(collection(db, 'projectAssignments'), where('projectId', '==', id))
-  );
-  assignmentsSnapshot.docs.forEach(doc => {
     batch.delete(doc.ref);
   });
 

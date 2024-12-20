@@ -5,7 +5,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Layout } from '@/components/layout/Layout';
 import { useStore } from '@/lib/store';
-import { mockRoles, mockProjects, mockClients, mockTimeEntries } from '@/lib/services/mockData';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
 import Reports from '@/pages/Reports';
@@ -23,10 +22,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    store.setRoles(mockRoles);
-    store.setProjects(mockProjects);
-    store.setClients(mockClients);
-    store.setTimeEntries(mockTimeEntries);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);

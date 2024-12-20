@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import {
   getProjects,
   createProject,
@@ -7,42 +8,58 @@ import {
 } from '@/lib/services/projects';
 import type { Project } from '@/types';
 
+const QUERY_KEY = 'projects';
+
 export function useProjects() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['projects'],
+    queryKey: [QUERY_KEY],
     queryFn: getProjects
   });
 
   const createMutation = useMutation({
     mutationFn: createProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Project> }) =>
-      updateProject(id, data),
+    mutationFn: updateProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
+
+  const handleCreateProject = useCallback(async (data: Omit<Project, 'id'>) => {
+    return createMutation.mutateAsync(data);
+  }, [createMutation]);
+
+  const handleUpdateProject = useCallback(async (id: string, data: Partial<Project>) => {
+    return updateMutation.mutateAsync(id, data);
+  }, [updateMutation]);
+
+  const handleDeleteProject = useCallback(async (id: string) => {
+    return deleteMutation.mutateAsync(id);
+  }, [deleteMutation]);
 
   return {
     projects: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
-    createProject: createMutation.mutate,
-    updateProject: updateMutation.mutate,
-    deleteProject: deleteMutation.mutate,
+    createProject: handleCreateProject,
+    updateProject: handleUpdateProject,
+    deleteProject: handleDeleteProject,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
   };
 }
