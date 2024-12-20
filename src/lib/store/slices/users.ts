@@ -4,7 +4,7 @@ import type { User, ProjectAssignment } from '@/types';
 export interface UsersSlice {
   users: User[];
   projectAssignments: ProjectAssignment[];
-  setUsers: (users: User[]) => void;
+  setUsers: (users: User[] | ((prev: User[]) => User[])) => void;
   addUser: (user: User) => void;
   updateUser: (id: string, user: Partial<User>) => void;
   deleteUser: (id: string) => void;
@@ -16,7 +16,9 @@ export interface UsersSlice {
 export const createUsersSlice: StateCreator<UsersSlice> = (set) => ({
   users: [],
   projectAssignments: [],
-  setUsers: (users) => set({ users }),
+  setUsers: (users) => set((state) => ({ 
+    users: typeof users === 'function' ? users(state.users) : users 
+  })),
   addUser: (user) => set((state) => ({ users: [...state.users, user] })),
   updateUser: (id, user) => set((state) => ({
     users: state.users.map(u => u.id === id ? { ...u, ...user } : u)

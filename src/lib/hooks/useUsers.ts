@@ -1,13 +1,24 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { useStore } from '@/lib/store';
 import type { User, ProjectAssignment } from '@/types';
 
 export function useUsers() {
   const store = useStore();
+  const db = getFirestore();
 
   const query = useQuery({
     queryKey: ['users'],
-    queryFn: () => store.users,
+    queryFn: async () => {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const users = usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+      store.setUsers(users);
+      return users;
+    },
     initialData: [],
   });
 

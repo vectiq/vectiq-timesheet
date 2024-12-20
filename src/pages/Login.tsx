@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { createUserProfile } from '@/lib/services/users';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Briefcase } from 'lucide-react';
@@ -12,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,10 +21,18 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      if (isSignUp) {
+        const { user } = await createUserWithEmailAndPassword(auth, email, password);
+        await createUserProfile(user.uid, {
+          email: user.email,
+          name: email.split('@')[0], // Simple default name
+        });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
       navigate('/');
     } catch (err) {
-      setError('Invalid email or password');
+      setError(isSignUp ? 'Failed to create account' : 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +85,18 @@ export default function Login() {
               className="w-full flex justify-center py-2 px-4"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? 'Processing...' : (isSignUp ? 'Sign up' : 'Sign in')}
             </Button>
+
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-indigo-600 hover:text-indigo-500"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+              </button>
+            </div>
           </form>
         </div>
       </div>
