@@ -2,12 +2,11 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  useReactTable,
   getSortedRowModel,
+  useReactTable,
 } from '@tanstack/react-table';
 import { TimeEntry, Project } from '@/types';
 import { formatDate } from '@/lib/utils/date';
-import { formatCurrency } from '@/lib/utils/currency';
 
 const columnHelper = createColumnHelper<TimeEntry>();
 

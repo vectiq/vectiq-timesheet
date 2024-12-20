@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Plus, Edit } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ProjectDialog } from '@/components/projects/ProjectDialog';
-import { formatCurrency } from '@/lib/utils/currency';
-import { formatDate } from '@/lib/utils/date';
+import { ProjectsTable } from '@/components/projects/ProjectsTable';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import type { Project } from '@/types';
 
 export default function Projects() {
-  const { projects, isLoading, createProject, updateProject } = useProjects();
+  const { projects, isLoading, createProject, updateProject, deleteProject } = useProjects();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -23,8 +22,14 @@ export default function Projects() {
     setIsDialogOpen(true);
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      await deleteProject(id);
+    }
+  };
+
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <LoadingScreen />;
   }
 
   return (
@@ -37,57 +42,12 @@ export default function Projects() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
-          <Card key={project.id} className="relative">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-4 right-4"
-              onClick={() => handleEdit(project)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-
-            <h3 className="text-lg font-medium text-gray-900 mb-4">{project.name}</h3>
-            
-            <dl className="grid grid-cols-1 gap-x-4 gap-y-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Budget</dt>
-                <dd className="mt-1 text-sm text-gray-900">{formatCurrency(project.budget)}</dd>
-              </div>
-              
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Duration</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {formatDate(project.startDate)} - {formatDate(project.endDate)}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Approval Required</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {project.requiresApproval ? 'Yes' : 'No'}
-                </dd>
-              </div>
-
-              <div className="col-span-2">
-                <dt className="text-sm font-medium text-gray-500 mb-2">Roles</dt>
-                <dd className="space-y-2">
-                  {project.roles.map(role => (
-                    <div key={role.id} className="text-sm">
-                      <span className="font-medium">{role.name}</span>
-                      <div className="text-gray-500 text-xs">
-                        Cost: {formatCurrency(role.costRate)}/hr • 
-                        Sell: {formatCurrency(role.sellRate)}/hr
-                      </div>
-                    </div>
-                  ))}
-                </dd>
-              </div>
-            </dl>
-          </Card>
-        ))}
+      <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg">
+        <ProjectsTable 
+          projects={projects} 
+          onEdit={handleEdit} 
+          onDelete={handleDelete}
+        />
       </div>
 
       <ProjectDialog

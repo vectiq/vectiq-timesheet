@@ -1,7 +1,0 @@
-node_modules
-dist
-*.log
-.git
-.env
-.env.*
-!.env.production

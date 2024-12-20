@@ -1,63 +1,53 @@
 import { useState } from 'react';
-import { Card } from '@/components/ui/Card';
-import { WeeklyTimesheet } from '@/components/timesheet/WeeklyTimesheet';
-import { TimesheetActions } from '@/components/timesheet/actions/TimesheetActions';
+import { ViewSwitcher } from '@/components/timesheet/ViewSwitcher';
+import { WeeklyView } from '@/components/timesheet/WeeklyView';
+import { MonthlyView } from '@/components/timesheet/MonthlyView';
+import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useProjects } from '@/lib/hooks/useProjects';
+import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
 
 export default function TimeEntries() {
-  const { timeEntries, isLoading: isLoadingEntries, createTimeEntry } = useTimeEntries();
+  const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
+  const { isLoading: isLoadingEntries } = useTimeEntries();
   const { projects, isLoading: isLoadingProjects } = useProjects();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const dateNav = useDateNavigation({
+    type: view === 'weekly' ? 'week' : 'month',
+  });
 
   if (isLoadingEntries || isLoadingProjects) {
     return <LoadingScreen />;
   }
 
-  const handleSave = async () => {
-    setIsSubmitting(true);
-    try {
-      // Save logic here
-      console.log('Saving timesheet...');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      // Submit logic here
-      console.log('Submitting timesheet...');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCopyPrevious = () => {
-    console.log('Copying previous week...');
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">Weekly Timesheet</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+        <h1 className="text-2xl font-semibold text-gray-900">Timesheet</h1>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <DateNavigation
+            currentDate={dateNav.currentDate}
+            onPrevious={dateNav.goToPrevious}
+            onNext={dateNav.goToNext}
+            onToday={dateNav.goToToday}
+            formatString={view === 'weekly' ? 'MMMM d, yyyy' : 'MMMM yyyy'}
+          />
+          <ViewSwitcher view={view} onViewChange={setView} />
+        </div>
       </div>
 
-      <WeeklyTimesheet
-        projects={projects}
-        timeEntries={timeEntries}
-      />
-
-      <Card className="p-4">
-        <TimesheetActions
-          onSave={handleSave}
-          onSubmit={handleSubmit}
-          onCopyPrevious={handleCopyPrevious}
-          isSubmitting={isSubmitting}
+      {view === 'weekly' ? (
+        <WeeklyView
+          projects={projects}
+          dateRange={dateNav.dateRange}
         />
-      </Card>
+      ) : (
+        <MonthlyView
+          projects={projects}
+          dateRange={dateNav.dateRange}
+        />
+      )}
     </div>
   );
 }

@@ -2,16 +2,6 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 const initialData = {
-  members: [
-    {
-      id: 'admin',
-      name: 'System Admin',
-      email: 'admin@example.com',
-      role: 'admin',
-      status: 'active',
-      joinedAt: new Date().toISOString()
-    }
-  ],
   clients: [
     {
       id: 'client1',
@@ -63,13 +53,6 @@ async function setupFirebase() {
     // Create collections
     console.log('Creating collections:');
 
-    // Members collection
-    console.log('- Setting up members...');
-    for (const member of initialData.members) {
-      const memberRef = db.collection('members').doc(member.id);
-      batch.set(memberRef, member);
-    }
-
     // Clients collection
     console.log('- Setting up clients...');
     for (const client of initialData.clients) {
@@ -96,13 +79,8 @@ async function setupFirebase() {
     console.log('✅ Database initialized\n');
 
     console.log(`
-Next steps:
-1. Sign in with the admin account:
-   Email: admin@example.com
-   Password: Set through Firebase Console
-
-2. Start the development server:
-   npm run dev
+Setup complete! Start the development server:
+npm run dev
 `);
 
   } catch (error) {

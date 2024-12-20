@@ -1,11 +1,7 @@
 import { Bell, User } from 'lucide-react';
-import { Button } from '../ui/Button';
 import { MobileNav } from './MobileNav';
-import { useAuth } from '@/lib/auth'; // Updated import
 
 export function Navbar() {
-  const { user, signOut } = useAuth();
-
   return (
     <nav className="fixed top-0 z-40 w-full bg-white border-b border-gray-200">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -23,23 +19,9 @@ export function Navbar() {
               <Bell className="h-5 w-5" aria-hidden="true" />
             </button>
 
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <div className="flex items-center gap-x-4">
-                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                  <User className="h-5 w-5 text-gray-500" />
-                </div>
-                <div className="hidden lg:flex lg:items-center lg:gap-x-6">
-                  <span className="text-sm font-semibold leading-6 text-gray-900">
-                    {user?.name || user?.email}
-                  </span>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => signOut()}
-                  >
-                    Log out
-                  </Button>
-                </div>
+            <div className="flex items-center gap-x-4">
+              <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                <User className="h-5 w-5 text-gray-500" />
               </div>
             </div>
           </div>
