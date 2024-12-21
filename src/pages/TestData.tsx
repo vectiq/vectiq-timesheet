@@ -205,10 +205,10 @@ export default function TestData() {
       }
 
       // Generate time entries
-      setStatus('Creating time entries...');
-      for (const entry of dummyData.timeEntries) {
-        await setDoc(doc(db, 'timeEntries', entry.id), entry);
-      }
+      // setStatus('Creating time entries...');
+      // for (const entry of dummyData.timeEntries) {
+      //   await setDoc(doc(db, 'timeEntries', entry.id), entry);
+      // }
 
       // Generate users
     //   setStatus('Creating users...');

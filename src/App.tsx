@@ -18,10 +18,10 @@ const queryClient = new QueryClient({
     queries: {
       // Disable automatic refetching
       refetchOnWindowFocus: true,
-      refetchOnReconnect: false,
+      refetchOnReconnect: true,
       refetchOnMount: true,
-      // Cache data for 5 minutes
-      staleTime: 5 * 60 * 1000,
+      // Cache data for 1 min
+      staleTime: 60 * 1000,
       // Keep unused data in cache for 10 minutes
       gcTime: 10 * 60 * 1000,
     },

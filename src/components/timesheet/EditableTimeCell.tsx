@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils/styles';
 
 interface EditableTimeCellProps {
@@ -16,25 +16,31 @@ export function EditableTimeCell({
   onStartEdit,
   onEndEdit
 }: EditableTimeCellProps) {
-  const [inputValue, setInputValue] = useState(value?.toString() || '');
   const inputRef = useRef<HTMLInputElement>(null);
+  const [localValue, setLocalValue] = useState('');
 
   useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (isEditing) {
+      setLocalValue(value?.toString() || '');
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      });
     }
-  }, [isEditing]);
+  }, [isEditing, value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     if (newValue === '' || /^\d*\.?\d*$/.test(newValue)) {
-      setInputValue(newValue);
+      setLocalValue(newValue);
     }
   };
 
   const handleBlur = () => {
-    const numValue = inputValue === '' ? null : parseFloat(inputValue);
+    const numValue = localValue === '' ? null : parseFloat(localValue);
     if (numValue !== value) {
       onChange(numValue);
     }
@@ -43,13 +49,13 @@ export function EditableTimeCell({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      const numValue = inputValue === '' ? null : parseFloat(inputValue);
+      const numValue = localValue === '' ? null : parseFloat(localValue);
       if (numValue !== value) {
         onChange(numValue);
       }
       onEndEdit();
     } else if (e.key === 'Escape') {
-      setInputValue(value?.toString() || '');
+      setLocalValue(value?.toString() || '');
       onEndEdit();
     }
   };
@@ -58,7 +64,7 @@ export function EditableTimeCell({
     <input
       ref={inputRef}
       type="text"
-      value={inputValue}
+      value={localValue}
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}

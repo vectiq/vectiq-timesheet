@@ -1,70 +1,77 @@
+import { useMemo } from 'react';
+import { format } from 'date-fns';
 import { Td } from '@/components/ui/Table';
-import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EditableTimeCell } from './EditableTimeCell';
-import { useTimesheetData } from '@/lib/hooks/useTimesheetData';
+import { X } from 'lucide-react';
+import type { TimeEntry, Project } from '@/types';
 
 interface TimesheetRowProps {
-  dates: Date[];
-  selectedClientId?: string;
-  selectedProjectId?: string;
-  selectedRoleId?: string;
-  hours: Record<string, number | null>;
-  onClientChange: (clientId: string) => void;
-  onProjectChange: (projectId: string) => void;
-  onRoleChange: (roleId: string) => void;
-  onHoursChange: (date: string, hours: number | null) => void;
-  onRemove: () => void;
+  index: number;
+  row: {
+    clientId: string;
+    projectId: string;
+    roleId: string;
+  };
+  weekDays: Date[];
+  timeEntries: TimeEntry[];
+  clients: Array<{ id: string; name: string }>;
+  getProjectsForClient: (clientId: string) => Project[];
+  getRolesForProject: (projectId: string) => Array<{ 
+    role: { id: string; name: string };
+    rates: { costRate: number; sellRate: number };
+  }>;
   editingCell: string | null;
+  onUpdateRow: (index: number, updates: any) => void;
+  onRemoveRow: (index: number) => void;
+  onCellChange: (date: string, row: any, value: number | null) => void;
   onStartEdit: (key: string) => void;
   onEndEdit: () => void;
 }
 
 export function TimesheetRow({
-  dates,
-  selectedClientId,
-  selectedProjectId,
-  selectedRoleId,
-  hours,
-  onClientChange,
-  onProjectChange,
-  onRoleChange,
-  onHoursChange,
-  onRemove,
+  index,
+  row,
+  weekDays,
+  timeEntries,
+  clients,
+  getProjectsForClient,
+  getRolesForProject,
   editingCell,
+  onUpdateRow,
+  onRemoveRow,
+  onCellChange,
   onStartEdit,
   onEndEdit,
 }: TimesheetRowProps) {
-  const { 
-    clients, 
-    getProjectsForClient, 
-    getRolesForProject 
-  } = useTimesheetData();
-
-  const availableProjects = selectedClientId 
-    ? getProjectsForClient(selectedClientId)
-    : [];
-
-  const availableRoles = selectedProjectId 
-    ? getRolesForProject(selectedProjectId)
-    : [];
+  // Filter entries for this row
+  const rowEntries = useMemo(() => {
+    if (!row.clientId || !row.projectId || !row.roleId) return [];
+    return timeEntries.filter(entry =>
+      entry.clientId === row.clientId &&
+      entry.projectId === row.projectId &&
+      entry.roleId === row.roleId
+    );
+  },
+    [timeEntries, row]
+  );
 
   // Calculate row total
-  const rowTotal = Object.values(hours).reduce(
-    (sum, value) => sum + (value || 0),
-    0
+  const rowTotal = useMemo(() => 
+    rowEntries.reduce((sum, entry) => sum + entry.hours, 0),
+    [rowEntries]
   );
 
   return (
     <tr>
       <Td>
         <select
-          value={selectedClientId || ''}
-          onChange={(e) => {
-            onClientChange(e.target.value);
-            onProjectChange('');
-            onRoleChange('');
-          }}
+          value={row.clientId}
+          onChange={(e) => onUpdateRow(index, { 
+            clientId: e.target.value,
+            projectId: '',
+            roleId: ''
+          })}
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
         >
           <option value="">Select Client</option>
@@ -77,16 +84,16 @@ export function TimesheetRow({
       </Td>
       <Td>
         <select
-          value={selectedProjectId || ''}
-          onChange={(e) => {
-            onProjectChange(e.target.value);
-            onRoleChange('');
-          }}
-          disabled={!selectedClientId}
+          value={row.projectId}
+          onChange={(e) => onUpdateRow(index, {
+            projectId: e.target.value,
+            roleId: ''
+          })}
+          disabled={!row.clientId}
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
         >
           <option value="">Select Project</option>
-          {availableProjects.map(project => (
+          {getProjectsForClient(row.clientId).map(project => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>
@@ -94,32 +101,32 @@ export function TimesheetRow({
         </select>
       </Td>
       <Td>
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedRoleId || ''}
-            onChange={(e) => onRoleChange(e.target.value)}
-            disabled={!selectedProjectId}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-          >
-            <option value="">Select Role</option>
-            {availableRoles.map(({ role, rates }) => (
-              <option key={role.id} value={role.id}>
-                {role.name} ({rates.costRate}/{rates.sellRate})
-              </option>
-            ))}
-          </select>
-          
-        </div>
+        <select
+          value={row.roleId}
+          onChange={(e) => onUpdateRow(index, {
+            roleId: e.target.value
+          })}
+          disabled={!row.projectId}
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+        >
+          <option value="">Select Role</option>
+          {getRolesForProject(row.projectId).map(({ role }) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
+        </select>
       </Td>
-      {dates.map(date => {
-        const dateStr = date.toISOString().split('T')[0];
-        const cellKey = `${dateStr}-${selectedProjectId}-${selectedRoleId}`;
+      {weekDays.map(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const entry = rowEntries.find(e => e.date === dateStr);
+        const cellKey = `${dateStr}-${row.projectId}-${row.roleId}`;
         
         return (
           <Td key={dateStr} className="text-center p-0">
             <EditableTimeCell
-              value={hours[dateStr] || null}
-              onChange={(value) => onHoursChange(dateStr, value)}
+              value={entry?.hours || null}
+              onChange={(value) => onCellChange(dateStr, row, value)}
               isEditing={editingCell === cellKey}
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
@@ -130,14 +137,15 @@ export function TimesheetRow({
       <Td className="text-center font-medium">
         {rowTotal.toFixed(2)}
       </Td>
-      <Td><Button
-            variant="secondary"
-            size="sm"
-            onClick={onRemove}
-            className="shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </Button></Td>
+      <Td>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onRemoveRow(index)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </Td>
     </tr>
   );
 }
