@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { 
+  updateProfile as updateFirebaseProfile,
+  updateEmail,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 import {
   getUsers,
+  getCurrentUser,
   createUser,
   updateUser,
   deleteUser,
@@ -9,10 +15,12 @@ import {
   createProjectAssignment,
   deleteProjectAssignment
 } from '@/lib/services/users';
+import { auth } from '@/lib/firebase';
 import type { User, ProjectAssignment } from '@/types';
 
 const USERS_KEY = 'users';
 const ASSIGNMENTS_KEY = 'projectAssignments';
+const CURRENT_USER_KEY = 'currentUser';
 
 export function useUsers() {
   const queryClient = useQueryClient();
@@ -20,6 +28,11 @@ export function useUsers() {
   const usersQuery = useQuery({
     queryKey: [USERS_KEY],
     queryFn: getUsers
+  });
+
+  const currentUserQuery = useQuery({
+    queryKey: [CURRENT_USER_KEY],
+    queryFn: getCurrentUser
   });
 
   const assignmentsQuery = useQuery({
@@ -68,8 +81,24 @@ export function useUsers() {
   }, [createUserMutation]);
 
   const handleUpdateUser = useCallback(async (id: string, data: Partial<User>) => {
+    const currentUser = auth.currentUser;
+    if (currentUser?.uid === id) {
+      // Update Firebase Auth profile if it's the current user
+      if (data.name) {
+        await updateFirebaseProfile(currentUser, {
+          displayName: data.name
+        });
+      }
+      if (data.email && data.email !== currentUser.email) {
+        await updateEmail(currentUser, data.email);
+      }
+    }
     return updateUserMutation.mutateAsync(id, data);
   }, [updateUserMutation]);
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  }, []);
 
   const handleDeleteUser = useCallback(async (id: string) => {
     return deleteUserMutation.mutateAsync(id);
@@ -85,6 +114,7 @@ export function useUsers() {
 
   return {
     users: usersQuery.data ?? [],
+    currentUser: currentUserQuery.data ?? null,
     assignments: assignmentsQuery.data ?? [],
     isLoading: usersQuery.isLoading || assignmentsQuery.isLoading,
     error: usersQuery.error || assignmentsQuery.error,
@@ -98,5 +128,6 @@ export function useUsers() {
     isDeleting: deleteUserMutation.isPending,
     isAssigning: createAssignmentMutation.isPending,
     isRemoving: deleteAssignmentMutation.isPending,
+    sendPasswordReset,
   };
 }

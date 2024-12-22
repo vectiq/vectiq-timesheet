@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { User } from 'lucide-react';
+import { User, Settings, LogOut } from 'lucide-react';
+import { useUsers } from '@/lib/hooks/useUsers';
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-
+  const { currentUser } = useUsers();
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -34,10 +35,24 @@ export function UserMenu() {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute right-0 z-40 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5">
+            <div className="px-4 py-2">
+              {currentUser?.name || 'User'}
+            </div>
+            <button
+              onClick={() => {
+                navigate('/profile');
+                setIsOpen(false);
+              }}
+              className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Profile Settings
+            </button>
             <button
               onClick={handleLogout}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
             >
+              <LogOut className="h-4 w-4 mr-2" />
               Sign out
             </button>
           </div>

@@ -73,6 +73,9 @@ export interface User {
   name: string;
   role: 'admin' | 'user';
   isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  projectAssignments: ProjectAssignment[];
 }
 
 export interface ProjectAssignment {

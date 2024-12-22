@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDocs, 
+  getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -9,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { User, ProjectAssignment } from '@/types';
+import { getAuth } from 'firebase/auth';
 
 const USERS_COLLECTION = 'users';
 const ASSIGNMENTS_COLLECTION = 'projectAssignments';
@@ -20,6 +22,41 @@ export async function getUsers(): Promise<User[]> {
     id: doc.id,
     ...doc.data()
   })) as User[];
+}
+
+// Get the current user
+export async function getCurrentUser(): Promise<User | null> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  
+  if (!user) {
+    return null;
+  }
+
+  const userRef = doc(db, USERS_COLLECTION, user.uid);
+  const userDoc = await getDoc(userRef);
+
+  if (!userDoc.exists()) {
+    return null;
+  }
+
+  const assignmentsSnapshot = await getDocs(collection(db, ASSIGNMENTS_COLLECTION));
+  const projectAssignments = assignmentsSnapshot.docs
+    .filter(doc => doc.data().userId === user.uid)
+    .map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as ProjectAssignment[];
+    console.log({
+      id: user.uid,
+      ...userDoc.data(),
+      projectAssignments
+    } as User)
+  return {
+    id: user.uid,
+    ...userDoc.data(),
+    projectAssignments
+  } as User;
 }
 
 export async function createUser(data: Omit<User, 'id'>): Promise<User> {

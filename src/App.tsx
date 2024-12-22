@@ -12,21 +12,23 @@ import Roles from '@/pages/Roles';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
 import TestData from '@/pages/TestData';
+import Profile from '@/pages/Profile';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Disable automatic refetching
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      refetchOnMount: true,
-      // Cache data for 1 min
-      staleTime: 60 * 1000,
-      // Keep unused data in cache for 10 minutes
-      gcTime: 10 * 60 * 1000,
-    },
-  },
-});
+// const queryClient = new QueryClient({
+//   defaultOptions: {
+//     queries: {
+//       // Disable automatic refetching
+//       refetchOnWindowFocus: true,
+//       refetchOnReconnect: false,
+//       refetchOnMount: true,
+//       // Cache data for 5 minutes
+//       staleTime: 5 * 60 * 1000,
+//       // Keep unused data in cache for 10 minutes
+//       gcTime: 10 * 60 * 1000,
+//     },
+//   },
+// });
+const queryClient = new QueryClient()
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -57,6 +59,7 @@ export default function App() {
               <Route path="projects" element={<Projects />} />
               <Route path="roles" element={<Roles />} />
               <Route path="clients" element={<Clients />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="users" element={<Users />} />
               <Route path="test-data" element={<TestData />} />
             </Route>
