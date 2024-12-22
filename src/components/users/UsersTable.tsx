@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/lib/utils/date';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
+import { useClients } from '@/lib/hooks/useClients';
 import type { User, ProjectAssignment } from '@/types';
 
 interface UsersTableProps {
@@ -26,6 +27,7 @@ export function UsersTable({
 }: UsersTableProps) {
   const { projects } = useProjects();
   const { roles } = useRoles();
+  const { clients } = useClients();
 
   return (
     <Table>
@@ -62,10 +64,12 @@ export function UsersTable({
                   {userAssignments.map(assignment => {
                     const project = projects.find(p => p.id === assignment.projectId);
                     const role = roles.find(r => r.id === assignment.roleId);
+                    const client = clients.find(c => c.id === assignment.clientId);
                     
                     return (
                       <div key={assignment.id} className="flex items-center justify-between text-sm">
                         <div>
+                          <div className="text-gray-500">{client?.name}</div>
                           <div className="font-medium">{project?.name}</div>
                           <div className="text-gray-500">{role?.name}</div>
                         </div>

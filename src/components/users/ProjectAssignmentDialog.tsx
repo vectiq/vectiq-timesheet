@@ -11,6 +11,7 @@ import { FormField } from '@/components/ui/FormField';
 import { projectAssignmentSchema } from '@/lib/schemas/user';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
+import { useClients } from '@/lib/hooks/useClients';
 import type { ProjectAssignment, User } from '@/types';
 
 interface ProjectAssignmentDialogProps {
@@ -28,24 +29,30 @@ export function ProjectAssignmentDialog({
 }: ProjectAssignmentDialogProps) {
   const { projects } = useProjects();
   const { roles } = useRoles();
+  const { clients } = useClients();
 
   const {
     register,
     handleSubmit,
-    reset,
     watch,
+    reset,
   } = useForm({
     defaultValues: {
       userId: user.id,
+      clientId: '',
       projectId: '',
       roleId: ''
     },
   });
 
+  const selectedClientId = watch('clientId');
+  const filteredProjects = projects.filter(p => p.clientId === selectedClientId);
+
   useEffect(() => {
     if (open) {
       reset({
         userId: user.id,
+        clientId: '',
         projectId: '',
         roleId: ''
       });
@@ -75,13 +82,28 @@ export function ProjectAssignmentDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+          <FormField label="Client">
+            <select
+              {...register('clientId')}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="">Select Client</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+
           <FormField label="Project">
             <select
               {...register('projectId')}
+              disabled={!selectedClientId}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
               <option value="">Select Project</option>
-              {projects.map(project => (
+              {filteredProjects.map(project => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>

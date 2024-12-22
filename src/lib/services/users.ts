@@ -8,9 +8,14 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
+import { 
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  getAuth,
+} from 'firebase/auth';
 import { db } from '@/lib/firebase';
+import { generatePassword } from '@/lib/utils/password';
 import type { User, ProjectAssignment } from '@/types';
-import { getAuth } from 'firebase/auth';
 
 const USERS_COLLECTION = 'users';
 const ASSIGNMENTS_COLLECTION = 'projectAssignments';
@@ -59,16 +64,31 @@ export async function getCurrentUser(): Promise<User | null> {
   } as User;
 }
 
-export async function createUser(data: Omit<User, 'id'>): Promise<User> {
-  const userRef = doc(collection(db, USERS_COLLECTION));
+export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+  const auth = getAuth();
+  const tempPassword = generatePassword();
+
+  // Create the user in Firebase Auth
+  const userCredential = await createUserWithEmailAndPassword(
+    auth,
+    data.email,
+    tempPassword
+  );
+
+  // Create the user document in Firestore
+  const userRef = doc(db, USERS_COLLECTION, userCredential.user.uid);
   const user: User = {
-    id: userRef.id,
+    id: userCredential.user.uid,
     ...data,
+    projectAssignments: [],
     createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
   };
-  
   await setDoc(userRef, user);
+
+  // Send password reset email
+  await sendPasswordResetEmail(auth, data.email);
+
   return user;
 }
 
@@ -98,6 +118,7 @@ export async function createProjectAssignment(data: Omit<ProjectAssignment, 'id'
   const assignmentRef = doc(collection(db, ASSIGNMENTS_COLLECTION));
   const newAssignment: ProjectAssignment = {
     id: assignmentRef.id,
+    clientId: data.clientId,
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

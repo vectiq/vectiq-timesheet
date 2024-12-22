@@ -16,6 +16,11 @@ interface TimesheetRowProps {
   weekDays: Date[];
   timeEntries: TimeEntry[];
   clients: Array<{ id: string; name: string }>;
+  userAssignments: Array<{
+    clientId: string;
+    projectId: string;
+    roleId: string;
+  }>;
   getProjectsForClient: (clientId: string) => Project[];
   getRolesForProject: (projectId: string) => Array<{ 
     role: { id: string; name: string };
@@ -35,6 +40,7 @@ export function TimesheetRow({
   weekDays,
   timeEntries,
   clients,
+  userAssignments,
   getProjectsForClient,
   getRolesForProject,
   editingCell,
@@ -44,6 +50,23 @@ export function TimesheetRow({
   onStartEdit,
   onEndEdit,
 }: TimesheetRowProps) {
+  // Filter clients based on user assignments
+  const assignedClientIds = [...new Set(userAssignments.map(a => a.clientId))];
+  const filteredClients = clients.filter(client => assignedClientIds.includes(client.id));
+
+  // Filter projects based on selected client and user assignments
+  const assignedProjects = userAssignments
+    .filter(a => a.clientId === row.clientId)
+    .map(a => a.projectId);
+  const availableProjects = getProjectsForClient(row.clientId)
+    .filter(project => assignedProjects.includes(project.id));
+
+  // Filter roles based on selected project and user assignments
+  const assignedRoles = userAssignments
+    .filter(a => a.projectId === row.projectId)
+    .map(a => a.roleId);
+  const availableRoles = getRolesForProject(row.projectId)
+    .filter(({ role }) => assignedRoles.includes(role.id));
   // Filter entries for this row
   const rowEntries = useMemo(() => {
     if (!row.clientId || !row.projectId || !row.roleId) return [];
@@ -75,7 +98,7 @@ export function TimesheetRow({
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
         >
           <option value="">Select Client</option>
-          {clients.map(client => (
+          {filteredClients.map(client => (
             <option key={client.id} value={client.id}>
               {client.name}
             </option>
@@ -93,7 +116,7 @@ export function TimesheetRow({
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
         >
           <option value="">Select Project</option>
-          {getProjectsForClient(row.clientId).map(project => (
+          {availableProjects.map(project => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>
@@ -110,7 +133,7 @@ export function TimesheetRow({
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
         >
           <option value="">Select Role</option>
-          {getRolesForProject(row.projectId).map(({ role }) => (
+          {availableRoles.map(({ role }) => (
             <option key={role.id} value={role.id}>
               {role.name}
             </option>

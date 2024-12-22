@@ -5,8 +5,10 @@ import { Table, TableHeader, TableBody, Th } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Plus } from 'lucide-react';
 import { TimesheetRow } from './TimesheetRow';
+import { useUsers } from '@/lib/hooks/useUsers';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
+import { useRoles } from '@/lib/hooks/useRoles';
 import type { Project } from '@/types';
 
 interface WeeklyViewProps {
@@ -18,6 +20,7 @@ interface WeeklyViewProps {
 }
 
 export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
+  const { currentUser } = useUsers();
   const { 
     timeEntries,
     rows,
@@ -30,6 +33,9 @@ export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
   } = useTimeEntries({ dateRange });
 
   const { clients } = useClients();
+  const { roles: allRoles } = useRoles();
+
+  const userAssignments = currentUser?.projectAssignments || [];
 
   const weekDays = useMemo(() => {
     const days: Date[] = [];
@@ -48,9 +54,12 @@ export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
   const getRolesForProject = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return [];
-    
+
     return project.roles.map(projectRole => ({
-      role: { id: projectRole.roleId, name: projectRole.roleId },
+      role: { 
+        id: projectRole.roleId, 
+        name: allRoles.find(r => r.id === projectRole.roleId)?.name || 'Unknown Role'
+      },
       rates: projectRole
     }));
   };
@@ -89,6 +98,7 @@ export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
                 weekDays={weekDays}
                 timeEntries={timeEntries}
                 clients={clients}
+                userAssignments={userAssignments}
                 getProjectsForClient={getProjectsForClient}
                 getRolesForProject={getRolesForProject}
                 editingCell={editingCell}

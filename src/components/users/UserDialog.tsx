@@ -27,13 +27,15 @@ export function UserDialog({
   const {
     register,
     handleSubmit,
+    formState: { errors },
     reset,
-  } = useForm({
+  } = useForm<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
     defaultValues: user || {
       email: '',
       name: '',
       role: 'user',
       isActive: true,
+      projectAssignments: [],
     },
   });
 
@@ -61,6 +63,11 @@ export function UserDialog({
           <DialogTitle>
             {user ? 'Edit User' : 'New User'}
           </DialogTitle>
+          {!user && (
+            <p className="mt-2 text-sm text-gray-500">
+              A temporary password will be generated and a password reset email will be sent to the user.
+            </p>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">

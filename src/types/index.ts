@@ -83,6 +83,7 @@ export interface ProjectAssignment {
   userId: string;
   projectId: string;
   roleId: string;
+  clientId: string;
 }
 
 export interface ReportData {
