@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ViewSwitcher } from '@/components/timesheet/ViewSwitcher';
 import { WeeklyView } from '@/components/timesheet/WeeklyView';
-import { MonthlyView } from '@/components/timesheet/MonthlyView';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
@@ -37,21 +35,13 @@ export default function TimeEntries() {
             onToday={dateNav.goToToday}
             formatString={view === 'weekly' ? 'MMMM d, yyyy' : 'MMMM yyyy'}
           />
-          <ViewSwitcher view={view} onViewChange={handleViewChange} />
         </div>
       </div>
 
-      {view === 'weekly' ? (
         <WeeklyView
           projects={projects}
           dateRange={dateNav.dateRange}
         />
-      ) : (
-        <MonthlyView
-          projects={projects}
-          dateRange={dateNav.dateRange}
-        />
-      )}
     </div>
   );
 }
