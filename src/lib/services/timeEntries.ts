@@ -1,7 +1,8 @@
-import { 
+import {
   collection,
   doc,
-  getDocs, 
+  addDoc,
+  getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -22,60 +23,83 @@ export async function getTimeEntries(
 ): Promise<TimeEntry[]> {
   const baseQuery = collection(db, COLLECTION);
   let constraints: any[] = [];
-  
-  // Add user filter if provided
-  if (userId) {
-    constraints.push(where('userId', '==', userId));
-  }
-  
+
+  // User filter is required
+  if (!userId) return [];
+  constraints.push(where('userId', '==', userId));
+
   // Add date range filters if provided
   if (dateRange) {
     const startDate = format(dateRange.start, 'yyyy-MM-dd');
     const endDate = format(dateRange.end, 'yyyy-MM-dd');
-    
     constraints.push(
       where('date', '>=', startDate),
       where('date', '<=', endDate)
     );
   }
-  
-  // Add ordering by date
-  constraints.push(orderBy('date', 'asc'));
-  
+
   // Build query with all constraints
-  const queryRef = constraints.length > 0
-    ? query(baseQuery, ...constraints)
-    : baseQuery;
-    
-  const snapshot = await getDocs(queryRef);
-  return snapshot.docs.map(doc => ({
+  const queryRef = query(
+    baseQuery,
+    ...constraints,
+    orderBy('date', 'asc')
+  );
+  var snapshot;
+  try {
+    snapshot = await getDocs(queryRef);
+  } catch (error) {
+    console.error('Error fetching time entries:', error);
+    throw error;
+  }
+  console.log(JSON.stringify(snapshot))
+  const entries = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   })) as TimeEntry[];
+  console.log('FETCH - Query Results:', {
+    constraints: constraints.map(c => c.toString()),
+    count: entries.length,
+    entries: JSON.stringify(entries, null, 2)
+  });
+  return entries;
 }
 
 export async function createTimeEntry(entryData: Omit<TimeEntry, 'id'>): Promise<TimeEntry> {
-  const entryRef = doc(collection(db, COLLECTION));
-  const entry: TimeEntry = {
+  console.log('CREATE - New Entry:', JSON.stringify(entryData, null, 2));
+  const entryRef = await addDoc(collection(db, COLLECTION), {
+    ...entryData,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  const newEntry = {
     id: entryRef.id,
     ...entryData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   };
-  
-  await setDoc(entryRef, entry);
-  return entry;
+  console.log('CREATE - Success, ID:', entryRef.id);
+  return newEntry;
 }
 
-export async function updateTimeEntry(id: string, entryData: Partial<TimeEntry>): Promise<void> {
+export async function updateTimeEntry(id: string, data: Partial<TimeEntry>): Promise<void> {
+  console.log('UPDATE - Entry:', id);
+  console.log('UPDATE - Changes:', JSON.stringify(data, null, 2));
   const entryRef = doc(db, COLLECTION, id);
-  await updateDoc(entryRef, {
-    ...entryData,
-    updatedAt: serverTimestamp(),
-  });
+  const updateData = {
+    ...data,
+    updatedAt: new Date().toISOString(),
+  };
+  try {
+    await updateDoc(entryRef, updateData);
+    console.log('UPDATE - Success');
+  } catch (error) {
+    console.error('Error updating time entry:', error);
+    throw error;
+  }
 }
 
 export async function deleteTimeEntry(id: string): Promise<void> {
+  console.log('DELETE - Entry:', id);
   const entryRef = doc(db, COLLECTION, id);
   await deleteDoc(entryRef);
+  console.log('DELETE - Success');
 }

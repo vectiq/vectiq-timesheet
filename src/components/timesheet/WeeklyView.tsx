@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, Th } from '@/components/ui/Table';
@@ -19,7 +19,7 @@ interface WeeklyViewProps {
   };
 }
 
-export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
+export const WeeklyView = memo(function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
   const { currentUser } = useUsers();
   const { 
     timeEntries,
@@ -133,4 +133,4 @@ export function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
       </div>
     </Card>
   );
-}
+});

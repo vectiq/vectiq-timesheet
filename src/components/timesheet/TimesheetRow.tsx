@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback, memo } from 'react';
 import { format } from 'date-fns';
 import { Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -34,7 +34,7 @@ interface TimesheetRowProps {
   onEndEdit: () => void;
 }
 
-export function TimesheetRow({
+export const TimesheetRow = memo(function TimesheetRow({
   index,
   row,
   weekDays,
@@ -65,9 +65,11 @@ export function TimesheetRow({
   const assignedRoles = userAssignments
     .filter(a => a.projectId === row.projectId)
     .map(a => a.roleId);
+    
   const availableRoles = getRolesForProject(row.projectId)
     .filter(({ role }) => assignedRoles.includes(role.id));
-  // Filter entries for this row
+    
+  // Memoize row entries
   const rowEntries = useMemo(() => {
     if (!row.clientId || !row.projectId || !row.roleId) return [];
     return timeEntries.filter(entry =>
@@ -79,7 +81,7 @@ export function TimesheetRow({
     [timeEntries, row]
   );
 
-  // Calculate row total
+  // Memoize row total
   const rowTotal = useMemo(() => 
     rowEntries.reduce((sum, entry) => sum + entry.hours, 0),
     [rowEntries]
@@ -171,4 +173,6 @@ export function TimesheetRow({
       </Td>
     </tr>
   );
-}
+});
+
+TimesheetRow.displayName = 'TimesheetRow';
