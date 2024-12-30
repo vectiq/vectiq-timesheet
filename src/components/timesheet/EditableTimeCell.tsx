@@ -7,6 +7,7 @@ interface EditableTimeCellProps {
   isEditing: boolean;
   onStartEdit: () => void;
   onEndEdit: () => void;
+  isDisabled?: boolean;
 }
 
 export function EditableTimeCell({ 
@@ -14,7 +15,8 @@ export function EditableTimeCell({
   onChange,
   isEditing,
   onStartEdit,
-  onEndEdit
+  onEndEdit,
+  isDisabled = false
 }: EditableTimeCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState('');
@@ -72,10 +74,11 @@ export function EditableTimeCell({
     />
   ) : (
     <div
-      onClick={onStartEdit}
+      onClick={isDisabled ? undefined : onStartEdit}
       className={cn(
         "w-16 py-2 text-center cursor-pointer rounded hover:bg-gray-50",
-        value === null && "text-gray-400"
+        value === null && "text-gray-400",
+        isDisabled && "cursor-not-allowed opacity-50 hover:bg-transparent"
       )}
     >
       {value?.toFixed(2) || '-'}

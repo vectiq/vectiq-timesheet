@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
 import {
   getTimeEntries,
   createTimeEntry,
@@ -29,50 +29,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   const userId = auth.currentUser?.uid;
   const queryClient = useQueryClient();
   const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [manualRows, setManualRows] = useState<TimesheetRow[]>([
-    { clientId: '', projectId: '', roleId: '' }
-  ]);
-
-  const query = useQuery({
-    queryKey: [QUERY_KEY, userId, options.dateRange?.start, options.dateRange?.end],
-    queryFn: () => getTimeEntries(userId, options.dateRange),
-    enabled: !!userId && !!options.dateRange,
-  });
-
-  const timeEntries = useMemo(() => query.data || [], [query.data]);
-
-  // Combine automatic and manual rows
-  const rows = useMemo(() => {
-    console.log('🔄 Computing rows from:', { 
-      timeEntries: timeEntries.length,
-      manualRows: manualRows.length 
-    });
-    // Get unique rows from existing time entries
-    const uniqueRows = timeEntries.reduce((acc: TimesheetRow[], entry) => {
-      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.roleId}`;
-      if (!acc.find(row => 
-        row.clientId === entry.clientId && 
-        row.projectId === entry.projectId && 
-        row.roleId === entry.roleId
-      )) {
-        acc.push({
-          clientId: entry.clientId,
-          projectId: entry.projectId,
-          roleId: entry.roleId,
-        });
-      }
-      return acc;
-    }, []);
-
-    console.log('📋 Generated rows:', {
-      uniqueRows: uniqueRows.length,
-      manualRows: manualRows.length,
-      total: [...uniqueRows, ...manualRows].length
-    });
-    // Combine unique rows from entries with manual rows
-    return [...uniqueRows, ...manualRows];
-  }, [timeEntries, manualRows]);
-
+  const [manualRows, setManualRows] = useState<TimesheetRow[]>([]);
 
   const createMutation = useMutation({
     mutationFn: createTimeEntry,
@@ -115,6 +72,95 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   const handleDeleteEntry = useCallback(async (id: string) => {
     return deleteMutation.mutateAsync(id);
   }, [deleteMutation]);
+
+  const query = useQuery({
+    queryKey: [QUERY_KEY, userId, options.dateRange?.start, options.dateRange?.end],
+    queryFn: () => getTimeEntries(userId, options.dateRange),
+    enabled: !!userId && !!options.dateRange,
+  });
+
+  const timeEntries = useMemo(() => query.data || [], [query.data]);
+
+  const hasEntriesForCurrentWeek = useMemo(() => {
+    if (!options.dateRange) return false;
+    return timeEntries.some(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate >= options.dateRange.start && entryDate <= options.dateRange.end;
+    });
+  }, [timeEntries, options.dateRange]);
+
+  const copyFromPreviousWeek = useCallback(async () => {
+    if (!userId || !options.dateRange) return;
+
+    const previousWeekStart = new Date(options.dateRange.start);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+    const previousWeekEnd = new Date(options.dateRange.end);
+    previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
+
+    // Get previous week's entries
+    const previousEntries = await getTimeEntries(userId, {
+      start: previousWeekStart,
+      end: previousWeekEnd
+    });
+
+    // Create new entries for current week
+    const promises = previousEntries.map(entry => {
+      const entryDate = new Date(entry.date);
+      const newDate = new Date(entryDate);
+      newDate.setDate(newDate.getDate() + 7);
+
+      return handleCreateEntry({
+        userId,
+        date: newDate.toISOString().split('T')[0],
+        clientId: entry.clientId,
+        projectId: entry.projectId,
+        roleId: entry.roleId,
+        hours: entry.hours,
+        description: entry.description || '',
+      });
+    });
+
+    await Promise.all(promises);
+  }, [userId, options.dateRange, handleCreateEntry]);
+
+
+  // Combine automatic and manual rows
+  const rows = useMemo(() => {
+    // Get unique rows from existing time entries
+    const uniqueRowKeys = new Set();
+    const allRows: TimesheetRow[] = [];
+    
+    // Add rows from time entries
+    timeEntries.forEach(entry => {
+      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.roleId}`;
+      if (!uniqueRowKeys.has(rowKey)) {
+        uniqueRowKeys.add(rowKey);
+        allRows.push({
+          clientId: entry.clientId,
+          projectId: entry.projectId,
+          roleId: entry.roleId,
+        });
+      }
+    });
+    
+    // Add manual rows that don't already exist
+    manualRows.forEach(row => {
+      const rowKey = `${row.clientId}-${row.projectId}-${row.roleId}`;
+      if (!uniqueRowKeys.has(rowKey) && (row.clientId || row.projectId || row.roleId)) {
+        uniqueRowKeys.add(rowKey);
+        allRows.push(row);
+      }
+    });
+
+    // Add empty manual rows at the end
+    manualRows.forEach(row => {
+      if (!row.clientId && !row.projectId && !row.roleId) {
+        allRows.push(row);
+      }
+    });
+
+    return allRows;
+  }, [timeEntries, manualRows]);
 
   const handleCellChange = useCallback(async (
     date: string,
@@ -159,12 +205,31 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   }, []);
   
   const removeRow = useCallback((index: number) => {
-    // Only remove if it's a manual row
-    const uniqueRowCount = rows.length - manualRows.length;
-    if (index >= uniqueRowCount) {
-      setManualRows(current => current.filter((_, i) => i !== (index - uniqueRowCount)));
+    const row = rows[index];
+    const rowEntries = timeEntries.filter(entry =>
+      entry.clientId === row.clientId &&
+      entry.projectId === row.projectId &&
+      entry.roleId === row.roleId
+    );
+
+    if (rowEntries.length > 0) {
+      if (!window.confirm('This will delete all time entries for this row. Are you sure?')) {
+        return;
+      }
+      // Delete all entries for this row
+      Promise.all(rowEntries.map(entry => handleDeleteEntry(entry.id)))
+        .then(() => {
+          setManualRows(current => current.filter((_, i) => i !== (index - (rows.length - current.length))));
+        })
+        .catch(error => {
+          console.error('Error deleting time entries:', error);
+          alert('Failed to delete time entries');
+        });
+    } else {
+      // Just remove the manual row if no entries exist
+      setManualRows(current => current.filter((_, i) => i !== (index - (rows.length - current.length))));
     }
-  }, [rows.length, manualRows.length]);
+  }, [rows, timeEntries, handleDeleteEntry]);
 
   const updateRow = useCallback((index: number, updates: Partial<TimesheetRow>) => {
     // Only update if it's a manual row
@@ -201,6 +266,8 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     error: query.error,
     addRow,
     removeRow,
+    copyFromPreviousWeek,
+    hasEntriesForCurrentWeek,
     updateRow,
     handleCellChange,
     setEditingCell,

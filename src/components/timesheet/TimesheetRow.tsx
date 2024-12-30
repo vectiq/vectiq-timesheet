@@ -146,6 +146,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         const dateStr = format(date, 'yyyy-MM-dd');
         const entry = rowEntries.find(e => e.date === dateStr);
         const cellKey = `${dateStr}-${row.projectId}-${row.roleId}`;
+        const isRowComplete = row.clientId && row.projectId && row.roleId;
         
         return (
           <Td key={dateStr} className="text-center p-0">
@@ -155,6 +156,7 @@ export const TimesheetRow = memo(function TimesheetRow({
               isEditing={editingCell === cellKey}
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
+              isDisabled={!isRowComplete}
             />
           </Td>
         );
