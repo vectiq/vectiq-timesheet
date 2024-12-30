@@ -44,28 +44,15 @@ export async function getTimeEntries(
     ...constraints,
     orderBy('date', 'asc')
   );
-  var snapshot;
-  try {
-    snapshot = await getDocs(queryRef);
-  } catch (error) {
-    console.error('Error fetching time entries:', error);
-    throw error;
-  }
-  console.log(JSON.stringify(snapshot))
+  const snapshot = await getDocs(queryRef);
   const entries = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   })) as TimeEntry[];
-  console.log('FETCH - Query Results:', {
-    constraints: constraints.map(c => c.toString()),
-    count: entries.length,
-    entries: JSON.stringify(entries, null, 2)
-  });
   return entries;
 }
 
 export async function createTimeEntry(entryData: Omit<TimeEntry, 'id'>): Promise<TimeEntry> {
-  console.log('CREATE - New Entry:', JSON.stringify(entryData, null, 2));
   const entryRef = await addDoc(collection(db, COLLECTION), {
     ...entryData,
     createdAt: new Date().toISOString(),
@@ -76,30 +63,19 @@ export async function createTimeEntry(entryData: Omit<TimeEntry, 'id'>): Promise
     id: entryRef.id,
     ...entryData,
   };
-  console.log('CREATE - Success, ID:', entryRef.id);
   return newEntry;
 }
 
 export async function updateTimeEntry(id: string, data: Partial<TimeEntry>): Promise<void> {
-  console.log('UPDATE - Entry:', id);
-  console.log('UPDATE - Changes:', JSON.stringify(data, null, 2));
   const entryRef = doc(db, COLLECTION, id);
   const updateData = {
     ...data,
     updatedAt: new Date().toISOString(),
   };
-  try {
-    await updateDoc(entryRef, updateData);
-    console.log('UPDATE - Success');
-  } catch (error) {
-    console.error('Error updating time entry:', error);
-    throw error;
-  }
+  await updateDoc(entryRef, updateData);
 }
 
 export async function deleteTimeEntry(id: string): Promise<void> {
-  console.log('DELETE - Entry:', id);
   const entryRef = doc(db, COLLECTION, id);
   await deleteDoc(entryRef);
-  console.log('DELETE - Success');
 }

@@ -115,7 +115,7 @@ export default function App() {
             />
           </Route>
 
-          {/* Catch all route */}
+          {/* Catch all route - must be last */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

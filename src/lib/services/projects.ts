@@ -47,14 +47,11 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   
   // Create project document
   const projectRef = doc(collection(db, COLLECTION));
-  const project: Omit<Project, 'roles'> = {
+  const { roles, ...projectFields } = projectData;
+  const project = {
     id: projectRef.id,
-    name: projectData.name,
-    clientId: projectData.clientId,
-    budget: projectData.budget,
-    startDate: projectData.startDate,
-    endDate: projectData.endDate,
-    requiresApproval: projectData.requiresApproval,
+    ...projectFields,
+    approverEmail: projectData.approverEmail || '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -62,8 +59,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   batch.set(projectRef, project);
 
   // Create project roles
-  const roles = projectData.roles || [];
-  const projectRoles = roles.map(role => ({
+  const projectRoles = (roles || []).map(role => ({
     projectId: projectRef.id,
     roleId: role.roleId,
     costRate: role.costRate,
@@ -88,32 +84,31 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
   
   // Update project document
   const projectRef = doc(db, COLLECTION, id);
-  const { roles, ...projectUpdate } = projectData;
-  
-  batch.update(projectRef, {
-    ...projectUpdate,
+  const { roles = [], ...projectFields } = projectData;
+  const projectUpdate = {
+    ...projectFields,
     updatedAt: serverTimestamp(),
+  };
+  
+  batch.update(projectRef, projectUpdate);
+
+  // Delete existing project roles
+  const existingRolesSnapshot = await getDocs(
+    query(collection(db, ROLES_COLLECTION), where('projectId', '==', id))
+  );
+  existingRolesSnapshot.docs.forEach(doc => {
+    batch.delete(doc.ref);
   });
 
-  if (roles) {
-    // Delete existing project roles
-    const existingRolesSnapshot = await getDocs(
-      query(collection(db, ROLES_COLLECTION), where('projectId', '==', id))
-    );
-    existingRolesSnapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
+  // Create new project roles
+  for (const role of roles) {
+    const roleRef = doc(collection(db, ROLES_COLLECTION));
+    batch.set(roleRef, {
+      projectId: id,
+      roleId: role.roleId,
+      costRate: role.costRate || 0,
+      sellRate: role.sellRate || 0,
     });
-
-    // Create new project roles
-    for (const role of roles) {
-      const roleRef = doc(collection(db, ROLES_COLLECTION));
-      batch.set(roleRef, {
-        projectId: id,
-        roleId: role.roleId,
-        costRate: role.costRate,
-        sellRate: role.sellRate,
-      });
-    }
   }
 
   await batch.commit();

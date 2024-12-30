@@ -21,21 +21,21 @@ export function useProjects() {
   const createMutation = useMutation({
     mutationFn: createProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      return queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: updateProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      return queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteProject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      return queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
@@ -43,8 +43,9 @@ export function useProjects() {
     return createMutation.mutateAsync(data);
   }, [createMutation]);
 
-  const handleUpdateProject = useCallback(async (id: string, data: Partial<Project>) => {
-    return updateMutation.mutateAsync(id, data);
+  const handleUpdateProject = useCallback(async (data: Project) => {
+    if (!data.id) throw new Error('Project ID is required for update');
+    return updateMutation.mutateAsync(data.id, data);
   }, [updateMutation]);
 
   const handleDeleteProject = useCallback(async (id: string) => {

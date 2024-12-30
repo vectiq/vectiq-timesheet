@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { projectSchema } from '@/lib/schemas/project';
 import { useClients } from '@/lib/hooks/useClients';
 import { ProjectRolesTable } from './ProjectRolesTable';
 import type { Project, ProjectRole } from '@/types';
@@ -20,15 +18,14 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
     watch,
     setValue,
     reset,
   } = useForm({
-    resolver: zodResolver(projectSchema),
     defaultValues: project || {
       name: '',
       clientId: '',
+      approverEmail: '',
       budget: 0,
       startDate: '',
       endDate: '',
@@ -47,23 +44,47 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   const roles = watch('roles') || [];
 
   const handleFormSubmit = async (data: any) => {
-    // Ensure we have the project ID if we're updating
-    const projectData: Project = {
-      ...data,
-      id: project?.id || `proj_${Date.now()}`,
-      roles: roles,
+    const projectData = {
+      id: project?.id || '',
+      name: data.name || '',
+      clientId: data.clientId || '',
+      budget: data.budget || 0,
+      startDate: data.startDate || '',
+      endDate: data.endDate || '',
+      approverEmail: data.approverEmail || '',
+      requiresApproval: data.requiresApproval || false,
+      roles: (roles || []).map(role => ({
+        roleId: role.roleId,
+        projectId: project?.id || '', // This will be set by the service
+        costRate: role.costRate || 0,
+        sellRate: role.sellRate || 0
+      }))
     };
     
-    await onSubmit(projectData);
+    try {
+      await onSubmit(projectData);
+    } catch (error) {
+      console.error('Error submitting project:', error);
+    }
   };
 
   const handleRateChange = (roleId: string, rates: { costRate: number; sellRate: number }) => {
     const currentRoles = roles.filter(r => r.roleId !== roleId);
-    setValue('roles', [...currentRoles, { roleId, ...rates }]);
+    setValue('roles', [...currentRoles, { 
+      roleId,
+      projectId: project?.id || '',
+      costRate: rates.costRate,
+      sellRate: rates.sellRate
+    }]);
   };
 
   const handleAddRole = (roleId: string) => {
-    setValue('roles', [...roles, { roleId, costRate: 0, sellRate: 0 }]);
+    setValue('roles', [...roles, {
+      roleId,
+      projectId: project?.id || '',
+      costRate: 0,
+      sellRate: 0
+    }]);
   };
 
   const handleRemoveRole = (roleId: string) => {
@@ -73,7 +94,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
       <div className="space-y-4">
-        <FormField label="Project Name" error={errors.name?.message}>
+        <FormField label="Project Name">
           <input
             {...register('name')}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -81,7 +102,16 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           />
         </FormField>
 
-        <FormField label="Client" error={errors.clientId?.message}>
+        <FormField label="Approver Email">
+          <input
+            type="email"
+            {...register('approverEmail')}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="e.g., approver@company.com"
+          />
+        </FormField>
+
+        <FormField label="Client">
           <select
             {...register('clientId')}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -96,7 +126,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
         </FormField>
 
         <div className="grid grid-cols-3 gap-4">
-          <FormField label="Budget" error={errors.budget?.message}>
+          <FormField label="Budget">
             <input
               type="number"
               step="0.01"
@@ -105,7 +135,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             />
           </FormField>
 
-          <FormField label="Start Date" error={errors.startDate?.message}>
+          <FormField label="Start Date">
             <input
               type="date"
               {...register('startDate')}
@@ -113,7 +143,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             />
           </FormField>
 
-          <FormField label="End Date" error={errors.endDate?.message}>
+          <FormField label="End Date">
             <input
               type="date"
               {...register('endDate')}
@@ -122,7 +152,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           </FormField>
         </div>
 
-        <FormField label="Approval Required" error={errors.requiresApproval?.message}>
+        <FormField label="Approval Required">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"

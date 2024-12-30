@@ -25,6 +25,7 @@ export interface Project {
   budget: number;
   startDate: string;
   endDate: string;
+  approverEmail: string;
   requiresApproval: boolean;
   roles: ProjectRole[];
 }

@@ -167,7 +167,6 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     row: TimesheetRow,
     value: number | null
   ) => {
-    console.log('🎯 Cell change:', { date, row, value });
     if (!userId || !row.clientId || !row.projectId || !row.roleId) return;
 
     const entry = timeEntries.find(e => 
@@ -176,18 +175,14 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
       e.projectId === row.projectId &&
       e.roleId === row.roleId
     );
-    console.log('🔍 Found existing entry:', entry);
 
     if (entry) {
       if (value === null) {
-        console.log('🗑️ Deleting entry');
         await handleDeleteEntry(entry.id);
       } else {
-        console.log('📝 Updating entry');
         await handleUpdateEntry(entry.id, { hours: value });
       }
     } else if (value !== null) {
-      console.log('➕ Creating new entry');
       await handleCreateEntry({
         userId,
         date,
