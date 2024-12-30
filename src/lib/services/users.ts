@@ -1,16 +1,21 @@
-import { 
+import {
   collection,
   doc,
-  getDocs, 
+  getDocs,
   getDoc,
   setDoc,
+  query,
+  where,
   updateDoc,
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { 
+import { getFunctions, httpsCallable } from "firebase/functions";
+import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
   getAuth,
 } from 'firebase/auth';
 import { db } from '@/lib/firebase';
@@ -33,7 +38,7 @@ export async function getUsers(): Promise<User[]> {
 export async function getCurrentUser(): Promise<User | null> {
   const auth = getAuth();
   const user = auth.currentUser;
-  
+
   if (!user) {
     return null;
   }
@@ -45,46 +50,60 @@ export async function getCurrentUser(): Promise<User | null> {
     return null;
   }
 
-  const assignmentsSnapshot = await getDocs(collection(db, ASSIGNMENTS_COLLECTION));
-  const projectAssignments = assignmentsSnapshot.docs
-    .filter(doc => doc.data().userId === user.uid)
-    .map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as ProjectAssignment[];
-    console.log({
-      id: user.uid,
-      ...userDoc.data(),
-      projectAssignments
-    } as User)
+  const assignmentsQuery = query(
+    collection(db, ASSIGNMENTS_COLLECTION),
+    where('userId', '==', user.uid)
+  );
+  var assignmentsSnapshot;
+  try {
+    assignmentsSnapshot = await getDocs(assignmentsQuery);
+  } catch (error) {
+    console.error('Error getting user assignments', error);
+  }
+  const projectAssignments = assignmentsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as ProjectAssignment[];
+
   return {
     id: user.uid,
     ...userDoc.data(),
-    projectAssignments
+    projectAssignments,
   } as User;
 }
 
 export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
   const auth = getAuth();
+  const idToken = await auth.currentUser.getIdToken(true);
+  const functions = getFunctions();
   const tempPassword = generatePassword();
 
   // Create the user in Firebase Auth
-  const userCredential = await createUserWithEmailAndPassword(
-    auth,
-    data.email,
-    tempPassword
-  );
+  var userCredential;
+  const email = data.email;
+
+  const createUser = httpsCallable(functions, "createUser");
+  try {
+    userCredential = await createUser({ email, tempPassword });
+    console.log("User created successfully:", userCredential.data.uid);
+  } catch (error) {
+    console.error("Error creating user:", error.message);
+  }
 
   // Create the user document in Firestore
-  const userRef = doc(db, USERS_COLLECTION, userCredential.user.uid);
+  const userRef = doc(db, USERS_COLLECTION, userCredential.data.uid);
   const user: User = {
-    id: userCredential.user.uid,
+    id: userCredential.data.uid,
     ...data,
-    projectAssignments: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
-  await setDoc(userRef, user);
+  try {
+    await setDoc(userRef, user);
+  } catch (error) {
+    console.error("Error setting document:", error.code, error.message);
+    throw error;
+  }
 
   // Send password reset email
   await sendPasswordResetEmail(auth, data.email);
@@ -123,7 +142,7 @@ export async function createProjectAssignment(data: Omit<ProjectAssignment, 'id'
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
-  
+
   await setDoc(assignmentRef, newAssignment);
   return newAssignment;
 }

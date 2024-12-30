@@ -2,9 +2,16 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/Sheet';
 import { Menu } from 'lucide-react';
 import { navigationItems } from '@/lib/constants/navigation';
 import { Link, useLocation } from 'react-router-dom';
+import { useUsers } from '@/lib/hooks/useUsers';
 
 export function MobileNav() {
   const location = useLocation();
+  const { currentUser } = useUsers();
+
+  // Filter navigation items based on user role
+  const allowedItems = navigationItems.filter(item =>
+    item.roles.includes(currentUser?.role || 'user')
+  );
 
   return (
     <Sheet>
@@ -27,7 +34,7 @@ export function MobileNav() {
         </div>
         <nav className="flex flex-1 flex-col">
           <ul role="list" className="flex flex-1 flex-col gap-y-7">
-            {navigationItems.map((item) => {
+            {allowedItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
 

@@ -1,8 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { RoleProtectedRoute } from '@/components/auth/RoleProtectedRoute';
 import { Layout } from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
@@ -14,25 +16,16 @@ import Users from '@/pages/Users';
 import TestData from '@/pages/TestData';
 import Profile from '@/pages/Profile';
 
-// const queryClient = new QueryClient({
-//   defaultOptions: {
-//     queries: {
-//       // Disable automatic refetching
-//       refetchOnWindowFocus: true,
-//       refetchOnReconnect: false,
-//       refetchOnMount: true,
-//       // Cache data for 5 minutes
-//       staleTime: 5 * 60 * 1000,
-//       // Keep unused data in cache for 10 minutes
-//       gcTime: 10 * 60 * 1000,
-//     },
-//   },
-// });
 const queryClient = new QueryClient()
 
-export default function App() {
-  const [user, setUser] = useState(null);
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -44,28 +37,86 @@ export default function App() {
   }, []);
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return <LoadingScreen />;
   }
 
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          {user ? (
-            <Route path="/" element={<Layout />}>
-              <Route index element={<TimeEntries />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="projects" element={<Projects />} />
-              <Route path="roles" element={<Roles />} />
-              <Route path="clients" element={<Clients />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="users" element={<Users />} />
-              <Route path="test-data" element={<TestData />} />
-            </Route>
-          ) : (
-            <Route path="*" element={<Navigate to="/login" />} />
-          )}
+
+          {/* Protected Routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<TimeEntries />} />
+            <Route path="profile" element={<Profile />} />
+            <Route
+              path="reports"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Reports />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="projects"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Projects />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="roles"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Roles />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="clients"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Clients />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Users />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="test-data"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <TestData />
+                </RoleProtectedRoute>
+              }
+            />
+          </Route>
+
+          {/* Catch all route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

@@ -1,8 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
 import { navigationItems } from '@/lib/constants/navigation';
+import { useUsers } from '@/lib/hooks/useUsers';
 
 export function Sidebar() {
   const location = useLocation();
+  const { currentUser } = useUsers();
+
+  // Filter navigation items based on user role
+  const allowedItems = navigationItems.filter(item =>
+    item.roles.includes(currentUser?.role || 'user')
+  );
 
   return (
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-72 lg:flex-col">
@@ -18,7 +25,7 @@ export function Sidebar() {
           <ul role="list" className="flex flex-1 flex-col gap-y-7">
             <li>
               <ul role="list" className="-mx-2 space-y-1">
-                {navigationItems.map((item) => {
+                {allowedItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.href;
 
