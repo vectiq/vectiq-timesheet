@@ -6,6 +6,7 @@ import { MonthlyViewRow } from './MonthlyViewRow';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
+import { useApprovals } from '@/lib/hooks/useApprovals';
 import { useRoles } from '@/lib/hooks/useRoles';
 import type { Project } from '@/types';
 
@@ -19,6 +20,7 @@ interface MonthlyViewProps {
 
 export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
   const { timeEntries } = useTimeEntries({ dateRange });
+  const { approvals } = useApprovals();
   const { clients } = useClients();
   const { projects } = useProjects();
   const { roles } = useRoles();
@@ -28,6 +30,7 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
     const groups = new Map();
 
     timeEntries.forEach(entry => {
+      const approval = approvals.find(a => a.approvalKey === entry.approvalKey);
       const client = clients.find(c => c.id === entry.clientId);
       const project = projects.find(p => p.id === entry.projectId);
       const role = roles.find(r => r.id === entry.roleId);
@@ -51,6 +54,10 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       if (!clientGroup.projects.has(projectKey)) {
         clientGroup.projects.set(projectKey, {
           project,
+          approvalStatus: {
+            status: approval ? approval.status : 'unsubmitted',
+            approvalKey: approval?.approvalKey || ''
+          },
           totalHours: 0,
           entries: [],
         });
@@ -61,6 +68,7 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       projectGroup.entries.push({
         ...entry,
         role,
+        approvalKey: entry.approvalKey
       });
 
       // Update totals

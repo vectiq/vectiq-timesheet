@@ -39,6 +39,7 @@ export interface TimeEntry {
   date: string;
   hours: number;
   description?: string;
+  approvalKey?: string;  // Format: {projectId}_{startDate}_{endDate}_{userId}
 }
 
 export interface ReportFilters {
@@ -90,4 +91,23 @@ export interface ProjectAssignment {
 export interface ReportData {
   entries: ReportEntry[];
   summary: ReportSummary;
+}
+
+export interface Approval {
+  id: string;
+  approvalKey: string;  // Composite key matching TimeEntry.approvalKey
+  status: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
+  submittedAt: Date;
+  approvedAt?: Date;
+  rejectedAt?: Date;
+  rejectionReason?: string;
+  project: Project;
+  client: Client;
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  totalHours: number;
+  userId: string;
+  approverEmail: string;
 }

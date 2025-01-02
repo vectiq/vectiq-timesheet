@@ -1,6 +1,8 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils/styles';
 
+export type BadgeVariant = 'default' | 'secondary' | 'success' | 'warning' | 'destructive';
+
 const badgeVariants = cva(
   'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset',
   {

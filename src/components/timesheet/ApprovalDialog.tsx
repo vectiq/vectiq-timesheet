@@ -10,7 +10,19 @@ import { FormField } from '@/components/ui/FormField';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
+import { useApprovals } from '@/lib/hooks/useApprovals';
+import { Badge } from '@/components/ui/Badge';
+import type { BadgeVariant } from '@/components/ui/Badge';
+import { auth } from '@/lib/firebase';
 import { format } from 'date-fns';
+
+interface ProjectWithStatus {
+  id: string;
+  name: string;
+  clientName: string;
+  totalHours: number;
+  status?: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
+}
 
 interface ApprovalDialogProps {
   open: boolean;
@@ -29,65 +41,96 @@ export function ApprovalDialog({
   const { projects } = useProjects();
   const { clients } = useClients();
   const { timeEntries } = useTimeEntries({ dateRange });
+  const { approvals, submitApproval, isSubmitting } = useApprovals();
   const [selectedProject, setSelectedProject] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function getStatusBadge(status?: 'unsubmitted' | 'pending' | 'approved' | 'rejected') {
+    let variant: BadgeVariant = 'secondary';
+    let text = 'Unsubmitted';
+
+    switch (status) {
+      case 'pending':
+        variant = 'warning';
+        text = 'Pending Approval';
+        break;
+      case 'approved':
+        variant = 'success';
+        text = 'Approved';
+        break;
+      case 'rejected':
+        variant = 'destructive';
+        text = 'Rejected';
+        break;
+    }
+
+    return <Badge variant={variant}>{text}</Badge>;
+  }
 
   // Get projects with time entries for the current period
   const projectsWithEntries = useMemo(() => {
     // Get unique project IDs from time entries
     const projectIds = new Set(timeEntries.map(entry => entry.projectId));
     
+    const startDate = format(dateRange.start, 'yyyy-MM-dd');
+    const endDate = format(dateRange.end, 'yyyy-MM-dd');
+
     // Filter projects that have entries and require approval
     return projects
       .filter(project => 
         projectIds.has(project.id) && 
         project.requiresApproval
       )
-      .map(project => ({
-        ...project,
-        totalHours: timeEntries
+      .map(project => {
+        const client = clients.find(c => c.id === project.clientId);
+        const projectEntries = timeEntries
           .filter(entry => entry.projectId === project.id)
-          .reduce((sum, entry) => sum + entry.hours, 0)
-      }));
-  }, [timeEntries, projects]);
+          .reduce((sum, entry) => sum + entry.hours, 0);
+
+        // Check if there's an existing approval for this period
+        const approvalKey = `${project.id}_${startDate}_${endDate}_${auth.currentUser?.uid}`;
+        const approval = approvals.find(a => a.approvalKey === approvalKey);
+
+        return {
+          id: project.id,
+          name: project.name,
+          clientName: client?.name || 'Unknown Client',
+          totalHours: projectEntries,
+          status: approval?.status || 'unsubmitted'
+        };
+      });
+  }, [timeEntries, projects, clients, approvals, dateRange, auth.currentUser?.uid]);
+
+  const selectedProjectStatus = projectsWithEntries.find(p => p.id === selectedProject)?.status;
+  const canSubmit = selectedProject && selectedProjectStatus === 'unsubmitted';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setError(null);
 
     const project = projects.find(p => p.id === selectedProject);
     const client = clients.find(c => c.id === project?.clientId);
     
-    if (!project || !client) return;
+    if (!project || !client || !auth.currentUser) return;
 
     // Filter entries for selected project
     const projectEntries = timeEntries.filter(entry => 
       entry.projectId === project.id
     );
 
-    // Calculate total hours
-    const totalHours = projectEntries.reduce((sum, entry) => sum + entry.hours, 0);
-
-    // Format date range
-    const startDate = format(dateRange.start, 'MMM d, yyyy');
-    const endDate = format(dateRange.end, 'MMM d, yyyy');
-
-    // In a real app, you would send this via an API
-    // For now, we'll just log it
-    console.log('Sending approval request:', {
-      project,
-      client,
-      dateRange: { startDate, endDate },
-      totalHours,
-      entries: projectEntries,
-      to: project.approverEmail,
-    });
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSubmitting(false);
-    onOpenChange(false);
+    try {
+      await submitApproval({
+        project,
+        client,
+        dateRange,
+        entries: projectEntries,
+        userId: auth.currentUser.uid,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      setError('Failed to submit timesheet for approval');
+      console.error(error);
+    }
   };
 
   return (
@@ -106,20 +149,34 @@ export function ApprovalDialog({
               required
             >
               <option value="">Select Project</option>
-              {projectsWithEntries.map(project => {
-                  const client = clients.find(c => c.id === project.clientId);
-                  return (
-                    <option key={project.id} value={project.id}>
-                      {client?.name} - {project.name} ({project.totalHours.toFixed(2)} hours)
-                    </option>
-                  );
-                })}
+              {projectsWithEntries.map(project => (
+                <option 
+                  key={project.id} 
+                  value={project.id}
+                  disabled={project.status !== 'unsubmitted'}
+                >
+                  {project.clientName} - {project.name} ({project.totalHours.toFixed(2)} hours) {project.status !== 'unsubmitted' ? `[${project.status.charAt(0).toUpperCase() + project.status.slice(1)}]` : ''}
+                </option>
+              ))}
             </select>
           </FormField>
+          
+          {selectedProject && selectedProjectStatus !== 'unsubmitted' && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Status:</span>
+              {getStatusBadge(selectedProjectStatus)}
+            </div>
+          )}
           
           {projectsWithEntries.length === 0 && (
             <div className="text-sm text-gray-500">
               No projects with time entries for this period require approval.
+            </div>
+          )}
+          
+          {error && (
+            <div className="text-sm text-red-600">
+              {error}
             </div>
           )}
 
@@ -138,7 +195,7 @@ export function ApprovalDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!selectedProject || isSubmitting}>
+            <Button type="submit" disabled={!canSubmit || isSubmitting}>
               {isSubmitting ? 'Submitting...' : 'Submit for Approval'}
             </Button>
           </div>
