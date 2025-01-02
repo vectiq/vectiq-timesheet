@@ -79,12 +79,12 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   } as Project;
 }
 
-export async function updateProject(id: string, projectData: Partial<Project>): Promise<void> {
+export async function updateProject(id: string, projectData: Project): Promise<void> {
   const batch = writeBatch(db);
   
   // Update project document
   const projectRef = doc(db, COLLECTION, id);
-  const { roles = [], ...projectFields } = projectData;
+  const { roles, ...projectFields } = projectData;
   const projectUpdate = {
     ...projectFields,
     updatedAt: serverTimestamp(),
@@ -99,15 +99,15 @@ export async function updateProject(id: string, projectData: Partial<Project>): 
   existingRolesSnapshot.docs.forEach(doc => {
     batch.delete(doc.ref);
   });
-
+  
   // Create new project roles
   for (const role of roles) {
     const roleRef = doc(collection(db, ROLES_COLLECTION));
     batch.set(roleRef, {
       projectId: id,
       roleId: role.roleId,
-      costRate: role.costRate || 0,
-      sellRate: role.sellRate || 0,
+      costRate: role.costRate,
+      sellRate: role.sellRate,
     });
   }
 

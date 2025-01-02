@@ -31,7 +31,7 @@ export default function Projects() {
 
   const handleSubmit = useCallback(async (data: Omit<Project, 'id'>) => {
     if (selectedProject) {
-      await updateProject(selectedProject.id, data);
+      await updateProject({ ...data, id: selectedProject.id });
     } else {
       await createProject(data);
     }

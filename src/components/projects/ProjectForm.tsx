@@ -44,8 +44,9 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   const roles = watch('roles') || [];
 
   const handleFormSubmit = async (data: any) => {
-    const projectData = {
-      id: project?.id || '',
+    const projectId = project?.id || crypto.randomUUID();
+    const projectData: Project = {
+      id: projectId,
       name: data.name || '',
       clientId: data.clientId || '',
       budget: data.budget || 0,
@@ -55,7 +56,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       requiresApproval: data.requiresApproval || false,
       roles: (roles || []).map(role => ({
         roleId: role.roleId,
-        projectId: project?.id || '', // This will be set by the service
+        projectId: projectId,
         costRate: role.costRate || 0,
         sellRate: role.sellRate || 0
       }))
@@ -65,6 +66,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       await onSubmit(projectData);
     } catch (error) {
       console.error('Error submitting project:', error);
+      throw error;
     }
   };
 
@@ -72,7 +74,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     const currentRoles = roles.filter(r => r.roleId !== roleId);
     setValue('roles', [...currentRoles, { 
       roleId,
-      projectId: project?.id || '',
+      projectId: project?.id || crypto.randomUUID(),
       costRate: rates.costRate,
       sellRate: rates.sellRate
     }]);
@@ -81,7 +83,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   const handleAddRole = (roleId: string) => {
     setValue('roles', [...roles, {
       roleId,
-      projectId: project?.id || '',
+      projectId: project?.id || crypto.randomUUID(),
       costRate: 0,
       sellRate: 0
     }]);

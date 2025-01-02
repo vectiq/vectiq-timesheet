@@ -26,7 +26,7 @@ export function useProjects() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: updateProject,
+    mutationFn: (data: Project) => updateProject(data.id, data),
     onSuccess: () => {
       return queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
@@ -45,7 +45,7 @@ export function useProjects() {
 
   const handleUpdateProject = useCallback(async (data: Project) => {
     if (!data.id) throw new Error('Project ID is required for update');
-    return updateMutation.mutateAsync(data.id, data);
+    return updateMutation.mutateAsync(data);
   }, [updateMutation]);
 
   const handleDeleteProject = useCallback(async (id: string) => {
