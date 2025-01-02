@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useApprovals } from '@/lib/hooks/useApprovals';
 import type { BadgeVariant } from '@/components/ui/Badge';
 
 interface ApprovalStatus {
-  status: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
-  approvalKey: string;
+  status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  approvalId: string;
 }
 
 interface MonthlyViewRowProps {
@@ -28,7 +29,7 @@ interface MonthlyViewRowProps {
   };
 }
 
-function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' }) {
+function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn' }) {
   let variant: BadgeVariant = 'secondary';
   let Icon = Clock;
   let text = 'Unsubmitted';
@@ -49,6 +50,11 @@ function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approv
       Icon = XCircle;
       text = 'Rejected';
       break;
+    case 'withdrawn':
+      variant = 'secondary';
+      Icon = Undo2;
+      text = 'Withdrawn';
+      break;
   }
 
   return (
@@ -60,7 +66,19 @@ function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approv
 }
 
 export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const { withdrawApproval, isWithdrawing } = useApprovals();
+
+  const handleWithdraw = async (approvalId: string) => {
+    if (window.confirm('Are you sure you want to withdraw this timesheet submission?')) {
+      try {
+        await withdrawApproval(approvalId);
+      } catch (error) {
+        console.error('Failed to withdraw approval:', error);
+        alert('Failed to withdraw approval');
+      }
+    }
+  };
 
   return (
     <div className="divide-y divide-gray-100">
@@ -93,10 +111,26 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
           {/* Project Summary */}
           <div className="p-4 bg-gray-50 flex justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <span className="font-medium">{projectGroup.project.name}</span>
-              {projectGroup.approvalStatus && (
-                <ApprovalBadge status={projectGroup.approvalStatus.status} />
-              )}
+              <div className="flex items-center gap-3">
+                <span className="font-medium">{projectGroup.project.name}</span>
+                {projectGroup.approvalStatus && (
+                  <div className="flex items-center gap-2">
+                    <ApprovalBadge status={projectGroup.approvalStatus.status} />
+                    {projectGroup.approvalStatus.status === 'pending' && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleWithdraw(projectGroup.approvalStatus.approvalId)}
+                        disabled={isWithdrawing}
+                        className="ml-2"
+                      >
+                        <Undo2 className="h-4 w-4 mr-1" />
+                        Withdraw
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <span className="text-sm">
               <span className="text-gray-500">Total Hours:</span>

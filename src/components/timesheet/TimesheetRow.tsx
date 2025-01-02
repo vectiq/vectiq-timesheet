@@ -1,10 +1,12 @@
-import { useMemo, useCallback, memo } from 'react';
+import { useMemo, useCallback, memo, useState } from 'react';
 import { format } from 'date-fns';
 import { Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { EditableTimeCell } from './EditableTimeCell';
+import { cn } from '@/lib/utils/styles';
 import { X } from 'lucide-react';
-import type { TimeEntry, Project } from '@/types';
+import { useApprovals } from '@/lib/hooks/useApprovals';
+import type { TimeEntry, Project, Approval } from '@/types';
 
 interface TimesheetRowProps {
   index: number;
@@ -50,6 +52,9 @@ export const TimesheetRow = memo(function TimesheetRow({
   onStartEdit,
   onEndEdit,
 }: TimesheetRowProps) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { approvals } = useApprovals();
+
   // Filter clients based on user assignments
   const assignedClientIds = [...new Set(userAssignments.map(a => a.clientId))];
   const filteredClients = clients.filter(client => assignedClientIds.includes(client.id));
@@ -87,17 +92,30 @@ export const TimesheetRow = memo(function TimesheetRow({
     [rowEntries]
   );
 
+  // Check if any entries in this row are locked
+  const hasLockedEntries = useMemo(() => {
+    return rowEntries.some(entry => {
+      const approval = approvals.find(a => a.compositeKey === entry.compositeKey);
+      return approval?.status === 'pending' || approval?.status === 'approved';
+    });
+  }, [rowEntries, approvals]);
+
   return (
     <tr>
       <Td>
         <select
           value={row.clientId}
+          disabled={hasLockedEntries}
           onChange={(e) => onUpdateRow(index, { 
             clientId: e.target.value,
             projectId: '',
             roleId: ''
           })}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+          className={cn(
+            "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
+            hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+          )}
+          title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Client</option>
           {filteredClients.map(client => (
@@ -114,8 +132,12 @@ export const TimesheetRow = memo(function TimesheetRow({
             projectId: e.target.value,
             roleId: ''
           })}
-          disabled={!row.clientId}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+          disabled={!row.clientId || hasLockedEntries}
+          className={cn(
+            "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
+            hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+          )}
+          title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Project</option>
           {availableProjects.map(project => (
@@ -131,8 +153,12 @@ export const TimesheetRow = memo(function TimesheetRow({
           onChange={(e) => onUpdateRow(index, {
             roleId: e.target.value
           })}
-          disabled={!row.projectId}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+          disabled={!row.projectId || hasLockedEntries}
+          className={cn(
+            "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
+            hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+          )}
+          title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Role</option>
           {availableRoles.map(({ role }) => (
@@ -146,6 +172,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         const dateStr = format(date, 'yyyy-MM-dd');
         const entry = rowEntries.find(e => e.date === dateStr);
         const cellKey = `${dateStr}-${row.projectId}-${row.roleId}`;
+        const approval = approvals.find(a => a.compositeKey === entry?.compositeKey);
         const isRowComplete = row.clientId && row.projectId && row.roleId;
         
         return (
@@ -157,6 +184,7 @@ export const TimesheetRow = memo(function TimesheetRow({
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
               isDisabled={!isRowComplete}
+              approvalStatus={approval?.status}
             />
           </Td>
         );
@@ -168,7 +196,10 @@ export const TimesheetRow = memo(function TimesheetRow({
         <Button
           variant="secondary"
           size="sm"
+          disabled={hasLockedEntries}
+          title={hasLockedEntries ? "Cannot delete row with pending or approved entries" : undefined}
           onClick={() => onRemoveRow(index)}
+          className={hasLockedEntries ? "opacity-50 cursor-not-allowed" : ""}
         >
           <X className="h-4 w-4" />
         </Button>

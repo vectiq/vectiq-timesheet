@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Send } from 'lucide-react';
@@ -6,7 +7,6 @@ import { MonthlyViewRow } from './MonthlyViewRow';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useApprovals } from '@/lib/hooks/useApprovals';
 import { useRoles } from '@/lib/hooks/useRoles';
 import type { Project } from '@/types';
 
@@ -28,9 +28,10 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
   // Group entries by client and project
   const groupedEntries = useMemo(() => {
     const groups = new Map();
+    const startDate = format(dateRange.start, 'yyyy-MM-dd');
+    const endDate = format(dateRange.end, 'yyyy-MM-dd');
 
-    timeEntries.forEach(entry => {
-      const approval = approvals.find(a => a.approvalKey === entry.approvalKey);
+    timeEntries.forEach(entry => {      
       const client = clients.find(c => c.id === entry.clientId);
       const project = projects.find(p => p.id === entry.projectId);
       const role = roles.find(r => r.id === entry.roleId);
@@ -52,11 +53,17 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       // Initialize project group if it doesn't exist
       const clientGroup = groups.get(clientKey);
       if (!clientGroup.projects.has(projectKey)) {
+        const approval = approvals.find(a => 
+          a.project.id === project.id && 
+          a.period.startDate === startDate && 
+          a.period.endDate === endDate
+        );
+
         clientGroup.projects.set(projectKey, {
           project,
           approvalStatus: {
             status: approval ? approval.status : 'unsubmitted',
-            approvalKey: approval?.approvalKey || ''
+            approvalId: approval?.id || ''
           },
           totalHours: 0,
           entries: [],
@@ -68,7 +75,7 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       projectGroup.entries.push({
         ...entry,
         role,
-        approvalKey: entry.approvalKey
+        compositeKey: entry.compositeKey
       });
 
       // Update totals
@@ -88,6 +95,19 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
     });
 
     return { hours };
+  }, [groupedEntries]);
+  // Check if any projects have pending/approved entries
+  const hasLockedProjects = useMemo(() => {
+    let locked = false;
+    groupedEntries.forEach(group => {
+      group.projects.forEach(project => {
+        if (project.approvalStatus?.status === 'pending' || 
+            project.approvalStatus?.status === 'approved') {
+          locked = true;
+        }
+      });
+    });
+    return locked;
   }, [groupedEntries]);
 
   return (

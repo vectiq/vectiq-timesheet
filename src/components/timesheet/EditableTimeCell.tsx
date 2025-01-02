@@ -8,6 +8,7 @@ interface EditableTimeCellProps {
   onStartEdit: () => void;
   onEndEdit: () => void;
   isDisabled?: boolean;
+  approvalStatus?: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
 }
 
 export function EditableTimeCell({ 
@@ -16,10 +17,12 @@ export function EditableTimeCell({
   isEditing,
   onStartEdit,
   onEndEdit,
-  isDisabled = false
+  isDisabled = false,
+  approvalStatus
 }: EditableTimeCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState('');
+  const isLocked = approvalStatus === 'pending' || approvalStatus === 'approved';
 
   useEffect(() => {
     if (isEditing) {
@@ -74,12 +77,14 @@ export function EditableTimeCell({
     />
   ) : (
     <div
-      onClick={isDisabled ? undefined : onStartEdit}
+      onClick={(isDisabled || isLocked) ? undefined : onStartEdit}
       className={cn(
         "w-16 py-2 text-center cursor-pointer rounded hover:bg-gray-50",
         value === null && "text-gray-400",
-        isDisabled && "cursor-not-allowed opacity-50 hover:bg-transparent"
+        (isDisabled || isLocked) && "cursor-not-allowed opacity-50 hover:bg-transparent",
+        isLocked && "bg-gray-50"
       )}
+      title={isLocked ? `Time entries are locked - ${approvalStatus} approval` : undefined}
     >
       {value?.toFixed(2) || '-'}
     </div>

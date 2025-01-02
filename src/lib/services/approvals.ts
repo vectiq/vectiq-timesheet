@@ -8,12 +8,23 @@ import {
     where,
     setDoc,
     serverTimestamp,
+    orderBy,
+    limit,
   } from 'firebase/firestore';
   import { getFunctions, httpsCallable } from 'firebase/functions';
   import { format } from 'date-fns';
   import { db } from '@/lib/firebase';
   import { formatTimesheetBreakdown } from '@/lib/utils/timesheet';
-  import type { TimeEntry, Project, Client, Approval } from '@/types';
+  import type { TimeEntry, Project, Client, Approval, ApprovalStatus } from '@/types';
+  
+  export async function withdrawApproval(approvalId: string) {
+    const approvalRef = doc(db, 'approvals', approvalId);
+    await updateDoc(approvalRef, { 
+      status: 'withdrawn',
+      withdrawnAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+  }
   
   interface ApprovalRequest {
     project: Project;
@@ -29,24 +40,32 @@ import {
   export async function submitTimesheetApproval(request: ApprovalRequest) {
     const { project, client, dateRange, entries, userId } = request;
     
-    // Generate composite approval key
-    const approvalKey = `${project.id}_${format(dateRange.start, 'yyyy-MM-dd')}_${format(dateRange.end, 'yyyy-MM-dd')}_${userId}`;
+    // Generate composite key for querying
+    const compositeKey = `${project.id}_${format(dateRange.start, 'yyyy-MM-dd')}_${format(dateRange.end, 'yyyy-MM-dd')}_${userId}`;
     
-    // Try to get existing approval
-    const approvalRef = doc(db, 'approvals', approvalKey);
-    const existingApproval = await getDoc(approvalRef);
+    // Generate unique approval ID
+    const approvalId = crypto.randomUUID();
+    
+    // Check for existing active approvals
+    const existingApprovalsSnapshot = await getDocs(
+      query(
+        collection(db, 'approvals'),
+        where('compositeKey', '==', compositeKey),
+        where('status', 'in', ['pending', 'approved'])
+      )
+    );
   
-    if (existingApproval.exists()) {
+    if (!existingApprovalsSnapshot.empty) {
       throw new Error('Time entries for this period have already been submitted for approval');
     }
   
     // Calculate total hours
     const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
   
-    // Create approval document with composite key
+    // Create approval document
     const approvalDoc: Approval = {
-      id: approvalKey,
-      approvalKey,
+      id: approvalId,
+      compositeKey,
       status: 'pending',
       submittedAt: new Date(),
       project,
@@ -56,26 +75,17 @@ import {
         endDate: format(dateRange.end, 'yyyy-MM-dd')
       },
       totalHours,
-      entries,
-      approverEmail: project.approverEmail,
       userId,
+      approverEmail: project.approverEmail,
     };
   
     // Save approval document
-    await setDoc(approvalRef, approvalDoc);
-  
-    // Update time entries with approval key
-    const batch = writeBatch(db);
-    entries.forEach(entry => {
-      const entryRef = doc(db, 'timeEntries', entry.id);
-      batch.update(entryRef, { approvalKey });
-    });
-    await batch.commit();
+    await setDoc(doc(db, 'approvals', approvalId), approvalDoc);
   
     // Generate approval URLs
     const baseUrl = import.meta.env.VITE_FIREBASE_API_URL;
-    const approveUrl = `${baseUrl}/api/timesheetApproval?id=${approvalKey}&action=approve`;
-    const rejectUrl = `${baseUrl}/api/timesheetApproval?id=${approvalKey}&action=reject`;
+    const approveUrl = `${baseUrl}/api/timesheetApproval?id=${approvalId}&action=approve`;
+    const rejectUrl = `${baseUrl}/api/timesheetApproval?id=${approvalId}&action=reject`;
   
     // Format dates for email
     const startDate = format(dateRange.start, 'MMM d, yyyy');
@@ -139,5 +149,34 @@ import {
       type: 'Timesheet approval'
     });
   
-    return approvalKey;
+    return approvalId;
+  }
+  
+  export async function getApprovalStatus(
+    projectId: string,
+    userId: string,
+    date: string
+  ): Promise<ApprovalStatus | null> {
+    // Query approvals that could contain this date
+    const approvalsSnapshot = await getDocs(
+      query(
+        collection(db, 'approvals'),
+        where('project.id', '==', projectId),
+        where('userId', '==', userId),
+        where('period.startDate', '<=', date),
+        where('period.endDate', '>=', date),
+        orderBy('period.startDate', 'desc'),
+        limit(1)
+      )
+    );
+  
+    if (approvalsSnapshot.empty) {
+      return null;
+    }
+  
+    const approval = approvalsSnapshot.docs[0].data() as Approval;
+    return {
+      status: approval.status,
+      approvalId: approval.id
+    };
   }
