@@ -152,29 +152,41 @@ import {
     return approvalId;
   }
   
+  export async function getApprovals(): Promise<Approval[]> {
+    const snapshot = await getDocs(
+      query(
+        collection(db, 'approvals'),
+        where('status', 'in', ['pending', 'approved', 'rejected', 'withdrawn']),
+        orderBy('submittedAt', 'desc')
+      )
+    );
+    
+    return snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id,
+    })) as Approval[];
+  }
+
   export async function getApprovalStatus(
     projectId: string,
     userId: string,
-    date: string
+    startDate: string,
+    endDate: string
   ): Promise<ApprovalStatus | null> {
-    // Query approvals that could contain this date
-    const approvalsSnapshot = await getDocs(
-      query(
-        collection(db, 'approvals'),
-        where('project.id', '==', projectId),
-        where('userId', '==', userId),
-        where('period.startDate', '<=', date),
-        where('period.endDate', '>=', date),
-        orderBy('period.startDate', 'desc'),
-        limit(1)
-      )
+    const approvalsRef = collection(db, 'approvals');
+    const q = query(
+      approvalsRef,
+      where('project.id', '==', projectId),
+      where('userId', '==', userId),
+      where('period.startDate', '==', startDate),
+      where('period.endDate', '==', endDate),
+      limit(1)
     );
-  
-    if (approvalsSnapshot.empty) {
-      return null;
-    }
-  
-    const approval = approvalsSnapshot.docs[0].data() as Approval;
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+
+    const approval = snapshot.docs[0].data() as Approval;
     return {
       status: approval.status,
       approvalId: approval.id

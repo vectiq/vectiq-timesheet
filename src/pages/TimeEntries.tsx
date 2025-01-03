@@ -12,6 +12,7 @@ import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
 export default function TimeEntries() {
   const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [projectsWithStatus, setProjectsWithStatus] = useState<ProjectWithStatus[]>([]);
   const { isLoading: isLoadingEntries } = useTimeEntries();
   const { projects, isLoading: isLoadingProjects } = useProjects();
   
@@ -68,14 +69,18 @@ export default function TimeEntries() {
       ) : (
         <MonthlyView 
           dateRange={dateNav.dateRange}
-          onApprovalClick={() => setIsApprovalDialogOpen(true)}
+          onApprovalClick={(projects) => {
+            setProjectsWithStatus(projects);
+            setIsApprovalDialogOpen(true);
+          }}
         />
       )}
-
+      
       <ApprovalDialog
         open={isApprovalDialogOpen}
         onOpenChange={setIsApprovalDialogOpen}
         dateRange={dateNav.dateRange}
+        projectsWithStatus={projectsWithStatus}
       />
     </div>
   );

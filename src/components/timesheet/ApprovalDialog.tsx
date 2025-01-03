@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,17 +12,10 @@ import { useClients } from '@/lib/hooks/useClients';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useApprovals } from '@/lib/hooks/useApprovals';
 import { Badge } from '@/components/ui/Badge';
-import type { BadgeVariant } from '@/components/ui/Badge';
+import { Clock, CheckCircle, AlertCircle, Undo2 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
-import { format, isWithinInterval } from 'date-fns';
-
-interface ProjectWithStatus {
-  id: string;
-  name: string;
-  clientName: string;
-  totalHours: number;
-  status?: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
-}
+import { format } from 'date-fns';
+import type { ProjectWithStatus } from '@/types';
 
 interface ApprovalDialogProps {
   open: boolean;
@@ -31,109 +24,40 @@ interface ApprovalDialogProps {
     start: Date;
     end: Date;
   };
+  projectsWithStatus: ProjectWithStatus[];
 }
 
 export function ApprovalDialog({
   open,
   onOpenChange,
   dateRange,
+  projectsWithStatus,
 }: ApprovalDialogProps) {
   const { projects } = useProjects();
   const { clients } = useClients();
   const { timeEntries } = useTimeEntries({ dateRange });
-  const { approvals, submitApproval, isSubmitting } = useApprovals();
+  const { submitApproval, isSubmitting } = useApprovals();
   const [selectedProject, setSelectedProject] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const userId = auth.currentUser?.uid;
-  const startDate = format(dateRange.start, 'yyyy-MM-dd');
-  const endDate = format(dateRange.end, 'yyyy-MM-dd');
 
-  function getStatusBadge(status?: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn') {
-    let variant: BadgeVariant = 'secondary';
-    let text = 'Unsubmitted';
-
-    switch (status) {
-      case 'pending':
-        variant = 'warning';
-        text = 'Pending Approval';
-        break;
-      case 'approved':
-        variant = 'success';
-        text = 'Approved';
-        break;
-      case 'rejected':
-        variant = 'destructive';
-        text = 'Rejected';
-        break;
-      case 'withdrawn':
-        variant = 'secondary';
-        text = 'Withdrawn';
-        break;
-    }
-
-    return <Badge variant={variant}>{text}</Badge>;
-  }
-
-  // Get projects with time entries for the current period
-  const projectsWithEntries = useMemo(() => {
-    // Get unique project IDs from time entries
-    const projectIds = new Set(timeEntries.map(entry => entry.projectId));
-    
-    // Generate composite key for current period
-    const generateCompositeKey = (projectId: string) => 
-      `${projectId}_${startDate}_${endDate}_${userId}`;
-
-    // Get all approvals for the current period
-    const periodApprovals = approvals.filter(approval => 
-      approval.period.startDate === startDate && 
-      approval.period.endDate === endDate &&
-      approval.userId === userId
-    );
-
-    // Filter projects that have entries and require approval
-    return projects
-      .filter(project => 
-        projectIds.has(project.id) && 
-        project.requiresApproval
-      )
-      .map(project => {
-        const client = clients.find(c => c.id === project.clientId);
-        const projectEntries = timeEntries
-          .filter(entry => entry.projectId === project.id)
-          .reduce((sum, entry) => sum + entry.hours, 0);
-
-        // Find any existing approval for this project in the period
-        const approval = periodApprovals.find(a => a.compositeKey === generateCompositeKey(project.id) &&
-          a.project.id === project.id && 
-          a.userId === auth.currentUser?.uid
-        );
-
-        return {
-          id: project.id,
-          name: project.name,
-          clientName: client?.name || 'Unknown Client',
-          totalHours: projectEntries,
-          status: approval?.status || 'unsubmitted'
-        };
-      });
-  }, [timeEntries, projects, clients, approvals, dateRange, auth.currentUser?.uid]);
-
-  const selectedProjectStatus = projectsWithEntries.find(p => p.id === selectedProject)?.status;
+  const selectedProjectData = projectsWithStatus.find(p => p.id === selectedProject);
   const canSubmit = selectedProject && (
-    selectedProjectStatus === 'unsubmitted' || 
-    selectedProjectStatus === 'withdrawn'
+    selectedProjectData?.status === 'unsubmitted' || 
+    selectedProjectData?.status === 'withdrawn' ||
+    selectedProjectData?.status === 'rejected'
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    if (!selectedProject || !auth.currentUser) return;
+
     const project = projects.find(p => p.id === selectedProject);
     const client = clients.find(c => c.id === project?.clientId);
     
-    if (!project || !client || !auth.currentUser) return;
+    if (!project || !client) return;
 
-    // Filter entries for selected project
     const projectEntries = timeEntries.filter(entry => 
       entry.projectId === project.id
     );
@@ -169,31 +93,40 @@ export function ApprovalDialog({
               required
             >
               <option value="">Select Project</option>
-              {projectsWithEntries.map(project => (
+              {projectsWithStatus.map(project => (
                 <option 
                   key={project.id} 
                   value={project.id}
-                  disabled={project.status !== 'unsubmitted' && project.status !== 'withdrawn'}
+                  disabled={project.status === 'pending' || project.status === 'approved'}
                 >
-                  {project.clientName} - {project.name} ({project.totalHours.toFixed(2)} hours) {project.status !== 'unsubmitted' ? `[${project.status.charAt(0).toUpperCase() + project.status.slice(1)}]` : ''}
+                  {project.clientName} - {project.name} ({project.totalHours.toFixed(2)} hours)
+                  {project.status !== 'unsubmitted' ? ` [${project.status}]` : ''}
                 </option>
               ))}
             </select>
           </FormField>
-          
-          {selectedProject && selectedProjectStatus && selectedProjectStatus !== 'unsubmitted' && (
+
+          {selectedProjectData && selectedProjectData.status !== 'unsubmitted' && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Status:</span>
-              {getStatusBadge(selectedProjectStatus)}
+              <Badge 
+                variant={
+                  selectedProjectData.status === 'approved' ? 'success' :
+                  selectedProjectData.status === 'pending' ? 'warning' :
+                  selectedProjectData.status === 'rejected' ? 'destructive' :
+                  'secondary'
+                }
+                className="flex items-center gap-1.5"
+              >
+                {selectedProjectData.status === 'pending' && <Clock className="h-3 w-3" />}
+                {selectedProjectData.status === 'approved' && <CheckCircle className="h-3 w-3" />}
+                {selectedProjectData.status === 'rejected' && <AlertCircle className="h-3 w-3" />}
+                {selectedProjectData.status === 'withdrawn' && <Undo2 className="h-3 w-3" />}
+                {selectedProjectData.status.charAt(0).toUpperCase() + selectedProjectData.status.slice(1)}
+              </Badge>
             </div>
           )}
-          
-          {projectsWithEntries.length === 0 && (
-            <div className="text-sm text-gray-500">
-              No projects with time entries for this period require approval.
-            </div>
-          )}
-          
+
           {error && (
             <div className="text-sm text-red-600">
               {error}
@@ -203,13 +136,8 @@ export function ApprovalDialog({
           <div className="pt-4 border-t space-y-2 text-sm text-gray-600">
             <p>This will submit your timesheet for the period:</p>
             <p className="font-medium">
-              {format(dateRange.start, 'MMMM d, yyyy')} - {format(dateRange.end, 'MMMM d, yyyy')}
+              {format(dateRange.start, 'MMM d, yyyy')} - {format(dateRange.end, 'MMM d, yyyy')}
             </p>
-            {selectedProjectStatus === 'withdrawn' && (
-              <p className="text-yellow-600">
-                Note: This timesheet was previously withdrawn. Submitting again will create a new approval request.
-              </p>
-            )}
           </div>
 
           <div className="flex justify-end gap-3">

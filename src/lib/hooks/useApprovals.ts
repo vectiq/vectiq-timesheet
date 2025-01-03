@@ -1,8 +1,12 @@
+import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { submitTimesheetApproval, withdrawApproval, getApprovalStatus } from '@/lib/services/approvals';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Project, Client, TimeEntry, Approval, ApprovalStatus } from '@/types';
+import { 
+  submitTimesheetApproval, 
+  withdrawApproval,
+  getApprovals,
+  getApprovalStatus as getApprovalStatusService
+} from '@/lib/services/approvals';
+import type { Project, Client, TimeEntry, Approval } from '@/types';
 
 const QUERY_KEY = 'approvals';
 
@@ -22,19 +26,7 @@ export function useApprovals() {
 
   const query = useQuery({
     queryKey: [QUERY_KEY],
-    queryFn: async () => {
-      const snapshot = await getDocs(
-        query(
-          collection(db, 'approvals'),
-          orderBy('submittedAt', 'desc')
-        )
-      );
-      
-      return snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-      })) as Approval[];
-    }
+    queryFn: getApprovals
   });
 
   const submitMutation = useMutation({
@@ -54,9 +46,7 @@ export function useApprovals() {
   return {
     approvals: query.data || [],
     submitApproval: submitMutation.mutateAsync,
-    getApprovalStatus: async (projectId: string, userId: string, date: string) => {
-      return getApprovalStatus(projectId, userId, date);
-    },
+    getApprovalStatus: getApprovalStatusService,
     withdrawApproval: withdrawMutation.mutateAsync,
     isSubmitting: submitMutation.isPending,
     isWithdrawing: withdrawMutation.isPending,

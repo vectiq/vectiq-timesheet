@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2, AlertCircle } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -32,7 +32,7 @@ interface MonthlyViewRowProps {
 function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn' }) {
   let variant: BadgeVariant = 'secondary';
   let Icon = Clock;
-  let text = 'Unsubmitted';
+  let text = 'Not Submitted';
 
   switch (status) {
     case 'pending':
@@ -47,7 +47,7 @@ function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approv
       break;
     case 'rejected':
       variant = 'destructive';
-      Icon = XCircle;
+      Icon = AlertCircle;
       text = 'Rejected';
       break;
     case 'withdrawn':
@@ -58,7 +58,7 @@ function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approv
   }
 
   return (
-    <Badge variant={variant} className="flex items-center gap-1">
+    <Badge variant={variant} className="flex items-center gap-1.5">
       <Icon className="h-3 w-3" />
       <span>{text}</span>
     </Badge>

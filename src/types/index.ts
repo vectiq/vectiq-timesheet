@@ -18,6 +18,14 @@ export interface Client {
   approverEmail: string;
 }
 
+export interface ProjectWithStatus {
+  id: string;
+  name: string;
+  clientName: string;
+  totalHours: number;
+  status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
+}
+
 export interface Project {
   id: string;
   name: string;

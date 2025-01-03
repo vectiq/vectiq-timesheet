@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,30 +8,63 @@ import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
-import type { Project } from '@/types';
+import { useApprovals } from '@/lib/hooks/useApprovals';
+import { auth } from '@/lib/firebase';
+import type { Project, ProjectWithStatus } from '@/types';
 
 interface MonthlyViewProps {
   dateRange: {
     start: Date;
     end: Date;
-    onApprovalClick: () => void;
   };
+  onApprovalClick: (projects: ProjectWithStatus[]) => void;
+}
+
+interface GroupedData {
+  client: { id: string; name: string };
+  totalHours: number;
+  projects: Map<
+    string,
+    {
+    project: { id: string; name: string };
+    approvalStatus?: {
+      status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
+      approvalId: string;
+    };
+    totalHours: number;
+    entries: Array<{
+      date: string;
+      hours: number;
+      role: { name: string };
+      compositeKey?: string;
+    }>;
+    }
+  >;
 }
 
 export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
   const { timeEntries } = useTimeEntries({ dateRange });
-  const { approvals } = useApprovals();
   const { clients } = useClients();
   const { projects } = useProjects();
   const { roles } = useRoles();
+  const { approvals } = useApprovals();
+  const userId = auth.currentUser?.uid;
+
+  const startDate = format(dateRange.start, 'yyyy-MM-dd');
+  const endDate = format(dateRange.end, 'yyyy-MM-dd');
 
   // Group entries by client and project
   const groupedEntries = useMemo(() => {
-    const groups = new Map();
-    const startDate = format(dateRange.start, 'yyyy-MM-dd');
-    const endDate = format(dateRange.end, 'yyyy-MM-dd');
+    const groups = new Map<string, GroupedData>();
 
-    timeEntries.forEach(entry => {      
+    // Find approvals for the current period
+    const periodApprovals = approvals.filter(approval => 
+      approval.period.startDate === startDate &&
+      approval.period.endDate === endDate &&
+      approval.userId === userId
+    );
+
+    timeEntries.forEach(entry => {
       const client = clients.find(c => c.id === entry.clientId);
       const project = projects.find(p => p.id === entry.projectId);
       const role = roles.find(r => r.id === entry.roleId);
@@ -46,25 +79,26 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
         groups.set(clientKey, {
           client,
           totalHours: 0,
-          projects: new Map(),
+          projects: new Map<string, GroupedData['projects'] extends Map<string, infer V> ? V : never>(),
         });
       }
 
       // Initialize project group if it doesn't exist
       const clientGroup = groups.get(clientKey);
       if (!clientGroup.projects.has(projectKey)) {
-        const approval = approvals.find(a => 
+        // Find approval for this project in the current period
+        const approval = periodApprovals.find(a => 
           a.project.id === project.id && 
           a.period.startDate === startDate && 
           a.period.endDate === endDate
         );
-
+        
         clientGroup.projects.set(projectKey, {
           project,
-          approvalStatus: {
-            status: approval ? approval.status : 'unsubmitted',
-            approvalId: approval?.id || ''
-          },
+          approvalStatus: approval ? {
+            status: approval.status,
+            approvalId: approval.id
+          } : undefined,
           totalHours: 0,
           entries: [],
         });
@@ -79,16 +113,18 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       });
 
       // Update totals
-      projectGroup.totalHours += entry.hours;
-      clientGroup.totalHours += entry.hours;
+      if (projectGroup) {
+        projectGroup.totalHours += entry.hours;
+        clientGroup.totalHours += entry.hours;
+      }
     });
 
     return groups;
-  }, [timeEntries, clients, projects, roles]);
+  }, [timeEntries, clients, projects, roles, approvals, startDate, endDate, userId]);
 
   // Calculate grand totals
   const totals = useMemo(() => {
-    let hours = 0;
+    let hours = 0.0;
 
     groupedEntries.forEach(group => {
       hours += group.totalHours;
@@ -96,19 +132,22 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
 
     return { hours };
   }, [groupedEntries]);
-  // Check if any projects have pending/approved entries
-  const hasLockedProjects = useMemo(() => {
-    let locked = false;
-    groupedEntries.forEach(group => {
-      group.projects.forEach(project => {
-        if (project.approvalStatus?.status === 'pending' || 
-            project.approvalStatus?.status === 'approved') {
-          locked = true;
-        }
-      });
-    });
-    return locked;
-  }, [groupedEntries]);
+  
+  const handleApprovalClick = () => {
+    const projectsWithStatus = Array.from(groupedEntries.values())
+      .flatMap(clientGroup => 
+        Array.from(clientGroup.projects.values())
+          .filter(projectGroup => projectGroup.project.requiresApproval)
+          .map(projectGroup => ({
+            id: projectGroup.project.id,
+            name: projectGroup.project.name,
+            clientName: clientGroup.client.name,
+            totalHours: projectGroup.totalHours,
+            status: projectGroup.approvalStatus?.status || 'unsubmitted'
+          }))
+      );
+    onApprovalClick(projectsWithStatus);
+  };
 
   return (
     <Card>
@@ -130,7 +169,7 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
               {totals.hours.toFixed(2)} hours
             </span>
           </div>
-          <Button onClick={onApprovalClick}>
+          <Button onClick={handleApprovalClick}>
             <Send className="h-4 w-4 mr-2" />
             Submit for Approval
           </Button>
