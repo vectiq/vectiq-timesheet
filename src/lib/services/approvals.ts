@@ -85,8 +85,9 @@ import {
   
     // Generate approval URLs
     const baseUrl = import.meta.env.VITE_FIREBASE_API_URL;
-    const approveUrl = `${baseUrl}/api/timesheetApproval?id=${approvalId}&action=approve`;
-    const rejectUrl = `${baseUrl}/api/timesheetApproval?id=${approvalId}&action=reject`;
+    const baseAppUrl = import.meta.env.VITE_APP_URL;
+    const approveUrl = `${baseUrl}/approveTimesheet?id=${approvalId}`;
+    const rejectUrl = `${baseAppUrl}/reject?id=${approvalId}`;
   
     // Format dates for email
     const startDate = format(dateRange.start, 'MMM d, yyyy');
@@ -142,7 +143,7 @@ import {
   
     // Send approval email
     const functions = getFunctions();
-    const sendEmail = httpsCallable(functions, 'sendApprovalEmail');
+    const sendEmail = httpsCallable(functions, 'sendEmail');
     await sendEmail({
       recipient: project.approverEmail,
       subject: `Timesheet Approval Required: ${client.name} - ${project.name}`,

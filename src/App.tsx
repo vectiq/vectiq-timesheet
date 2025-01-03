@@ -15,6 +15,7 @@ import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
 import TestData from '@/pages/TestData';
 import Profile from '@/pages/Profile';
+import RejectTimesheet from '@/pages/RejectTimesheet';
 
 const queryClient = new QueryClient()
 
@@ -53,6 +54,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/reject" element={<RejectTimesheet />} />
 
           {/* Protected Routes */}
           <Route
