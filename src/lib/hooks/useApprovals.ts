@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   submitTimesheetApproval, 
   withdrawApproval,
+  rejectTimesheet,
   getApprovals,
   getApprovalStatus as getApprovalStatusService
 } from '@/lib/services/approvals';
@@ -43,13 +44,22 @@ export function useApprovals() {
     }
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: (approval: Approval,) => rejectTimesheet(approval),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
+  });
+
   return {
     approvals: query.data || [],
     submitApproval: submitMutation.mutateAsync,
     getApprovalStatus: getApprovalStatusService,
     withdrawApproval: withdrawMutation.mutateAsync,
+    rejectTimesheet: rejectMutation.mutateAsync,
     isSubmitting: submitMutation.isPending,
     isWithdrawing: withdrawMutation.isPending,
+    isRejecting: rejectMutation.isPending,
     error: submitMutation.error,
   };
 }

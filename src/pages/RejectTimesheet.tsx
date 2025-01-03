@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useApprovals } from '@/lib/hooks/useApprovals';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
@@ -11,11 +12,13 @@ import type { Approval } from '@/types';
 
 export default function RejectTimesheet() {
   const [searchParams] = useSearchParams();
+  const { rejectTimesheet, isRejecting } = useApprovals();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approval, setApproval] = useState<Approval | null>(null);
   const [comments, setComments] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
   const approvalId = searchParams.get('id');
 
   useEffect(() => {
@@ -53,25 +56,22 @@ export default function RejectTimesheet() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!approvalId || !comments.trim()) return;
+    setValidationError(null);
+    
+    if (!comments.trim()) {
+      setValidationError('Please provide rejection comments');
+      return;
+    }
 
-    setIsSubmitting(true);
     setError(null);
 
     try {
-      const approvalRef = doc(db, 'approvals', approvalId);
-      await updateDoc(approvalRef, {
-        status: 'rejected',
-        rejectionReason: comments,
-        rejectedAt: new Date(),
-      });
-
+        const rejection = {...approval,comments:comments}
+      await rejectTimesheet(rejection);
       setIsComplete(true);
-    } catch (err) {
+    } catch (error) {
       setError('Failed to submit rejection. Please try again.');
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
+      console.error(error);
     }
   };
 
@@ -151,20 +151,26 @@ export default function RejectTimesheet() {
             <FormField label="Rejection Comments">
               <textarea
                 value={comments}
-                onChange={(e) => setComments(e.target.value)}
+                onChange={(e) => {
+                  setComments(e.target.value);
+                  setValidationError(null);
+                }}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 rows={4}
                 required
                 placeholder="Please explain why this timesheet is being rejected..."
               />
+              {validationError && (
+                <p className="mt-1 text-sm text-red-600">{validationError}</p>
+              )}
             </FormField>
 
             <div className="flex justify-end gap-3">
               <Button
                 type="submit"
-                disabled={isSubmitting || !comments.trim()}
+                disabled={isRejecting}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Rejection'}
+                {isRejecting ? 'Submitting...' : 'Submit Rejection'}
               </Button>
             </div>
           </form>

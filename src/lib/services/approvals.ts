@@ -15,6 +15,7 @@ import {
   import { getFunctions, httpsCallable } from 'firebase/functions';
   import { format } from 'date-fns';
   import { db } from '@/lib/firebase';
+  import { doc, getDoc } from 'firebase/firestore';
   import { formatTimesheetBreakdown } from '@/lib/utils/timesheet';
   import type { TimeEntry, Project, Client, Approval, ApprovalStatus } from '@/types';
   
@@ -85,9 +86,8 @@ import {
   
     // Generate approval URLs
     const baseUrl = import.meta.env.VITE_FIREBASE_API_URL;
-    const baseAppUrl = import.meta.env.VITE_APP_URL;
-    const approveUrl = `${baseUrl}/approveTimesheet?id=${approvalId}`;
-    const rejectUrl = `${baseAppUrl}/reject?id=${approvalId}`;
+    const approveUrl = `${baseUrl}/approveTimesheet?id=${approvalId}&action=approve`;
+    const rejectUrl = `${baseUrl}/rejectTimesheet?id=${approvalId}&action=reject`;
   
     // Format dates for email
     const startDate = format(dateRange.start, 'MMM d, yyyy');
@@ -195,4 +195,55 @@ import {
       status: approval.status,
       approvalId: approval.id
     };
+  }
+
+  export async function rejectTimesheet(approval) {
+    const approvalRef = doc(db, 'approvals', approval.id);
+    await updateDoc(approvalRef, {
+      status: 'rejected',
+      rejectionReason: approval.comments,
+      rejectedAt: new Date(),
+    });
+
+    // Get user details
+    const userRef = doc(db, 'users', approval.userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+
+    const user = userDoc.data();
+    const startDate = format(new Date(approval.period.startDate), 'MMM d, yyyy');
+    const endDate = format(new Date(approval.period.endDate), 'MMM d, yyyy');
+
+    // Prepare rejection email
+    const emailHtml = `
+      <h2>Timesheet Rejected</h2>
+      <p>Your timesheet has been rejected for the following period:</p>
+      
+      <ul>
+        <li><strong>Client:</strong> ${approval.client.name}</li>
+        <li><strong>Project:</strong> ${approval.project.name}</li>
+        <li><strong>Period:</strong> ${startDate} - ${endDate}</li>
+        <li><strong>Total Hours:</strong> ${approval.totalHours.toFixed(2)}</li>
+      </ul>
+
+      <div style="margin: 24px 0; padding: 16px; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px;">
+        <h3 style="margin: 0 0 8px 0; color: #991b1b;">Rejection Reason:</h3>
+        <p style="margin: 0; color: #991b1b;">${approval.comments}</p>
+      </div>
+
+      <p>Please review the feedback and submit an updated timesheet.</p>
+    `;
+
+    // Send rejection email
+    const functions = getFunctions();
+    const sendEmail = httpsCallable(functions, 'sendEmail');
+    await sendEmail({
+      recipient: user.email,
+      subject: `Timesheet Rejected: ${approval.client.name} - ${approval.project.name}`,
+      body: emailHtml,
+      type: 'Timesheet rejection'
+    });
   }
