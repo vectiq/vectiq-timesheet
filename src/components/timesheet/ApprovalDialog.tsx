@@ -100,32 +100,11 @@ export function ApprovalDialog({
                   disabled={project.status === 'pending' || project.status === 'approved'}
                 >
                   {project.clientName} - {project.name} ({project.totalHours.toFixed(2)} hours)
-                  {project.status !== 'unsubmitted' ? ` [${project.status}]` : ''}
+                  {project.status !== 'unsubmitted' && project.status !== 'withdrawn' ? ` [${project.status}]` : ''}
                 </option>
               ))}
             </select>
           </FormField>
-
-          {selectedProjectData && selectedProjectData.status !== 'unsubmitted' && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Status:</span>
-              <Badge 
-                variant={
-                  selectedProjectData.status === 'approved' ? 'success' :
-                  selectedProjectData.status === 'pending' ? 'warning' :
-                  selectedProjectData.status === 'rejected' ? 'destructive' :
-                  'secondary'
-                }
-                className="flex items-center gap-1.5"
-              >
-                {selectedProjectData.status === 'pending' && <Clock className="h-3 w-3" />}
-                {selectedProjectData.status === 'approved' && <CheckCircle className="h-3 w-3" />}
-                {selectedProjectData.status === 'rejected' && <AlertCircle className="h-3 w-3" />}
-                {selectedProjectData.status === 'withdrawn' && <Undo2 className="h-3 w-3" />}
-                {selectedProjectData.status.charAt(0).toUpperCase() + selectedProjectData.status.slice(1)}
-              </Badge>
-            </div>
-          )}
 
           {error && (
             <div className="text-sm text-red-600">

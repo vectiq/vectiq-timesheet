@@ -104,7 +104,7 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
           project,
           approvalStatus: {
             status: approval?.status || 'unsubmitted',
-            approvalId: approval?.id || ''
+            approvalId: approval?.approvalId || ''
           },
           totalHours: 0,
           entries: [],

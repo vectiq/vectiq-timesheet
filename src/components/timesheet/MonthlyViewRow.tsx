@@ -48,10 +48,10 @@ function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approv
       Icon = AlertCircle;
       text = 'Rejected';
       break;
-    case 'withdrawn':
-      variant = 'secondary';
-      Icon = Undo2;
-      text = 'Withdrawn';
+    default:
+      variant = 'default';
+      Icon = ChevronRight;
+      text = 'Unsubmitted';
       break;
   }
 

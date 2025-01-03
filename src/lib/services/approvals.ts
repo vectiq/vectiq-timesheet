@@ -2,6 +2,7 @@ import {
     collection,
     doc,
     getDoc,
+    updateDoc,
     writeBatch,
     getDocs,
     query,
@@ -153,7 +154,6 @@ import {
   }
   
   export async function getApprovals(): Promise<Approval[]> {
-    console.log('Fetching approvals...');
     const snapshot = await getDocs(
       collection(db, 'approvals')
     );
@@ -167,7 +167,6 @@ import {
       withdrawnAt: doc.data().withdrawnAt?.toDate(),
     })) as Approval[];
     
-    console.log('Found approvals:', approvals);
     return approvals;
   }
 
