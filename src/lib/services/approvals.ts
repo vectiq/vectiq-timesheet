@@ -153,18 +153,22 @@ import {
   }
   
   export async function getApprovals(): Promise<Approval[]> {
+    console.log('Fetching approvals...');
     const snapshot = await getDocs(
-      query(
-        collection(db, 'approvals'),
-        where('status', 'in', ['pending', 'approved', 'rejected', 'withdrawn']),
-        orderBy('submittedAt', 'desc')
-      )
+      collection(db, 'approvals')
     );
     
-    return snapshot.docs.map(doc => ({
+    const approvals = snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
+      submittedAt: doc.data().submittedAt?.toDate(),
+      approvedAt: doc.data().approvedAt?.toDate(),
+      rejectedAt: doc.data().rejectedAt?.toDate(),
+      withdrawnAt: doc.data().withdrawnAt?.toDate(),
     })) as Approval[];
+    
+    console.log('Found approvals:', approvals);
+    return approvals;
   }
 
   export async function getApprovalStatus(

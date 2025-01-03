@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +8,7 @@ import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
-import { useApprovals } from '@/lib/hooks/useApprovals';
+import { useApprovals } from '@/lib/hooks/useApprovals'; 
 import { auth } from '@/lib/firebase';
 import type { Project, ProjectWithStatus } from '@/types';
 
@@ -47,22 +47,34 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
   const { clients } = useClients();
   const { projects } = useProjects();
   const { roles } = useRoles();
-  const { approvals } = useApprovals();
+  const { getApprovalStatus } = useApprovals();
+  const [approvalStatuses, setApprovalStatuses] = useState(new Map());
   const userId = auth.currentUser?.uid;
-
   const startDate = format(dateRange.start, 'yyyy-MM-dd');
   const endDate = format(dateRange.end, 'yyyy-MM-dd');
+
+  // Fetch approval statuses
+  useEffect(() => {
+    const fetchApprovalStatuses = async () => {
+      const statuses = new Map();
+      for (const project of projects) {
+        if (!project.requiresApproval) continue;
+        const status = await getApprovalStatus(project.id, userId, startDate, endDate);
+        if (status) {
+          statuses.set(project.id, status);
+        }
+      }
+      setApprovalStatuses(statuses);
+    };
+
+    if (userId) {
+      fetchApprovalStatuses();
+    }
+  }, [projects, userId, startDate, getApprovalStatus]);
 
   // Group entries by client and project
   const groupedEntries = useMemo(() => {
     const groups = new Map<string, GroupedData>();
-
-    // Find approvals for the current period
-    const periodApprovals = approvals.filter(approval => 
-      approval.period.startDate === startDate &&
-      approval.period.endDate === endDate &&
-      approval.userId === userId
-    );
 
     timeEntries.forEach(entry => {
       const client = clients.find(c => c.id === entry.clientId);
@@ -86,19 +98,14 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       // Initialize project group if it doesn't exist
       const clientGroup = groups.get(clientKey);
       if (!clientGroup.projects.has(projectKey)) {
-        // Find approval for this project in the current period
-        const approval = periodApprovals.find(a => 
-          a.project.id === project.id && 
-          a.period.startDate === startDate && 
-          a.period.endDate === endDate
-        );
-        
+        const approval = approvalStatuses.get(project.id);
+
         clientGroup.projects.set(projectKey, {
           project,
-          approvalStatus: approval ? {
-            status: approval.status,
-            approvalId: approval.id
-          } : undefined,
+          approvalStatus: {
+            status: approval?.status || 'unsubmitted',
+            approvalId: approval?.id || ''
+          },
           totalHours: 0,
           entries: [],
         });
@@ -113,14 +120,12 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       });
 
       // Update totals
-      if (projectGroup) {
-        projectGroup.totalHours += entry.hours;
-        clientGroup.totalHours += entry.hours;
-      }
+      projectGroup.totalHours += entry.hours;
+      clientGroup.totalHours += entry.hours;
     });
 
     return groups;
-  }, [timeEntries, clients, projects, roles, approvals, startDate, endDate, userId]);
+  }, [timeEntries, clients, projects, roles, approvalStatuses]);
 
   // Calculate grand totals
   const totals = useMemo(() => {
@@ -132,21 +137,41 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
 
     return { hours };
   }, [groupedEntries]);
-  
+
+  // Get projects that need approval
+  const projectsNeedingApproval = useMemo(() => {
+    if (!userId) return [];
+    const projectsWithEntries = new Set<string>(timeEntries.map(entry => entry.projectId));
+    const statuses: ProjectWithStatus[] = [];
+
+    for (const project of projects) {
+      if (!projectsWithEntries.has(project.id) || !project.requiresApproval) continue;
+
+      const client = clients.find(c => c.id === project.clientId);
+      if (!client) continue;
+
+      const projectEntries = timeEntries.filter(entry => entry.projectId === project.id);
+      const totalHours = projectEntries.reduce((sum, entry) => sum + entry.hours, 0);
+
+      if (totalHours === 0) continue;
+
+      const approvalStatus = approvalStatuses.get(project.id);
+
+      statuses.push({
+        id: project.id,
+        name: project.name,
+        clientName: client.name,
+        totalHours,
+        status: approvalStatus?.status || 'unsubmitted'
+      });
+    }
+
+    return statuses;
+  }, [timeEntries, projects, clients, userId, approvalStatuses]);
+
   const handleApprovalClick = () => {
-    const projectsWithStatus = Array.from(groupedEntries.values())
-      .flatMap(clientGroup => 
-        Array.from(clientGroup.projects.values())
-          .filter(projectGroup => projectGroup.project.requiresApproval)
-          .map(projectGroup => ({
-            id: projectGroup.project.id,
-            name: projectGroup.project.name,
-            clientName: clientGroup.client.name,
-            totalHours: projectGroup.totalHours,
-            status: projectGroup.approvalStatus?.status || 'unsubmitted'
-          }))
-      );
-    onApprovalClick(projectsWithStatus);
+    if (!userId) return;
+    onApprovalClick(projectsNeedingApproval);
   };
 
   return (

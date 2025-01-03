@@ -6,11 +6,6 @@ import { Badge } from '@/components/ui/Badge';
 import { useApprovals } from '@/lib/hooks/useApprovals';
 import type { BadgeVariant } from '@/components/ui/Badge';
 
-interface ApprovalStatus {
-  status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
-  approvalId: string;
-}
-
 interface MonthlyViewRowProps {
   clientGroup: {
     client: { id: string; name: string };
@@ -18,7 +13,10 @@ interface MonthlyViewRowProps {
     projects: Map<string, {
       project: { id: string; name: string };
       totalHours: number;
-      approvalStatus?: ApprovalStatus;
+      approvalStatus?: {
+        status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
+        approvalId: string;
+      };
       entries: Array<{
         date: string;
         hours: number;
@@ -32,7 +30,7 @@ interface MonthlyViewRowProps {
 function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn' }) {
   let variant: BadgeVariant = 'secondary';
   let Icon = Clock;
-  let text = 'Not Submitted';
+  let text = 'Unsubmitted';
 
   switch (status) {
     case 'pending':
@@ -111,26 +109,24 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
           {/* Project Summary */}
           <div className="p-4 bg-gray-50 flex justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3">
-                <span className="font-medium">{projectGroup.project.name}</span>
-                {projectGroup.approvalStatus && (
-                  <div className="flex items-center gap-2">
-                    <ApprovalBadge status={projectGroup.approvalStatus.status} />
-                    {projectGroup.approvalStatus.status === 'pending' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleWithdraw(projectGroup.approvalStatus.approvalId)}
-                        disabled={isWithdrawing}
-                        className="ml-2"
-                      >
-                        <Undo2 className="h-4 w-4 mr-1" />
-                        Withdraw
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
+              <span className="font-medium">{projectGroup.project.name}</span>
+              {projectGroup.approvalStatus && (
+                <div className="flex items-center gap-2">
+                  <ApprovalBadge status={projectGroup.approvalStatus.status} />
+                  {projectGroup.approvalStatus.status === 'pending' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleWithdraw(projectGroup.approvalStatus.approvalId)}
+                      disabled={isWithdrawing}
+                      className="ml-2"
+                    >
+                      <Undo2 className="h-4 w-4 mr-1" />
+                      Withdraw
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             <span className="text-sm">
               <span className="text-gray-500">Total Hours:</span>
