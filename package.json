@@ -17,6 +17,7 @@
     "@tanstack/react-table": "^8.13.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "crypto-js": "^4.2.0",
     "date-fns": "^3.3.1",
     "firebase": "^10.8.0",
     "firebase-admin": "^13.0.2",
