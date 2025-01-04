@@ -87,7 +87,7 @@ export async function submitTimesheetApproval(request: ApprovalRequest) {
 
   // Generate approval URLs
   const baseUrl = import.meta.env.VITE_FIREBASE_API_URL;
-  const rejectUrl = import.meta.env.VITE_APP_URL + '/rejectTimesheet?id=' + approvalId;
+  const rejectUrl = import.meta.env.VITE_APP_URL + '/reject?id=' + approvalId;
   const approveUrl = `${baseUrl}/approveTimesheet?id=${approvalId}&action=approve`;
 
   // Format dates for email
