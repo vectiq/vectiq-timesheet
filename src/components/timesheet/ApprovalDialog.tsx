@@ -11,8 +11,6 @@ import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useApprovals } from '@/lib/hooks/useApprovals';
-import { Badge } from '@/components/ui/Badge';
-import { Clock, CheckCircle, AlertCircle, Undo2 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { format } from 'date-fns';
 import type { ProjectWithStatus } from '@/types';
