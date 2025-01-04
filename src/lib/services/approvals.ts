@@ -20,6 +20,40 @@ import { formatTimesheetBreakdown } from '@/lib/utils/timesheet';
 import type { TimeEntry, Project, Client, Approval, ApprovalStatus } from '@/types';
 import CryptoJS from 'crypto-js';
 
+export async function getApprovalsForDate(
+  date: string,
+  userId: string,
+  projectId: string
+): Promise<Approval[]> {
+  // Get first day of week and month for the given date
+  const dateObj = new Date(date);
+  const firstDayOfWeek = new Date(dateObj);
+  firstDayOfWeek.setDate(dateObj.getDate() - dateObj.getDay() + 1);
+  const firstDayOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+
+  const weekStart = format(firstDayOfWeek, 'yyyy-MM-dd');
+  const monthStart = format(firstDayOfMonth, 'yyyy-MM-dd');
+
+  const approvalsRef = collection(db, 'approvals');
+  const q = query(
+    approvalsRef,
+    where('userId', '==', userId),
+    where('project.id', '==', projectId),
+    where('period.startDate', 'in', [weekStart, monthStart]),
+    where('status', 'in', ['pending', 'approved'])
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    ...doc.data(),
+    id: doc.id,
+    submittedAt: doc.data().submittedAt?.toDate(),
+    approvedAt: doc.data().approvedAt?.toDate(),
+    rejectedAt: doc.data().rejectedAt?.toDate(),
+    withdrawnAt: doc.data().withdrawnAt?.toDate(),
+  })) as Approval[];
+}
+
 export async function withdrawApproval(approvalId: string) {
   const approvalRef = doc(db, 'approvals', approvalId);
   await updateDoc(approvalRef, {

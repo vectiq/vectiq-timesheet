@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils/styles';
+import { Lock } from 'lucide-react';
 
 interface EditableTimeCellProps {
   value: number | null;
@@ -18,7 +19,7 @@ export function EditableTimeCell({
   onStartEdit,
   onEndEdit,
   isDisabled = false,
-  approvalStatus
+  approvalStatus,
 }: EditableTimeCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState('');
@@ -76,17 +77,22 @@ export function EditableTimeCell({
       className="w-16 text-center rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
     />
   ) : (
-    <div
-      onClick={(isDisabled || isLocked) ? undefined : onStartEdit}
-      className={cn(
-        "w-16 py-2 text-center cursor-pointer rounded hover:bg-gray-50",
-        value === null && "text-gray-400",
-        (isDisabled || isLocked) && "cursor-not-allowed opacity-50 hover:bg-transparent",
-        isLocked && "bg-gray-50"
+    <div className="relative">
+      <div
+        onClick={(isDisabled || isLocked) ? undefined : onStartEdit}
+        className={cn(
+          "w-16 py-2 text-center cursor-pointer rounded hover:bg-gray-50",
+          value === null && "text-gray-400",
+          (isDisabled || isLocked) && "cursor-not-allowed opacity-50 hover:bg-transparent",
+          isLocked && "bg-gray-50"
+        )}
+        title={isLocked ? `Time entries are locked - status: ${approvalStatus}` : undefined}
+      >
+        {value?.toFixed(2) || '-'}
+      </div>
+      {isLocked && (
+        <Lock className="h-3 w-3 text-gray-400 absolute -top-1 -right-1" />
       )}
-      title={isLocked ? `Time entries are locked - ${approvalStatus} approval` : undefined}
-    >
-      {value?.toFixed(2) || '-'}
     </div>
   );
 }

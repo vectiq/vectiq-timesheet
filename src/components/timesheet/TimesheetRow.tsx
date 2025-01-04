@@ -4,9 +4,10 @@ import { Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { EditableTimeCell } from './EditableTimeCell';
 import { cn } from '@/lib/utils/styles';
-import { X } from 'lucide-react';
-import { useApprovals } from '@/lib/hooks/useApprovals';
+import { X, Lock } from 'lucide-react';
+import { useApprovals } from '@/lib/hooks/useApprovals'; 
 import type { TimeEntry, Project, Approval } from '@/types';
+import { auth } from '@/lib/firebase';
 
 interface TimesheetRowProps {
   index: number;
@@ -55,7 +56,8 @@ export const TimesheetRow = memo(function TimesheetRow({
   onEndEdit,
 }: TimesheetRowProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const { approvals } = useApprovals();
+  const { useApprovalsForDate } = useApprovals();
+  const userId = auth.currentUser?.uid;
 
   // Filter clients based on user assignments
   const assignedClientIds = [...new Set(userAssignments.map(a => a.clientId))];
@@ -94,13 +96,18 @@ export const TimesheetRow = memo(function TimesheetRow({
     [rowEntries]
   );
 
-  // Check if any entries in this row are locked
-  const hasLockedEntries = useMemo(() => {
-    return rowEntries.some(entry => {
-      const approval = approvals.find(a => a.compositeKey === entry.compositeKey);
-      return approval?.status === 'pending' || approval?.status === 'approved';
-    });
-  }, [rowEntries, approvals]);
+  // Query approvals for each date in the week
+  const approvalQueries = weekDays.map(date => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const query = useApprovalsForDate(dateStr, userId, row.projectId);
+    return query;
+  });
+
+  // Check if the entire row is locked (all dates are covered by approvals)
+  const hasLockedEntries = approvalQueries.some(query => 
+    query.data && query.data.length > 0 && 
+    query.data.some(a => ['pending', 'approved'].includes(a.status))
+  );
 
   return (
     <tr>
@@ -174,7 +181,9 @@ export const TimesheetRow = memo(function TimesheetRow({
         const dateStr = format(date, 'yyyy-MM-dd');
         const entry = rowEntries.find(e => e.date === dateStr);
         const cellKey = `${dateStr}-${row.projectId}-${row.roleId}`;
-        const approval = approvals.find(a => a.compositeKey === entry?.compositeKey);
+        const approvalQuery = approvalQueries[weekDays.indexOf(date)];
+        const isLocked = approvalQuery.data && approvalQuery.data.length > 0;
+        const approvalStatus = isLocked ? approvalQuery.data[0].status : undefined;
         const isRowComplete = row.clientId && row.projectId && row.roleId;
         
         return (
@@ -186,7 +195,7 @@ export const TimesheetRow = memo(function TimesheetRow({
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
               isDisabled={!isRowComplete}
-              approvalStatus={approval?.status}
+              approvalStatus={approvalStatus}
             />
           </Td>
         );
@@ -199,11 +208,15 @@ export const TimesheetRow = memo(function TimesheetRow({
           variant="secondary"
           size="sm"
           disabled={hasLockedEntries}
-          title={hasLockedEntries ? "Cannot delete row with pending or approved entries" : undefined}
+          title={hasLockedEntries ? "Cannot delete row with locked entries" : undefined}
           onClick={() => onRemoveRow(index)}
           className={hasLockedEntries ? "opacity-50 cursor-not-allowed" : ""}
         >
-          <X className="h-4 w-4" />
+          {hasLockedEntries ? (
+            <Lock className="h-4 w-4 text-gray-400" />
+          ) : (
+            <X className="h-4 w-4" />
+          )}
         </Button>
       </Td>
     </tr>
