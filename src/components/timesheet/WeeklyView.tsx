@@ -38,6 +38,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, dateRange }: Week
   const { roles: allRoles } = useRoles();
 
   const userAssignments = currentUser?.projectAssignments || [];
+  const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
   const weekDays = useMemo(() => {
     const days: Date[] = [];
@@ -97,6 +98,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, dateRange }: Week
                 key={index}
                 index={index}
                 row={row}
+                weekKey={weekKey}
                 weekDays={weekDays}
                 timeEntries={timeEntries}
                 clients={clients}

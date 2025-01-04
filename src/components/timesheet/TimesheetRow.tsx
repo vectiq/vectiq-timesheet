@@ -15,6 +15,7 @@ interface TimesheetRowProps {
     projectId: string;
     roleId: string;
   };
+  weekKey: string;
   weekDays: Date[];
   timeEntries: TimeEntry[];
   clients: Array<{ id: string; name: string }>;
@@ -39,6 +40,7 @@ interface TimesheetRowProps {
 export const TimesheetRow = memo(function TimesheetRow({
   index,
   row,
+  weekKey,
   weekDays,
   timeEntries,
   clients,
