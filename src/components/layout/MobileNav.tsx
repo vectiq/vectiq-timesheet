@@ -32,9 +32,6 @@ export function MobileNav() {
               src="/logo.svg"
               alt="Company Logo"
             />
-            <span className="text-lg font-semibold text-gray-900">
-              VectiQ
-            </span>
           </div>
         </div>
         <nav className="flex flex-1 flex-col">
