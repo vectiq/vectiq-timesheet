@@ -8,7 +8,7 @@ import type { ProjectRole } from '@/types';
 interface ProjectRolesTableProps {
   selectedRoleIds: string[];
   rates: Record<string, ProjectRole>;
-  onRateChange: (roleId: string, rates: { costRate: number; sellRate: number }) => void;
+  onRateChange: (roleId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => void;
   onAddRole: (roleId: string) => void;
   onRemoveRole: (roleId: string) => void;
 }
@@ -66,6 +66,7 @@ export function ProjectRolesTable({
               <Th>Role</Th>
               <Th>Cost Rate ($/hr)</Th>
               <Th>Sell Rate ($/hr)</Th>
+              <Th>Billable</Th>
               <Th>Margin</Th>
               <Th className="w-16"></Th>
             </tr>
@@ -104,6 +105,18 @@ export function ProjectRolesTable({
                         sellRate: parseFloat(e.target.value) || 0,
                       })}
                       className="w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  </Td>
+                  <Td>
+                    <input
+                      type="checkbox"
+                      checked={rate.billable || false}
+                      onChange={(e) => onRateChange(role.id, {
+                        costRate: rate.costRate || 0,
+                        sellRate: rate.sellRate || 0,
+                        billable: e.target.checked
+                      })}
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
                   </Td>
                   <Td>{margin}%</Td>

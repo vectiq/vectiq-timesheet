@@ -1,4 +1,3 @@
-import { Bell } from 'lucide-react';
 import { MobileNav } from './MobileNav';
 import { UserMenu } from './UserMenu';
 
@@ -12,14 +11,6 @@ export function Navbar() {
           </div>
           
           <div className="flex items-center gap-x-4">
-            <button
-              type="button"
-              className="rounded-full bg-white p-1.5 text-gray-400 hover:text-gray-500"
-            >
-              <span className="sr-only">View notifications</span>
-              <Bell className="h-5 w-5" aria-hidden="true" />
-            </button>
-
             <UserMenu />
           </div>
         </div>

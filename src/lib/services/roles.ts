@@ -23,28 +23,22 @@ export async function getRoles(): Promise<Role[]> {
 export async function createRole(roleData: Omit<Role, 'id'>): Promise<Role> {
   const roleRef = doc(collection(db, COLLECTION));
   const role: Role = {
+    id: roleRef.id,
     ...roleData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   };
   
-  await setDoc(roleRef, role);
-  return {
-    ...role,
-    id: roleRef.id
-  };
+  await setDoc(roleRef, {
+    name: role.name,
+    isActive: role.isActive
+  });
+  
+  return role;
 }
 
 export async function updateRole(id: string, roleData: Partial<Role>): Promise<void> {
   const roleRef = doc(db, COLLECTION, id);
-  const updateData = {
-    ...roleData,
-    updatedAt: serverTimestamp(),
-  };
   
-  await updateDoc(roleRef, {
-    ...updateData,
-  });
+  await updateDoc(roleRef, roleData);
 }
 
 export async function deleteRole(id: string): Promise<void> {

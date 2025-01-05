@@ -10,6 +10,7 @@ export interface ProjectRole {
   projectId: string;
   costRate: number;
   sellRate: number;
+  billable: boolean;
 }
 
 export interface Client {
@@ -50,6 +51,7 @@ export interface TimeEntry {
 }
 
 export interface ReportFilters {
+  type?: 'time' | 'overtime';
   startDate: string;
   endDate: string;
   clientIds: string[];
@@ -99,6 +101,29 @@ export interface ProjectAssignment {
 export interface ReportData {
   entries: ReportEntry[];
   summary: ReportSummary;
+}
+
+export interface OvertimeReportEntry {
+  userId: string;
+  userName: string;
+  overtimeType: 'no' | 'billable' | 'all';
+  hoursPerWeek: number;
+  totalHours: number;
+  overtimeHours: number;
+  projects: {
+    projectId: string;
+    projectName: string;
+    hours: number;
+    overtimeHours: number;
+  }[];
+}
+
+export interface OvertimeReportData {
+  entries: OvertimeReportEntry[];
+  summary: {
+    totalOvertimeHours: number;
+    totalUsers: number;
+  };
 }
 
 export interface ApprovalStatus {

@@ -13,6 +13,18 @@ export function ProjectRates({ selectedRoleIds, onRateChange, rates }: ProjectRa
   const { roles } = useRoles();
   const selectedRoles = roles.filter(role => selectedRoleIds.includes(role.id));
 
+  const handleRateChange = (roleId: string, rates: { 
+    costRate: number; 
+    sellRate: number;
+    billable: boolean;
+  }) => {
+    onRateChange(roleId, {
+      costRate: rates.costRate || 0,
+      sellRate: rates.sellRate || 0,
+      billable: rates.billable || false
+    });
+  };
+
   return (
     <div className="space-y-4">
       {selectedRoles.map(role => (

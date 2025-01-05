@@ -70,13 +70,14 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     }
   };
 
-  const handleRateChange = (roleId: string, rates: { costRate: number; sellRate: number }) => {
+  const handleRateChange = (roleId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => {
     const currentRoles = roles.filter(r => r.roleId !== roleId);
     setValue('roles', [...currentRoles, { 
       roleId,
       projectId: project?.id || crypto.randomUUID(),
       costRate: rates.costRate,
-      sellRate: rates.sellRate
+      sellRate: rates.sellRate,
+      billable: rates.billable
     }]);
   };
 

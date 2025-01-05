@@ -80,8 +80,6 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
 }
 
 export async function updateProject(projectData: Project): Promise<void> {
-  const batch = writeBatch(db);
-  
   const { id, roles, ...projectFields } = projectData;
   if (!id) throw new Error('Project ID is required for update');
 
@@ -94,29 +92,29 @@ export async function updateProject(projectData: Project): Promise<void> {
     updatedAt: serverTimestamp(),
   };
   
-  batch.update(projectRef, projectUpdate);
+  await updateDoc(projectRef, projectUpdate);
 
   // Delete existing project roles
   const existingRolesSnapshot = await getDocs(
     query(collection(db, ROLES_COLLECTION), where('projectId', '==', id))
   );
-  existingRolesSnapshot.docs.forEach(doc => {
-    batch.delete(doc.ref);
-  });
   
+  // Delete existing roles
+  for (const doc of existingRolesSnapshot.docs) {
+    await deleteDoc(doc.ref);
+  }
+   
   // Create new project roles
   for (const role of (roles || [])) {
     const roleRef = doc(collection(db, ROLES_COLLECTION));
-    batch.set(roleRef, {
+    await setDoc(roleRef, {
       projectId: id,
       roleId: role.roleId,
       costRate: role.costRate,
       sellRate: role.sellRate,
+      billable: role.billable || false
     });
   }
-
-  // Commit all changes in one transaction
-  await batch.commit();
 }
 
 export async function deleteProject(id: string): Promise<void> {

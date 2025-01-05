@@ -1,12 +1,11 @@
-import { useState } from 'react';
-import { ReportFilters } from '@/components/reports/ReportFilters';
-import { ReportTable } from '@/components/reports/ReportTable';
-import { ReportSummary } from '@/components/reports/ReportSummary';
-import { useReports } from '@/lib/hooks/useReports';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { useState, useCallback } from 'react';
+import { ReportTabs } from '@/components/reports/ReportTabs';
+import { TimeReport } from '@/components/reports/TimeReport';
+import { OvertimeReport } from '@/components/reports/OvertimeReport';
 import type { ReportFilters as ReportFiltersType } from '@/types';
 
 export default function Reports() {
+  const [activeTab, setActiveTab] = useState('time');
   const [filters, setFilters] = useState<ReportFiltersType>({
     startDate: '',
     endDate: '',
@@ -15,11 +14,9 @@ export default function Reports() {
     roleIds: [],
   });
 
-  const { data, isLoading } = useReports(filters);
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -27,9 +24,13 @@ export default function Reports() {
         <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
       </div>
 
-      <ReportFilters filters={filters} onChange={setFilters} />
-      <ReportSummary data={data?.summary} />
-      <ReportTable data={data?.entries} />
+      <ReportTabs activeTab={activeTab} onTabChange={handleTabChange} />
+
+      {activeTab === 'time' ? (
+        <TimeReport filters={filters} onFiltersChange={setFilters} />
+      ) : (
+        <OvertimeReport filters={filters} onFiltersChange={setFilters} />
+      )}
     </div>
   );
 }
