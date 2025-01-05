@@ -5,6 +5,7 @@ export interface Role {
 }
 
 export interface ProjectRole {
+  id: string;
   roleId: string;
   projectId: string;
   costRate: number;
@@ -15,7 +16,6 @@ export interface Client {
   id: string;
   name: string;
   email: string;
-  approverEmail: string;
 }
 
 export interface ProjectWithStatus {
@@ -81,6 +81,8 @@ export interface User {
   email: string;
   name: string;
   role: 'admin' | 'user';
+  overtime: 'no' | 'billable' | 'all';
+  hoursPerWeek: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -23,8 +23,8 @@ export async function getRoles(): Promise<Role[]> {
 export async function createRole(roleData: Omit<Role, 'id'>): Promise<Role> {
   const roleRef = doc(collection(db, COLLECTION));
   const role: Role = {
-    id: roleRef.id,
     ...roleData,
+    id: roleRef.id,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };

@@ -43,8 +43,6 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function createProject(projectData: Omit<Project, 'id'>): Promise<Project> {
-  const batch = writeBatch(db);
-  
   // Create project document
   const projectRef = doc(collection(db, COLLECTION));
   const { roles, ...projectFields } = projectData;
@@ -56,7 +54,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
     updatedAt: serverTimestamp(),
   };
   
-  batch.set(projectRef, project);
+  await setDoc(projectRef, project);
 
   // Create project roles
   const projectRoles = (roles || []).map(role => ({
@@ -68,10 +66,8 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
 
   for (const role of projectRoles) {
     const roleRef = doc(collection(db, ROLES_COLLECTION));
-    batch.set(roleRef, role);
+    await setDoc(roleRef, {...role, id: roleRef.id});
   }
-
-  await batch.commit();
 
   return {
     ...project,
@@ -103,15 +99,14 @@ export async function updateProject(id: string, projectData: Project): Promise<v
   // Create new project roles
   for (const role of roles) {
     const roleRef = doc(collection(db, ROLES_COLLECTION));
-    batch.set(roleRef, {
+    await setDoc(roleRef, {
+      id: roleRef.id,
       projectId: id,
       roleId: role.roleId,
       costRate: role.costRate,
       sellRate: role.sellRate,
     });
   }
-
-  await batch.commit();
 }
 
 export async function deleteProject(id: string): Promise<void> {

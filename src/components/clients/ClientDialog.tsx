@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { clientSchema } from '@/lib/schemas/client';
 import type { Client } from '@/types';
 
 interface ClientDialogProps {
@@ -32,7 +31,6 @@ export function ClientDialog({
     defaultValues: client || {
       name: '',
       email: '',
-      approverEmail: '',
     },
   });
 
@@ -42,7 +40,6 @@ export function ClientDialog({
       reset(client || {
         name: '',
         email: '',
-        approverEmail: '',
       });
     }
   }, [open, client, reset]);
@@ -73,14 +70,6 @@ export function ClientDialog({
             <input
               type="email"
               {...register('email')}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-          </FormField>
-
-          <FormField label="Approver Email">
-            <input
-              type="email"
-              {...register('approverEmail')}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
           </FormField>

@@ -15,8 +15,7 @@ export function ClientsTable({ clients, onEdit, onDelete }: ClientsTableProps) {
       <TableHeader>
         <tr className="border-b border-gray-200">
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Name</th>
-          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
-          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approver Email</th>
+          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Contact Email</th>
           <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
         </tr>
       </TableHeader>
@@ -25,7 +24,6 @@ export function ClientsTable({ clients, onEdit, onDelete }: ClientsTableProps) {
           <tr key={client.id}>
             <Td className="font-medium text-gray-900">{client.name}</Td>
             <Td>{client.email}</Td>
-            <Td>{client.approverEmail}</Td>
             <Td className="text-right">
               <div className="flex justify-end gap-2">
                 <Button variant="secondary" size="sm" onClick={() => onEdit(client)}>

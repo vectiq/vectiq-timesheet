@@ -23,8 +23,8 @@ export async function getClients(): Promise<Client[]> {
 export async function createClient(clientData: Omit<Client, 'id'>): Promise<Client> {
   const clientRef = doc(collection(db, COLLECTION));
   const client: Client = {
-    id: clientRef.id,
     ...clientData,
+    id: clientRef.id,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
