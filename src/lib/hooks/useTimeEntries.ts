@@ -52,7 +52,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: updateTimeEntry,
+    mutationFn: ({ id, data }: { id: string; data: Partial<TimeEntry> }) => updateTimeEntry(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
@@ -76,7 +76,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   }, [createMutation]);
 
   const handleUpdateEntry = useCallback(async (id: string, data: Partial<TimeEntry>) => {
-    return updateMutation.mutateAsync(id, data);
+    return updateMutation.mutateAsync({ id, data });
   }, [updateMutation]);
 
   const handleDeleteEntry = useCallback(async (id: string) => {
@@ -191,7 +191,10 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
       if (value === null) {
         await handleDeleteEntry(entry.id);
       } else {
-        await handleUpdateEntry(entry.id, { hours: value });
+        await handleUpdateEntry(entry.id, { 
+          hours: value,
+          updatedAt: new Date().toISOString()
+        });
       }
     } else if (value !== null) {
       await handleCreateEntry({
