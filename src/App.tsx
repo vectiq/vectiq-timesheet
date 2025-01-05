@@ -13,7 +13,6 @@ import Projects from '@/pages/Projects';
 import Roles from '@/pages/Roles';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
-import TestData from '@/pages/TestData';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
 
@@ -104,14 +103,6 @@ export default function App() {
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Users />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="test-data"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <TestData />
                 </RoleProtectedRoute>
               }
             />

@@ -6,6 +6,5 @@ export const navigationItems = [
   { name: 'Projects', href: '/projects', icon: FolderKanban, roles: ['admin'] },
   { name: 'Roles', href: '/roles', icon: Briefcase, roles: ['admin'] },
   { name: 'Clients', href: '/clients', icon: Users, roles: ['admin'] },
-  { name: 'Users', href: '/users', icon: UserCircle, roles: ['admin'] },
-  { name: 'Test Data', href: '/test-data', icon: Database, roles: ['admin'] },
+  { name: 'Users', href: '/users', icon: UserCircle, roles: ['admin'] }
 ] as const;
