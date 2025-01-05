@@ -83,7 +83,6 @@ export interface User {
   role: 'admin' | 'user';
   overtime: 'no' | 'billable' | 'all';
   hoursPerWeek: number;
-  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   projectAssignments: ProjectAssignment[];

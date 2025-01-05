@@ -31,7 +31,9 @@ export default function Users() {
 
   const handleSubmit = async (data: Omit<User, 'id'>) => {
     if (selectedUser) {
-      await updateUser({ id: selectedUser.id, data });
+      // Remove email and projectAssignments from update data
+      const { email, projectAssignments, ...updateData } = data;
+      await updateUser(selectedUser.id, updateData);
     } else {
       await createUser(data);
     }

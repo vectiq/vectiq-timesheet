@@ -26,11 +26,16 @@ export function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-72">
         <div className="flex h-16 shrink-0 items-center">
-          <img
-            className="h-8 w-auto"
-            src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
-            alt="Your Company"
-          />
+          <div className="flex items-center gap-3">
+            <img
+              className="h-8 w-auto"
+              src="/logo.svg"
+              alt="Company Logo"
+            />
+            <span className="text-lg font-semibold text-gray-900">
+              VectiQ
+            </span>
+          </div>
         </div>
         <nav className="flex flex-1 flex-col">
           <ul role="list" className="flex flex-1 flex-col gap-y-7">

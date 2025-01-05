@@ -27,15 +27,16 @@ export function UserDialog({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors }, 
     reset,
   } = useForm<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
     defaultValues: user || {
       email: '',
       name: '',
       role: 'user',
-      isActive: true,
       projectAssignments: [],
+      hoursPerWeek: 40,
+      overtime: 'no',
     },
   });
 
@@ -45,7 +46,9 @@ export function UserDialog({
         email: '',
         name: '',
         role: 'user',
-        isActive: true,
+        hoursPerWeek: 40,
+        overtime: 'no',
+        projectAssignments: [],
       });
     }
   }, [open, user, reset]);
@@ -81,8 +84,15 @@ export function UserDialog({
           <FormField label="Email">
             <input
               {...register('email')}
+              readOnly={!!user}
+              disabled={!!user}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
+            {user && (
+              <p className="mt-1 text-sm text-gray-500">
+                Email cannot be changed. Users can update their email from their profile settings.
+              </p>
+            )}
           </FormField>
 
           <FormField label="Role">
@@ -95,16 +105,32 @@ export function UserDialog({
             </select>
           </FormField>
 
-          <FormField label="Status">
-            <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Hours Per Week">
               <input
-                type="checkbox"
-                {...register('isActive')}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                type="number"
+                min="0"
+                max="168"
+                {...register('hoursPerWeek', { 
+                  valueAsNumber: true,
+                  min: 0,
+                  max: 168
+                })}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
-              <span className="text-sm text-gray-600">Active</span>
-            </div>
-          </FormField>
+            </FormField>
+
+            <FormField label="Overtime">
+              <select
+                {...register('overtime')}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="no">No Overtime</option>
+                <option value="billable">Billable Only</option>
+                <option value="all">All Hours</option>
+              </select>
+            </FormField>
+          </div>
 
           <div className="flex justify-end gap-3">
             <Button

@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
 export default defineConfig({
+  
+  root: './',
   plugins: [
     react()
   ],
@@ -11,8 +13,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    watch: {
+      usePolling: true
+    }
+  },
   build: {
     sourcemap: true,
+    outDir: 'dist',
     rollupOptions: {
       onwarn(warning, warn) {
         if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
@@ -20,5 +28,6 @@ export default defineConfig({
         warn(warning);
       }
     }
-  }
+  },
+  publicDir: 'public'
 });

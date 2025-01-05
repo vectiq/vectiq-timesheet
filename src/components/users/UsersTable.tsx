@@ -32,39 +32,45 @@ export function UsersTable({
   return (
     <Table>
       <TableHeader>
-        <tr className="border-b border-gray-200">
+        <tr>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Name</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
+          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Hours/Week</th>
+          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Overtime</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Role</th>
-          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project Assignments</th>
           <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
         </tr>
       </TableHeader>
       <TableBody>
         {users.map((user) => {
-          const userAssignments = assignments.filter(a => a.userId === user.id);
+          const userAssignments = assignments?.filter(a => a.userId === user.id) || [];
 
           return (
             <tr key={user.id}>
               <Td className="font-medium text-gray-900">{user.name}</Td>
               <Td>{user.email}</Td>
+              <Td>{user.hoursPerWeek}</Td>
+              <Td>
+                <Badge variant="secondary">
+                  {user.overtime === 'no' ? 'No Overtime' : 
+                   user.overtime === 'billable' ? 'Billable Only' : 
+                   'All Hours'}
+                </Badge>
+              </Td>
               <Td>
                 <Badge variant={user.role === 'admin' ? 'warning' : 'secondary'}>
                   {user.role}
                 </Badge>
               </Td>
               <Td>
-                <Badge variant={user.isActive ? 'success' : 'secondary'}>
-                  {user.isActive ? 'Active' : 'Inactive'}
-                </Badge>
-              </Td>
-              <Td>
                 <div className="space-y-2">
-                  {userAssignments.map(assignment => {
+                  {userAssignments?.map(assignment => {
                     const project = projects.find(p => p.id === assignment.projectId);
                     const role = roles.find(r => r.id === assignment.roleId);
                     const client = clients.find(c => c.id === assignment.clientId);
+                    
+                    if (!project || !role || !client) return null;
                     
                     return (
                       <div key={assignment.id} className="flex items-center justify-between text-sm">
@@ -83,6 +89,11 @@ export function UsersTable({
                       </div>
                     );
                   })}
+                  {userAssignments.length === 0 && (
+                    <div className="text-sm text-gray-500">
+                      No project assignments
+                    </div>
+                  )}
                 </div>
               </Td>
               <Td className="text-right">

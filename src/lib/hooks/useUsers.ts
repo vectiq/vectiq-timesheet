@@ -27,7 +27,8 @@ export function useUsers() {
 
   const usersQuery = useQuery({
     queryKey: [USERS_KEY],
-    queryFn: getUsers
+    queryFn: getUsers,
+    staleTime: 1000 * 60 // 1 minute
   });
 
   const currentUserQuery = useQuery({
@@ -37,7 +38,8 @@ export function useUsers() {
 
   const assignmentsQuery = useQuery({
     queryKey: [ASSIGNMENTS_KEY],
-    queryFn: getProjectAssignments
+    queryFn: getProjectAssignments,
+    staleTime: 1000 * 60 // 1 minute
   });
 
   const createUserMutation = useMutation({
@@ -48,7 +50,7 @@ export function useUsers() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: updateUser,
+    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) => updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [USERS_KEY] });
     }
@@ -93,7 +95,7 @@ export function useUsers() {
         await updateEmail(currentUser, data.email);
       }
     }
-    return updateUserMutation.mutateAsync(id, data);
+    return updateUserMutation.mutateAsync({ id, data });
   }, [updateUserMutation]);
 
   const sendPasswordReset = useCallback(async (email: string) => {

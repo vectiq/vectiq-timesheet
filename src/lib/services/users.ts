@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  writeBatch,
   getDocs,
   getDoc,
   setDoc,
@@ -27,11 +28,14 @@ const ASSIGNMENTS_COLLECTION = 'projectAssignments';
 
 // User Operations
 export async function getUsers(): Promise<User[]> {
-  const snapshot = await getDocs(collection(db, USERS_COLLECTION));
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as User[];
+  // Get all users
+  const usersSnapshot = await getDocs(collection(db, USERS_COLLECTION));
+  const users = usersSnapshot.docs.map(doc => ({
+    ...doc.data(),
+    id: doc.id
+  }));
+
+  return users as User[];
 }
 
 // Get the current user
@@ -113,15 +117,44 @@ export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedA
 
 export async function updateUser(id: string, data: Partial<User>): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, id);
-  await updateDoc(userRef, {
+  const updateData = {
     ...data,
     updatedAt: serverTimestamp(),
-  });
+  };
+  
+  // Remove projectAssignments from the update data as it's stored separately
+  delete updateData.projectAssignments;
+  
+  await updateDoc(userRef, updateData);
 }
 
 export async function deleteUser(id: string): Promise<void> {
+  const functions = getFunctions();
+  const deleteUserFunction = httpsCallable(functions, 'deleteUser');
+
+  // Delete the auth user first
+  try {
+    await deleteUserFunction({ userId: id });
+  } catch (error) {
+    console.error('Error deleting auth user:', error);
+    throw error;
+  }
+
+  // Then delete the Firestore document
   const userRef = doc(db, USERS_COLLECTION, id);
   await deleteDoc(userRef);
+
+  // Delete any project assignments
+  const assignmentsSnapshot = await getDocs(
+    query(collection(db, ASSIGNMENTS_COLLECTION), where('userId', '==', id))
+  );
+  
+  const batch = writeBatch(db);
+  assignmentsSnapshot.docs.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+  
+  await batch.commit();
 }
 
 // Project Assignment Operations
