@@ -26,7 +26,7 @@ export function useRoles() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: updateRole,
+    mutationFn: ({ id, data }: { id: string; data: Partial<Role> }) => updateRole(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
@@ -44,7 +44,7 @@ export function useRoles() {
   }, [createMutation]);
 
   const handleUpdateRole = useCallback(async (id: string, data: Partial<Role>) => {
-    return updateMutation.mutateAsync(id, data);
+    return updateMutation.mutateAsync({ id, data });
   }, [updateMutation]);
 
   const handleDeleteRole = useCallback(async (id: string) => {

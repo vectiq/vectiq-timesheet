@@ -24,20 +24,26 @@ export async function createRole(roleData: Omit<Role, 'id'>): Promise<Role> {
   const roleRef = doc(collection(db, COLLECTION));
   const role: Role = {
     ...roleData,
-    id: roleRef.id,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
   
   await setDoc(roleRef, role);
-  return role;
+  return {
+    ...role,
+    id: roleRef.id
+  };
 }
 
 export async function updateRole(id: string, roleData: Partial<Role>): Promise<void> {
   const roleRef = doc(db, COLLECTION, id);
-  await updateDoc(roleRef, {
+  const updateData = {
     ...roleData,
     updatedAt: serverTimestamp(),
+  };
+  
+  await updateDoc(roleRef, {
+    ...updateData,
   });
 }
 
