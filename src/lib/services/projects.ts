@@ -52,6 +52,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   const { roles, ...projectFields } = projectData;
   const project = {
     ...projectFields,
+    id: projectRef.id,
     approverEmail: projectData.approverEmail || '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
