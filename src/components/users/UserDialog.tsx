@@ -126,8 +126,8 @@ export function UserDialog({
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               >
                 <option value="no">No Overtime</option>
-                <option value="billable">Billable Only</option>
-                <option value="all">All Hours</option>
+                <option value="eligible">Eligible Projects Only</option>
+                <option value="all">All Projects</option>
               </select>
             </FormField>
           </div>

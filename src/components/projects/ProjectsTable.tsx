@@ -26,6 +26,7 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">End Date</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approver Email</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approval Required</th>
+          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Overtime</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Roles</th>
           <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
         </tr>
@@ -41,6 +42,11 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
             <Td>
               <Badge variant={project.requiresApproval ? 'warning' : 'success'}>
                 {project.requiresApproval ? 'Yes' : 'No'}
+              </Badge>
+            </Td>
+            <Td>
+              <Badge variant={project.overtimeInclusive ? 'success' : 'secondary'}>
+                {project.overtimeInclusive ? 'Included' : 'Excluded'}
               </Badge>
             </Td>
             <Td>

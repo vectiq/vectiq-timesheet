@@ -30,6 +30,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       startDate: '',
       endDate: '',
       requiresApproval: false,
+      overtimeInclusive: true,
       roles: [],
     },
   });
@@ -54,6 +55,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       endDate: data.endDate || '',
       approverEmail: data.approverEmail || '',
       requiresApproval: data.requiresApproval || false,
+      overtimeInclusive: data.overtimeInclusive || false,
       roles: (roles || []).map(role => ({
         roleId: role.roleId,
         projectId: projectId,
@@ -165,6 +167,17 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
               className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
             />
             <span className="text-sm text-gray-600">Require time entry approval</span>
+          </div>
+        </FormField>
+
+        <FormField label="Overtime">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              {...register('overtimeInclusive')}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-sm text-gray-600">Include in overtime calculations</span>
           </div>
         </FormField>
 
