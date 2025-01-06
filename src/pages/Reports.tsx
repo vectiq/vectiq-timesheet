@@ -1,14 +1,24 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { ReportTabs } from '@/components/reports/ReportTabs';
 import { TimeReport } from '@/components/reports/TimeReport';
 import { OvertimeReport } from '@/components/reports/OvertimeReport';
 import type { ReportFilters as ReportFiltersType } from '@/types';
 
 export default function Reports() {
+  // Get current month's date range
+  const defaultDateRange = useMemo(() => {
+    const now = new Date();
+    return {
+      startDate: format(startOfMonth(now), 'yyyy-MM-dd'),
+      endDate: format(endOfMonth(now), 'yyyy-MM-dd')
+    };
+  }, []);
+
   const [activeTab, setActiveTab] = useState('time');
   const [filters, setFilters] = useState<ReportFiltersType>({
-    startDate: '',
-    endDate: '',
+    startDate: defaultDateRange.startDate,
+    endDate: defaultDateRange.endDate,
     clientIds: [],
     projectIds: [],
     roleIds: [],

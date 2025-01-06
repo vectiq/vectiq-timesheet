@@ -15,7 +15,6 @@ import {
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import { formatTimesheetBreakdown } from '@/lib/utils/timesheet';
 import type { TimeEntry, Project, Client, Approval, ApprovalStatus } from '@/types';
 import CryptoJS from 'crypto-js';
@@ -144,10 +143,20 @@ export async function submitTimesheetApproval(request: ApprovalRequest) {
     name: role.name
   })));
 
+  // Get user details
+  const userRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userRef);
+
+  if (!userDoc.exists()) {
+    throw new Error('User not found');
+  }
+
+  const user = userDoc.data();
+
   // Prepare email content
   const emailHtml = `
       <h2>Timesheet Approval Request</h2>
-      <p>A timesheet has been submitted for your approval:</p>
+      <p>A timesheet has been submitted for your approval by ${user.name}:</p>
       
       <ul>
         <li><strong>Client:</strong> ${client.name}</li>
@@ -181,10 +190,10 @@ export async function submitTimesheetApproval(request: ApprovalRequest) {
   const sendEmail = httpsCallable(functions, 'sendEmail');
   await sendEmail({
     recipient: project.approverEmail,
-    subject: `Timesheet Approval Required: ${client.name} - ${project.name}`,
+    subject: `Timesheet Approval Required: ${client.name} - ${project.name} (Submitted by ${user.name})`,
     body: emailHtml,
     type: 'Timesheet approval',
-    secret: generateToken(import.meta.env.VITE_EMAIL_SECRET)
+    token: generateToken(import.meta.env.VITE_EMAIL_SECRET)
   });
 
   return approvalId;
@@ -234,6 +243,7 @@ export async function getApprovalStatus(
   if (snapshot.empty) return null;
 
   const approval = snapshot.docs[0].data() as Approval;
+  console.log("Approval", approval)
   return {
     status: approval.status,
     approvalId: approval.id
@@ -288,6 +298,6 @@ export async function rejectTimesheet(approval) {
     subject: `Timesheet Rejected: ${approval.client.name} - ${approval.project.name}`,
     body: emailHtml,
     type: 'Timesheet rejection',
-    secret: generateToken(import.meta.env.VITE_EMAIL_SECRET)
+    token: generateToken(import.meta.env.VITE_EMAIL_SECRET)
   });
 }

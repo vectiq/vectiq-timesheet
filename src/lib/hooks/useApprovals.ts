@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   getApprovalsForDate,
@@ -6,7 +5,7 @@ import {
   withdrawApproval,
   rejectTimesheet,
   getApprovals,
-  getApprovalStatus as getApprovalStatusService
+  getApprovalStatus
 } from '@/lib/services/approvals';
 import type { Project, Client, TimeEntry, Approval } from '@/types';
 
@@ -44,7 +43,7 @@ export function useApprovals() {
     endDate: string
   ) => useQuery({
     queryKey: QUERY_KEYS.status(projectId, userId, startDate, endDate),
-    queryFn: () => getApprovalStatusService(projectId, userId, startDate, endDate)
+    queryFn: () => getApprovalStatus(projectId, userId, startDate, endDate)
   });
 
   const useApprovalsForDate = (date: string, userId: string, projectId: string) => useQuery({
