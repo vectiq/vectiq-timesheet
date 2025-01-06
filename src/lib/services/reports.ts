@@ -138,10 +138,21 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
   const userProjectHours = new Map<string, Map<string, number>>();
   const userOvertimeHours = new Map<string, Map<string, number>>();
 
+  // Get project roles for billable status
+  const projectRolesSnapshot = await getDocs(collection(db, 'projectRoles'));
+  const projectRoles = new Map();
+  projectRolesSnapshot.docs.forEach(doc => {
+    const data = doc.data();
+    const key = `${data.projectId}_${data.roleId}`;
+    projectRoles.set(key, data);
+  });
+
   // Process each time entry
   timeEntries.forEach(entry => {
     const user = users.get(entry.userId) as User;
     const project = projects.get(entry.projectId) as Project;
+    const projectRole = projectRoles.get(`${entry.projectId}_${entry.roleId}`);
+    const isBillable = projectRole?.billable || false;
     
     if (!user || !project) return;
 
@@ -149,14 +160,14 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
     if (user.overtime === 'no') return;
 
     // For billable only, skip non-billable projects
-    if (user.overtime === 'billable' && !project.billable) return;
+    if (user.overtime === 'billable' && !isBillable) return;
 
     // For projects requiring approval, only count approved hours
     if (project.requiresApproval) {
       const approval = approvals.find(a => 
         a.project.id === project.id &&
         a.userId === user.id &&
-        a.status === 'approved' &&
+        ['approved', 'pending'].includes(a.status) &&
         parseISO(a.period.startDate) <= parseISO(entry.date) &&
         parseISO(a.period.endDate) >= parseISO(entry.date)
       );
@@ -164,7 +175,7 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
     }
 
     // Get week start date for grouping
-    const weekStart = format(startOfWeek(parseISO(entry.date)), 'yyyy-MM-dd');
+    const weekStart = format(startOfWeek(parseISO(entry.date), { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
     // Update weekly hours
     if (!userWeeklyHours.has(user.id)) {
@@ -172,6 +183,9 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
     }
     const weeklyHours = userWeeklyHours.get(user.id);
     weeklyHours.set(weekStart, (weeklyHours.get(weekStart) || 0) + entry.hours);
+
+    // Log for debugging
+    console.log(`User ${user.name} - Week ${weekStart}: ${weeklyHours.get(weekStart)} hours`);
 
     // Update project hours
     if (!userProjectHours.has(user.id)) {
@@ -189,12 +203,15 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
       const weeklyHours = userWeeklyHours.get(user.id) || new Map();
       const projectHours = userProjectHours.get(user.id) || new Map();
       const overtimeHours = userOvertimeHours.get(user.id) || new Map();
+      const standardHoursPerWeek = user.hoursPerWeek || 40; // Default to 40 if not set
 
       // Calculate total overtime hours
       let userOvertimeHours = 0;
       weeklyHours.forEach((hours, week) => {
-        if (hours > user.hoursPerWeek) {
-          userOvertimeHours += hours - user.hoursPerWeek;
+        if (hours > standardHoursPerWeek) {
+          const weeklyOvertime = hours - standardHoursPerWeek;
+          userOvertimeHours += weeklyOvertime;
+          console.log(`Overtime for week ${week}: ${weeklyOvertime} (Total: ${hours}, Standard: ${standardHoursPerWeek})`);
         }
       });
 
