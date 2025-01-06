@@ -26,6 +26,17 @@ export function ProjectRolesTable({
     role.isActive && !selectedRoleIds.includes(role.id)
   );
 
+  const handleRateChange = (roleId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => {
+    const currentRoles = roles.filter(r => r.roleId !== roleId);
+    setValue('roles', [...currentRoles, { 
+      roleId,
+      projectId: project?.id || crypto.randomUUID(),
+      costRate: rates.costRate,
+      sellRate: rates.sellRate,
+      billable: rates.billable
+    }]);
+  };
+
   return (
     <div className="space-y-4">
       {/* Add Role Control */}
@@ -90,6 +101,7 @@ export function ProjectRolesTable({
                       onChange={(e) => onRateChange(role.id, {
                         costRate: parseFloat(e.target.value) || 0,
                         sellRate: rate.sellRate || 0,
+                        billable: rate.billable || false
                       })}
                       className="w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
@@ -103,6 +115,7 @@ export function ProjectRolesTable({
                       onChange={(e) => onRateChange(role.id, {
                         costRate: rate.costRate || 0,
                         sellRate: parseFloat(e.target.value) || 0,
+                        billable: rate.billable || false
                       })}
                       className="w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />

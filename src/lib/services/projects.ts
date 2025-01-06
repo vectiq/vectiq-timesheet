@@ -52,7 +52,6 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   const { roles, ...projectFields } = projectData;
   const project = {
     ...projectFields,
-    id: projectRef.id,
     approverEmail: projectData.approverEmail || '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -66,6 +65,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
     roleId: role.roleId,
     costRate: role.costRate,
     sellRate: role.sellRate,
+    billable: role.billable || false
   }));
 
   for (const role of projectRoles) {
@@ -111,8 +111,8 @@ export async function updateProject(projectData: Project): Promise<void> {
     await setDoc(roleRef, {
       projectId: id,
       roleId: role.roleId,
-      costRate: role.costRate,
-      sellRate: role.sellRate,
+      costRate: role.costRate || 0,
+      sellRate: role.sellRate || 0,
       billable: role.billable || false
     });
   }

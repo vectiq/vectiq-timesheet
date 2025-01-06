@@ -58,7 +58,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
         roleId: role.roleId,
         projectId: projectId,
         costRate: role.costRate || 0,
-        sellRate: role.sellRate || 0
+        sellRate: role.sellRate || 0,
+        billable: role.billable || false
       }))
     };
     
@@ -86,7 +87,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       roleId,
       projectId: project?.id || crypto.randomUUID(),
       costRate: 0,
-      sellRate: 0
+      sellRate: 0,
+      billable: false
     }]);
   };
 
