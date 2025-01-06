@@ -37,6 +37,7 @@ export interface Project {
   approverEmail: string;
   requiresApproval: boolean;
   roles: ProjectRole[];
+  overtimeInclusive: boolean;
 }
 
 export interface TimeEntry {
