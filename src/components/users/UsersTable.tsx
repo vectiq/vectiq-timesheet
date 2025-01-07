@@ -67,7 +67,7 @@ export function UsersTable({
                   {userAssignments?.map(assignment => {
                     const project = projects.find(p => p.id === assignment.projectId);
                     const client = clients.find(c => c.id === assignment.clientId);
-                    const projectRole = project?.roles?.find(r => r.id === assignment.projectRoleId);
+                    const projectRole = project?.roles?.find(r => r.id === assignment.roleId);
                     
                     if (!project || !projectRole || !client) return null;
                     
@@ -78,7 +78,7 @@ export function UsersTable({
                           <span className="text-gray-400 shrink-0">•</span>
                           <span className="font-medium truncate">{project.name}</span>
                           <span className="text-gray-400 shrink-0">•</span>
-                          <span className="text-gray-500 truncate">{projectRole.name}</span>
+                          <span className="text-gray-500 truncate">{projectRole?.name}</span>
                         </div>
                         <Button
                           variant="secondary"

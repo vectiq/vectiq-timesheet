@@ -60,8 +60,8 @@ export const WeeklyView = memo(function WeeklyView({ projects, dateRange }: Week
 
     return project.roles.map(projectRole => ({
       role: { 
-        id: projectRole.roleId, 
-        name: allRoles.find(r => r.id === projectRole.roleId)?.name || 'Unknown Role'
+        id: projectRole.projectRoleId, 
+        name: allRoles.find(r => r.id === projectRole.projectRoleId)?.name || 'Unknown Role'
       },
       rates: projectRole
     }));

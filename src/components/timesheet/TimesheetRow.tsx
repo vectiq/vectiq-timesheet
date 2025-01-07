@@ -76,7 +76,7 @@ export const TimesheetRow = memo(function TimesheetRow({
   const selectedProject = projects.find(p => p.id === row.projectId);
   const availableProjectRoles = userAssignments
     .filter(a => a.projectId === row.projectId)
-    .map(a => selectedProject?.roles?.find(r => r.id === a.projectRoleId))
+    .map(a => selectedProject?.roles?.find(r => r.id === a.roleId))
     .filter(Boolean);
     
   // Memoize row entries
@@ -85,7 +85,7 @@ export const TimesheetRow = memo(function TimesheetRow({
     return timeEntries.filter(entry =>
       entry.clientId === row.clientId &&
       entry.projectId === row.projectId &&
-      entry.projectRoleId === row.roleId
+      entry.roleId === row.roleId
     );
   },
     [timeEntries, row]
