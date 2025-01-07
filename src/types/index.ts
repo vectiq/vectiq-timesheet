@@ -40,7 +40,7 @@ export interface TimeEntry {
   userId: string;
   clientId: string;
   projectId: string;
-  roleId: string;
+  projectRoleId: string;
   date: string;
   hours: number;
   description?: string;

@@ -15,7 +15,7 @@ const QUERY_KEY = 'timeEntries';
 interface TimesheetRow {
   clientId: string;
   projectId: string;
-  roleId: string;
+  projectRoleId: string;
 }
 
 interface WeeklyRows {
@@ -124,7 +124,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
         date: newDate.toISOString().split('T')[0],
         clientId: entry.clientId,
         projectId: entry.projectId,
-        roleId: entry.roleId,
+        projectRoleId: entry.projectRoleId,
         hours: entry.hours,
         description: entry.description || '',
       });
@@ -143,21 +143,21 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     
     // Add rows from time entries
     timeEntries.forEach(entry => {
-      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.roleId}`;
+      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.projectRoleId}`;
       if (!uniqueRowKeys.has(rowKey)) {
         uniqueRowKeys.add(rowKey);
         allRows.push({
           clientId: entry.clientId,
           projectId: entry.projectId,
-          roleId: entry.roleId,
+          projectRoleId: entry.projectRoleId,
         });
       }
     });
     
     // Add manual rows that don't already exist
     currentWeekManualRows.forEach(row => {
-      const rowKey = `${row.clientId}-${row.projectId}-${row.roleId}`;
-      if (!uniqueRowKeys.has(rowKey) && (row.clientId || row.projectId || row.roleId)) {
+      const rowKey = `${row.clientId}-${row.projectId}-${row.projectRoleId}`;
+      if (!uniqueRowKeys.has(rowKey) && (row.clientId || row.projectId || row.projectRoleId)) {
         uniqueRowKeys.add(rowKey);
         allRows.push(row);
       }
@@ -165,7 +165,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
 
     // Add empty manual rows at the end
     currentWeekManualRows.forEach(row => {
-      if (!row.clientId && !row.projectId && !row.roleId) {
+      if (!row.clientId && !row.projectId && !row.projectRoleId) {
         allRows.push(row);
       }
     });
@@ -178,13 +178,13 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     row: TimesheetRow,
     value: number | null
   ) => {
-    if (!userId || !row.clientId || !row.projectId || !row.roleId) return;
+    if (!userId || !row.clientId || !row.projectId || !row.projectRoleId) return;
 
     const entry = timeEntries.find(e => 
       e.date === date && 
       e.clientId === row.clientId &&
       e.projectId === row.projectId &&
-      e.roleId === row.roleId
+      e.projectRoleId === row.projectRoleId
     );
 
     if (entry) {
@@ -202,7 +202,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
         date,
         clientId: row.clientId,
         projectId: row.projectId,
-        roleId: row.roleId,
+        projectRoleId: row.projectRoleId,
         hours: value,
         description: '',
       });
@@ -212,7 +212,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   const addRow = useCallback(() => {
     setManualRows(current => ({
       ...current,
-      [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', roleId: '' }]
+      [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', projectRoleId: '' }]
     }));
   }, [weekKey]);
   
@@ -221,7 +221,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     const rowEntries = timeEntries.filter(entry =>
       entry.clientId === row.clientId &&
       entry.projectId === row.projectId &&
-      entry.roleId === row.roleId
+      entry.projectRoleId === row.projectRoleId
     );
 
     if (rowEntries.length > 0) {
@@ -262,13 +262,13 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
         newRows[manualIndex] = { 
           clientId: updates.clientId || '',
           projectId: '',
-          roleId: ''
+          projectRoleId: ''
         };
       } else if ('projectId' in updates) {
         newRows[manualIndex] = { 
           ...newRows[manualIndex],
           projectId: updates.projectId || '',
-          roleId: ''
+          projectRoleId: ''
         };
       } else {
         newRows[manualIndex] = { ...newRows[manualIndex], ...updates };

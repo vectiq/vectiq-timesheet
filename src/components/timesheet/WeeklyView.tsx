@@ -101,6 +101,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, dateRange }: Week
                 weekKey={weekKey}
                 weekDays={weekDays}
                 timeEntries={timeEntries}
+                projects={projects}
                 clients={clients}
                 userAssignments={userAssignments}
                 getProjectsForClient={getProjectsForClient}
