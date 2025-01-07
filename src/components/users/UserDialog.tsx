@@ -36,6 +36,8 @@ export function UserDialog({
       role: 'user',
       projectAssignments: [],
       hoursPerWeek: 40,
+      costRate: 0,
+      sellRate: 0,
       overtime: 'no',
     },
   });
@@ -104,6 +106,28 @@ export function UserDialog({
               <option value="admin">Admin</option>
             </select>
           </FormField>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Cost Rate ($/hr)">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                {...register('costRate', { valueAsNumber: true })}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+            </FormField>
+
+            <FormField label="Sell Rate ($/hr)">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                {...register('sellRate', { valueAsNumber: true })}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+            </FormField>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Hours Per Week">

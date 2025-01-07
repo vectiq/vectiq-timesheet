@@ -1,23 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
-import { ForecastTable } from '@/components/forecasting/ForecastTable';
-import { generateDummyForecasts, getWorkingDays } from '@/lib/services/forecasting';
+import { UserForecastTable } from '@/components/forecasting/UserForecastTable';
+import { useForecasting } from '@/lib/hooks/useForecasting';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Calendar, TrendingUp } from 'lucide-react';
-import type { ProjectForecast, WorkingDays } from '@/types/forecasting';
 
 export default function Forecasting() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [forecasts, setForecasts] = useState<ProjectForecast[]>([]);
-  const [workingDays, setWorkingDays] = useState<WorkingDays | null>(null);
+  const { forecasts, workingDays, userForecasts, isLoading } = useForecasting(currentDate);
 
-  useEffect(() => {
-    const month = format(currentDate, 'yyyy-MM');
-    setForecasts(generateDummyForecasts(month, 6));
-    setWorkingDays(getWorkingDays(month));
-  }, [currentDate]);
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="space-y-6">
@@ -94,10 +91,16 @@ export default function Forecasting() {
       <Card>
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-medium">6-Month Forecast</h2>
+            <h2 className="text-lg font-medium">User Forecasts</h2>
             <Button>Update Forecast</Button>
           </div>
-          <ForecastTable forecasts={forecasts} />
+          <UserForecastTable 
+            userForecasts={userForecasts}
+            onUpdateHours={(userId, projectId, roleId, hours) => {
+              console.log('Update hours:', { userId, projectId, roleId, hours });
+              // TODO: Implement hours update
+            }}
+          />
         </div>
       </Card>
     </div>

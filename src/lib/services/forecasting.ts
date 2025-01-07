@@ -1,5 +1,7 @@
 import { addMonths, format, parseISO } from 'date-fns';
-import type { ForecastEntry, ProjectForecast, WorkingDays } from '@/types/forecasting';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { ForecastEntry, ProjectForecast, WorkingDays, UserForecast } from '@/types/forecasting';
 
 // Dummy data for holidays in Canberra
 const CANBERRA_HOLIDAYS_2024 = [
@@ -15,11 +17,11 @@ const CANBERRA_HOLIDAYS_2024 = [
   { date: '2024-12-26', name: 'Boxing Day' },
 ];
 
-// Dummy data generator for forecasts
 export function generateDummyForecasts(
   startMonth: string,
   months: number = 6
 ): ProjectForecast[] {
+  console.log(`Generating forecasts for ${startMonth} (${months} months)`);
   const forecasts: ProjectForecast[] = [];
   
   for (let i = 0; i < months; i++) {
@@ -59,4 +61,47 @@ export function getWorkingDays(month: string): WorkingDays {
     workingDays: 22,
     holidays: CANBERRA_HOLIDAYS_2024.filter(h => h.date.startsWith(month))
   };
+}
+
+export async function getUserForecasts(month: string): Promise<UserForecast[]> {
+  // Calculate working days for the month
+  const { workingDays } = getWorkingDays(month);
+  const defaultMonthlyHours = workingDays * 8; // 8 hours per working day
+
+  // Return dummy data for testing
+  return [
+    {
+      userId: 'user1',
+      userName: 'John Doe',
+      projectAssignments: [
+        {
+          projectId: 'project1',
+          projectName: 'Website Redesign',
+          roleId: 'role1',
+          roleName: 'Senior Developer',
+          forecastedHours: defaultMonthlyHours
+        },
+        {
+          projectId: 'project2',
+          projectName: 'Mobile App',
+          roleId: 'role2',
+          roleName: 'Project Manager',
+          forecastedHours: defaultMonthlyHours / 2
+        }
+      ]
+    },
+    {
+      userId: 'user2',
+      userName: 'Jane Smith',
+      projectAssignments: [
+        {
+          projectId: 'project1',
+          projectName: 'Website Redesign',
+          roleId: 'role3',
+          roleName: 'UI Designer',
+          forecastedHours: defaultMonthlyHours
+        }
+      ]
+    }
+  ];
 }

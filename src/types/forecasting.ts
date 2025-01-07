@@ -41,3 +41,15 @@ export interface ForecastEntry {
       name: string;
     }>;
   }
+  
+  export interface UserForecast {
+    userId: string;
+    userName: string;
+    projectAssignments: Array<{
+      projectId: string;
+      projectName: string;
+      roleId: string;
+      roleName: string;
+      forecastedHours: number;
+    }>;
+  }

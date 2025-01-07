@@ -85,6 +85,8 @@ export interface User {
   name: string;
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
+  costRate: number;
+  sellRate: number;
   hoursPerWeek: number;
   createdAt: Date;
   updatedAt: Date;
