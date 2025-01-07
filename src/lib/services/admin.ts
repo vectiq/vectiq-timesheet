@@ -99,16 +99,16 @@ export async function generateTestData(options: TestDataOptions): Promise<void> 
   const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  // Get all days and calculate weeks
+  // Get all days by month
   const days = eachDayOfInterval({
     start: parseISO(options.startDate),
     end: parseISO(options.endDate)
   });
 
-  // Group days by week
-  const weeks = days.reduce((acc, day) => {
-    const weekStart = startOfWeek(day, { weekStartsOn: 1 });
-    const key = format(weekStart, 'yyyy-MM-dd');
+  // Group days by month
+  const months = days.reduce((acc, day) => {
+    const monthStart = startOfMonth(day);
+    const key = format(monthStart, 'yyyy-MM-dd');
     if (!acc[key]) {
       acc[key] = [];
     }
@@ -120,21 +120,23 @@ export async function generateTestData(options: TestDataOptions): Promise<void> 
   for (const user of users) {
     const userAssignments = user.projectAssignments || [];
     if (userAssignments.length === 0) continue;
+    const minWeeklyHours = user.hoursPerWeek || 40;
 
-    // For each week
-    Object.entries(weeks).forEach(([weekStart, weekDays]) => {
-      const minWeeklyHours = user.hoursPerWeek;
-      const maxWeeklyHours = Math.min(minWeeklyHours * 1.5, weekDays.length * options.maxDailyHours);
-      const targetWeeklyHours = minWeeklyHours + Math.floor(Math.random() * (maxWeeklyHours - minWeeklyHours));
+    // For each month
+    Object.entries(months).forEach(([monthStart, monthDays]) => {
+      const weeksInMonth = Math.ceil(monthDays.length / 5);
+      const minMonthlyHours = minWeeklyHours * weeksInMonth;
+      const maxMonthlyHours = Math.min(minMonthlyHours * 1.5, monthDays.length * options.maxDailyHours);
+      const targetMonthlyHours = minMonthlyHours + Math.floor(Math.random() * (maxMonthlyHours - minMonthlyHours));
 
-      // Ensure we meet minimum weekly hours
-      let totalWeeklyHours = 0;
-      const shuffledDays = [...weekDays].sort(() => Math.random() - 0.5);
-      const dailyMinHours = Math.ceil(minWeeklyHours / weekDays.length);
+      // Ensure we meet minimum monthly hours
+      let totalMonthlyHours = 0;
+      const shuffledDays = [...monthDays].sort(() => Math.random() - 0.5);
+      const dailyMinHours = Math.ceil(minMonthlyHours / monthDays.length);
 
       for (const day of shuffledDays) {
         const dateStr = format(day, 'yyyy-MM-dd');
-        const maxDayHours = Math.min(options.maxDailyHours, targetWeeklyHours - totalWeeklyHours);
+        const maxDayHours = Math.min(options.maxDailyHours, targetMonthlyHours - totalMonthlyHours);
         let dailyHours = Math.max(dailyMinHours, Math.min(maxDayHours, Math.floor(Math.random() * 4) + 4));
         let remainingDayHours = dailyHours;
 

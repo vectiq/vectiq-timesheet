@@ -79,7 +79,7 @@ export function UtilitiesTab({
                 min="1"
                 max="24"
                 step="0.5"
-                defaultValue="12"
+                defaultValue={12}
                 required
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
@@ -91,7 +91,7 @@ export function UtilitiesTab({
                   type="checkbox"
                   name="generateApprovals"
                   value="true"
-                  defaultChecked={true}
+                  defaultChecked
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm text-gray-700">Generate Approvals</span>
@@ -116,7 +116,7 @@ export function UtilitiesTab({
                       name="approvedWeight"
                       min="0"
                       max="100"
-                      defaultValue="80"
+                      defaultValue={80}
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </FormField>
