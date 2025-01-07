@@ -81,6 +81,7 @@ export interface User {
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
   hoursPerWeek: number;
+  xeroEmployeeId?: string;
   createdAt: Date;
   updatedAt: Date;
   projectAssignments: ProjectAssignment[];

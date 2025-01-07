@@ -105,6 +105,14 @@ export function UserDialog({
             </select>
           </FormField>
 
+          <FormField label="Xero Employee ID">
+            <input
+              {...register('xeroEmployeeId')}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              placeholder="e.g., EMP001"
+            />
+          </FormField>
+
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Hours Per Week">
               <input
