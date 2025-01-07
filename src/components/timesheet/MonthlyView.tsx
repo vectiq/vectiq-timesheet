@@ -78,9 +78,9 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
     timeEntries.forEach(entry => {
       const client = clients.find(c => c.id === entry.clientId);
       const project = projects.find(p => p.id === entry.projectId);
-      const role = roles.find(r => r.id === entry.roleId);
+      const projectRole = project?.roles?.find(r => r.id === entry.roleId);
 
-      if (!client || !project || !role) return;
+      if (!client || !project || !projectRole) return;
 
       const clientKey = client.id;
       const projectKey = `${client.id}-${project.id}`;
@@ -114,7 +114,7 @@ export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
       const projectGroup = clientGroup.projects.get(projectKey);
       projectGroup.entries.push({
         ...entry,
-        role,
+        role: { name: projectRole.name },
         compositeKey: entry.compositeKey
       });
 
