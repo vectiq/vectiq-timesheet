@@ -3,6 +3,7 @@ import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/lib/utils/date';
+import { formatCurrency } from '@/lib/utils/currency';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
 import { useClients } from '@/lib/hooks/useClients';
@@ -10,16 +11,14 @@ import type { User, ProjectAssignment } from '@/types';
 
 interface UsersTableProps {
   users: User[];
-  assignments: ProjectAssignment[];
   onEdit: (user: User) => void;
   onDelete: (id: string) => void;
   onAssignProject: (user: User) => void;
-  onRemoveAssignment: (assignmentId: string) => void;
+  onRemoveAssignment: (userId: string, assignmentId: string) => void;
 }
 
 export function UsersTable({ 
   users, 
-  assignments,
   onEdit, 
   onDelete,
   onAssignProject,
@@ -45,7 +44,7 @@ export function UsersTable({
       </TableHeader>
       <TableBody>
         {users.map((user) => {
-          const userAssignments = assignments?.filter(a => a.userId === user.id) || [];
+          const userAssignments = user.projectAssignments || [];
 
           return (
             <tr key={user.id}>
@@ -74,22 +73,25 @@ export function UsersTable({
                 <div className="space-y-2">
                   {userAssignments?.map(assignment => {
                     const project = projects.find(p => p.id === assignment.projectId);
-                    const role = roles.find(r => r.id === assignment.roleId);
                     const client = clients.find(c => c.id === assignment.clientId);
+                    const projectRole = project?.roles?.find(r => r.id === assignment.projectRoleId);
                     
-                    if (!project || !role || !client) return null;
+                    if (!project || !projectRole || !client) return null;
                     
                     return (
-                      <div key={assignment.id} className="flex items-center justify-between text-sm">
-                        <div>
-                          <div className="text-gray-500">{client?.name}</div>
-                          <div className="font-medium">{project?.name}</div>
-                          <div className="text-gray-500">{role?.name}</div>
+                      <div key={assignment.id} className="flex items-center justify-between text-sm py-1">
+                        <div className="flex-1 flex items-center gap-2">
+                          <span className="text-gray-500 truncate">{client.name}</span>
+                          <span className="text-gray-400 shrink-0">•</span>
+                          <span className="font-medium truncate">{project.name}</span>
+                          <span className="text-gray-400 shrink-0">•</span>
+                          <span className="text-gray-500 truncate">{projectRole.name}</span>
                         </div>
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => onRemoveAssignment(assignment.id)}
+                          onClick={() => onRemoveAssignment(user.id, assignment.id)}
+                          className="ml-2 shrink-0"
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>

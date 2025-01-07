@@ -44,7 +44,13 @@ export async function getTimeEntries(
     ...constraints,
     orderBy('date', 'asc')
   );
-  const snapshot = await getDocs(queryRef);
+  let snapshot;
+  try {
+    snapshot = await getDocs(queryRef);
+  } catch (error) {
+    console.error('Error fetching time entries:', error);
+    return [];
+  }
   const entries = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()

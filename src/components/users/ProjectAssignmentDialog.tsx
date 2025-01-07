@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { formatCurrency } from '@/lib/utils/currency';
 import { projectAssignmentSchema } from '@/lib/schemas/user';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
@@ -41,12 +42,15 @@ export function ProjectAssignmentDialog({
       userId: user.id,
       clientId: '',
       projectId: '',
-      roleId: ''
+      projectRoleId: ''
     },
   });
 
   const selectedClientId = watch('clientId');
   const filteredProjects = projects.filter(p => p.clientId === selectedClientId);
+  const selectedProjectId = watch('projectId');
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const availableRoles = selectedProject?.roles || [];
 
   useEffect(() => {
     if (open) {
@@ -54,18 +58,10 @@ export function ProjectAssignmentDialog({
         userId: user.id,
         clientId: '',
         projectId: '',
-        roleId: ''
+        projectRoleId: ''
       });
     }
   }, [open, user.id, reset]);
-
-  const selectedProjectId = watch('projectId');
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
-  const availableRoles = selectedProject
-    ? roles.filter(role => 
-        selectedProject.roles.some(pr => pr.roleId === role.id)
-      )
-    : [];
 
   const handleFormSubmit = async (data: any) => {
     await onSubmit(data);
@@ -113,14 +109,14 @@ export function ProjectAssignmentDialog({
 
           <FormField label="Role">
             <select
-              {...register('roleId')}
+              {...register('projectRoleId')}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               disabled={!selectedProjectId}
             >
               <option value="">Select Role</option>
               {availableRoles.map(role => (
                 <option key={role.id} value={role.id}>
-                  {role.name}
+                  {role.name} ({formatCurrency(role.sellRate)}/hr)
                 </option>
               ))}
             </select>

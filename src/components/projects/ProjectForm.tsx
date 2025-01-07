@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Plus, X } from 'lucide-react';
 import { useClients } from '@/lib/hooks/useClients';
-import { ProjectRolesTable } from './ProjectRolesTable';
 import type { Project, ProjectRole } from '@/types';
 
 interface ProjectFormProps {
@@ -35,7 +35,6 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     },
   });
 
-  // Reset form when project changes
   useEffect(() => {
     if (project) {
       reset(project);
@@ -56,13 +55,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       approverEmail: data.approverEmail || '',
       requiresApproval: data.requiresApproval || false,
       overtimeInclusive: data.overtimeInclusive || false,
-      roles: (roles || []).map(role => ({
-        roleId: role.roleId,
-        projectId: projectId,
-        costRate: role.costRate || 0,
-        sellRate: role.sellRate || 0,
-        billable: role.billable || false
-      }))
+      roles: data.roles || []
     };
     
     try {
@@ -73,52 +66,37 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     }
   };
 
-  const handleRateChange = (roleId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => {
-    const currentRoles = roles.filter(r => r.roleId !== roleId);
-    setValue('roles', [...currentRoles, { 
-      roleId,
-      projectId: project?.id || crypto.randomUUID(),
-      costRate: rates.costRate,
-      sellRate: rates.sellRate,
-      billable: rates.billable
-    }]);
-  };
-
-  const handleAddRole = (roleId: string) => {
-    setValue('roles', [...roles, {
-      roleId,
-      projectId: project?.id || crypto.randomUUID(),
+  const addRole = () => {
+    const newRole: ProjectRole = {
+      id: crypto.randomUUID(),
+      name: '',
+      projectId: project?.id || '',
       costRate: 0,
       sellRate: 0,
       billable: false
-    }]);
+    };
+    setValue('roles', [...roles, newRole]);
   };
 
-  const handleRemoveRole = (roleId: string) => {
-    setValue('roles', roles.filter(r => r.roleId !== roleId));
+  const removeRole = (index: number) => {
+    const newRoles = [...roles];
+    newRoles.splice(index, 1);
+    setValue('roles', newRoles);
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
-      <div className="space-y-4">
-        <FormField label="Project Name">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Project Name">
           <input
             {...register('name')}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             placeholder="e.g., Website Redesign"
           />
-        </FormField>
+          </FormField>
 
-        <FormField label="Approver Email">
-          <input
-            type="email"
-            {...register('approverEmail')}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="e.g., approver@company.com"
-          />
-        </FormField>
-
-        <FormField label="Client">
+          <FormField label="Client">
           <select
             {...register('clientId')}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -130,7 +108,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
               </option>
             ))}
           </select>
-        </FormField>
+          </FormField>
+        </div>
 
         <div className="grid grid-cols-3 gap-4">
           <FormField label="Budget">
@@ -159,37 +138,104 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           </FormField>
         </div>
 
-        <FormField label="Approval Required">
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Approver Email">
             <input
-              type="checkbox"
-              {...register('requiresApproval')}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              type="email"
+              {...register('approverEmail')}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              placeholder="e.g., approver@company.com"
             />
-            <span className="text-sm text-gray-600">Require time entry approval</span>
-          </div>
-        </FormField>
+          </FormField>
 
-        <FormField label="Overtime">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              {...register('overtimeInclusive')}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <span className="text-sm text-gray-600">Include in overtime calculations</span>
+          <div className="flex gap-6 items-center mt-8">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                {...register('requiresApproval')}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-600">Require approval</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                {...register('overtimeInclusive')}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-600">Include overtime</span>
+            </div>
           </div>
-        </FormField>
+        </div>
 
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-700">Project Roles</h3>
-          <ProjectRolesTable
-            selectedRoleIds={roles.map(r => r.roleId)}
-            rates={roles.reduce((acc, role) => ({ ...acc, [role.roleId]: role }), {})}
-            onRateChange={handleRateChange}
-            onAddRole={handleAddRole}
-            onRemoveRole={handleRemoveRole}
-          />
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-medium text-gray-700">Project Roles</h3>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={addRole}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Role
+            </Button>
+          </div>
+          
+          <div className="space-y-2 mt-2">
+            {roles.map((role, index) => (
+              <div key={role.id} className="flex gap-2 items-start bg-gray-50 p-2 rounded-lg">
+                <div className="flex-1 grid grid-cols-4 gap-4">
+                  <FormField label="Role Name">
+                    <input
+                      {...register(`roles.${index}.name`)}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      placeholder="e.g., Senior Developer"
+                    />
+                  </FormField>
+
+                  <FormField label="Cost Rate">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register(`roles.${index}.costRate`, { valueAsNumber: true })}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  </FormField>
+
+                  <FormField label="Sell Rate">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register(`roles.${index}.sellRate`, { valueAsNumber: true })}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  </FormField>
+
+                  <FormField label="Billable">
+                    <div className="flex items-center h-10">
+                      <input
+                        type="checkbox"
+                        {...register(`roles.${index}.billable`)}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </FormField>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => removeRole(index)} 
+                  className="mt-7">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

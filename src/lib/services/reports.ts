@@ -134,38 +134,23 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
   const periodEnd = parseISO(filters.endDate);
   const workingDays = getWorkingDaysInPeriod(periodStart, periodEnd);
 
-  console.log('\n=== Overtime Report Diagnostics ===');
-  console.log(`Period: ${filters.startDate} to ${filters.endDate}`);
-  console.log(`Working days in period: ${workingDays}\n`);
-
   // Group time entries by user and week
   const userProjectHours = new Map<string, Map<string, number>>();
   const userOvertimeHours = new Map<string, Map<string, number>>();
   const userTotalHours = new Map<string, number>();
 
-  // Get project roles for billable status
-  const projectRolesSnapshot = await getDocs(collection(db, 'projectRoles'));
-  const projectRoles = new Map();
-  projectRolesSnapshot.docs.forEach(doc => {
-    const data = doc.data();
-    const key = `${data.projectId}_${data.roleId}`;
-    projectRoles.set(key, data);
-  });
-
   // Process each time entry
   timeEntries.forEach(entry => {
     const user = users.get(entry.userId) as User;
     const project = projects.get(entry.projectId) as Project;
-    const projectRole = projectRoles.get(`${entry.projectId}_${entry.roleId}`);
-    const isBillable = projectRole?.billable || false;
     
     if (!user || !project) return;
 
     // Skip users with no overtime
     if (user.overtime === 'no') return;
 
-    // For billable only, skip non-billable projects
-    if (user.overtime === 'billable' && !isBillable) return;
+    // For eligible overtime, only include overtime-inclusive projects
+    if (user.overtime === 'eligible' && !project.overtimeInclusive) return;
 
     // For projects requiring approval, only count approved hours
     if (project.requiresApproval) {
@@ -200,23 +185,9 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
       const totalHours = userTotalHours.get(user.id) || 0;
       const userOvertimeHours = Math.max(0, totalHours - standardMonthlyHours);
       
-      console.log(`\nUser: ${user.name}`);
-      console.log(`Standard weekly hours: ${user.hoursPerWeek || 40}`);
-      console.log(`Standard daily hours: ${(user.hoursPerWeek || 40) / 5}`);
-      console.log(`Standard monthly hours (${workingDays} working days): ${standardMonthlyHours.toFixed(2)}`);
-      console.log(`Total hours logged: ${totalHours.toFixed(2)}`);
-      console.log(`Overtime hours: ${userOvertimeHours.toFixed(2)}`);
-      
       const projectHours = userProjectHours.get(user.id) || new Map();
       const projectHoursTotal = Array.from(projectHours.values())
         .reduce((sum, hours) => sum + hours, 0);
-
-      console.log('\nProject breakdown:');
-      projectHours.forEach((hours, projectId) => {
-        const project = projects.get(projectId);
-        console.log(`- ${project?.name}: ${hours.toFixed(2)} hours`);
-      });
-      console.log('------------------------');
 
       totalOvertimeHours += userOvertimeHours;
 

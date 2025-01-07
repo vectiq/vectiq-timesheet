@@ -1,16 +1,11 @@
-export interface Role {
-  id: string;
-  name: string;
-  isActive: boolean;
-}
-
 export interface ProjectRole {
   id: string;
-  roleId: string;
+  name: string;
   projectId: string;
   costRate: number;
   sellRate: number;
   billable: boolean;
+  projectId: string;
 }
 
 export interface Client {
@@ -97,7 +92,7 @@ export interface ProjectAssignment {
   id: string;
   userId: string;
   projectId: string;
-  roleId: string;
+  projectRoleId: string;
   clientId: string;
 }
 
@@ -141,15 +136,8 @@ export interface Approval {
   submittedAt: Date;
   approvedAt?: Date;
   rejectedAt?: Date;
+  name: string;
   withdrawnAt?: Date;
-  rejectionReason?: string;
-  project: Project;
-  client: Client;
-  period: {
-    startDate: string;
-    endDate: string;
-  };
-  totalHours: number;
   userId: string;
   approverEmail: string;
 }

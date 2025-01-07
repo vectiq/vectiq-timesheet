@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDate } from '@/lib/utils/date';
-import { useRoles } from '@/lib/hooks/useRoles';
 import type { Project } from '@/types';
 
 interface ProjectsTableProps {
@@ -14,8 +13,6 @@ interface ProjectsTableProps {
 }
 
 export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps) {
-  const { roles } = useRoles();
-
   return (
     <Table>
       <TableHeader>
@@ -51,15 +48,12 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
             </Td>
             <Td>
               <div className="space-y-1">
-                {project.roles?.map(projectRole => {
-                  const role = roles?.find(r => r.id === projectRole.roleId);
-                  if (!role) return null;
+                {project.roles?.map(role => {
                   return (
-                    <div key={projectRole.roleId} className="text-xs">
-                      <div className="font-medium">{role.name}</div>
-                      <div className="text-gray-500">
-                        {formatCurrency(projectRole.costRate)}/{formatCurrency(projectRole.sellRate)}
-                      </div>
+                    <div key={role.id} className="flex items-center gap-2 text-xs">
+                      <span className="font-medium w-32 truncate">{role.name}</span>
+                      <span className="text-gray-500">{formatCurrency(role.costRate)}/{formatCurrency(role.sellRate)}</span>
+                      {role.billable && <span className="text-green-600 text-[10px] uppercase font-medium">Billable</span>}
                     </div>
                   );
                 })}

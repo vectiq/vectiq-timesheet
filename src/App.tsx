@@ -10,7 +10,6 @@ import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
 import Reports from '@/pages/Reports';
 import Projects from '@/pages/Projects';
-import Roles from '@/pages/Roles';
 import Forecasting from '@/pages/Forecasting';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
@@ -88,14 +87,6 @@ export default function App() {
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Projects />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="roles"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Roles />
                 </RoleProtectedRoute>
               }
             />
