@@ -19,16 +19,27 @@ const CANBERRA_HOLIDAYS_2024 = [
   { date: '2024-12-26', name: 'Boxing Day' },
 ];
 
+interface GenerateForecastOptions {
+  yearType?: 'calendar' | 'financial';
+  year?: number;
+}
+
 export function generateDummyForecasts(
   startMonth: string,
-  months: number = 6
+  months: number = 12,
+  options: GenerateForecastOptions = {}
 ): ProjectForecast[] {
-  console.log(`Generating forecasts for ${startMonth} (${months} months)`);
   const forecasts: ProjectForecast[] = [];
+  const { yearType = 'calendar', year = new Date().getFullYear() } = options;
+  
+  // Calculate start date based on year type
+  const startDate = yearType === 'calendar'
+    ? new Date(year, 0, 1)  // January 1st
+    : new Date(year, 6, 1); // July 1st
   
   for (let i = 0; i < months; i++) {
-    const date = parseISO(startMonth + '-01');
-    const month = format(addMonths(date, i), 'yyyy-MM');
+    const date = addMonths(startDate, i);
+    const month = format(date, 'yyyy-MM');
     const variance = Math.random() * 20 - 10; // Random variance between -10% and +10%
     
     forecasts.push({

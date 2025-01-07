@@ -5,7 +5,6 @@ export interface ProjectRole {
   costRate: number;
   sellRate: number;
   billable: boolean;
-  projectId: string;
 }
 
 export interface Client {

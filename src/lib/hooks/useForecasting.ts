@@ -9,24 +9,43 @@ const QUERY_KEYS = {
   userForecasts: (month: string) => ['user-forecasts', month] as const,
 } as const;
 
-export function useForecasting(currentDate: Date) {
-  const month = format(currentDate, 'yyyy-MM');
+interface UseforecastingOptions {
+  currentDate?: Date;
+  yearType?: 'calendar' | 'financial';
+  selectedYear?: number;
+}
+
+export function useForecasting({ currentDate, yearType, selectedYear }: UseforecastingOptions = {}) {
+  const month = currentDate ? format(currentDate, 'yyyy-MM') : format(new Date(), 'yyyy-MM');
+  const year = selectedYear ?? new Date().getFullYear();
 
   const forecastsQuery = useQuery({
-    queryKey: QUERY_KEYS.forecasts(month),
-    queryFn: () => generateDummyForecasts(month, 6),
+    queryKey: ['forecasts', yearType, year, month],
+    queryFn: () => {
+      if (yearType && selectedYear) {
+        // For yearly report view
+        const startMonth = yearType === 'calendar' 
+          ? `${year}-01` // January
+          : `${year}-07`; // July
+        return generateDummyForecasts(startMonth, 12, { yearType, year });
+      }
+      // For monthly view
+      return generateDummyForecasts(month, 6);
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const workingDaysQuery = useQuery({
     queryKey: QUERY_KEYS.workingDays(month),
     queryFn: () => getWorkingDays(month),
+    enabled: !!currentDate,
     staleTime: 1000 * 60 * 60, // 1 hour
   });
 
   const userForecastsQuery = useQuery({
     queryKey: QUERY_KEYS.userForecasts(month),
     queryFn: () => getUserForecasts(month),
+    enabled: !!currentDate,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 

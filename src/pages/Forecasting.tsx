@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card'; 
 import { formatCurrency } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/Button';
+import { ForecastReport } from '@/components/forecasting/ForecastReport';
+import { ForecastTabs } from '@/components/forecasting/ForecastTabs';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { UserForecastTable } from '@/components/forecasting/UserForecastTable';
 import { useForecasting } from '@/lib/hooks/useForecasting';
@@ -11,7 +13,15 @@ import { Calendar, TrendingUp } from 'lucide-react';
 
 export default function Forecasting() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const { forecasts, workingDays, userForecasts, isLoading } = useForecasting(currentDate);
+  const [activeTab, setActiveTab] = useState('monthly');
+  const [yearType, setYearType] = useState<'calendar' | 'financial'>('calendar');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  const { forecasts, workingDays, userForecasts, isLoading } = useForecasting({
+    currentDate: activeTab === 'monthly' ? currentDate : undefined,
+    yearType: activeTab === 'yearly' ? yearType : undefined,
+    selectedYear: activeTab === 'yearly' ? selectedYear : undefined
+  });
 
   // Calculate summary totals from user forecasts
   const summary = userForecasts.reduce((acc, user) => {
@@ -36,16 +46,23 @@ export default function Forecasting() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Forecasting</h1>
-        <DateNavigation
-          currentDate={currentDate}
-          onPrevious={() => setCurrentDate(prev => new Date(prev.setMonth(prev.getMonth() - 1)))}
-          onNext={() => setCurrentDate(prev => new Date(prev.setMonth(prev.getMonth() + 1)))}
-          onToday={() => setCurrentDate(new Date())}
-          formatString="MMMM yyyy"
-        />
       </div>
+
+      <ForecastTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {activeTab === 'monthly' ? (
+        <>
+          <div className="flex justify-end">
+            <DateNavigation
+              currentDate={currentDate}
+              onPrevious={() => setCurrentDate(prev => new Date(prev.setMonth(prev.getMonth() - 1)))}
+              onNext={() => setCurrentDate(prev => new Date(prev.setMonth(prev.getMonth() + 1)))}
+              onToday={() => setCurrentDate(new Date())}
+              formatString="MMMM yyyy"
+            />
+          </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -113,7 +130,7 @@ export default function Forecasting() {
           </div>
         </Card>
       </div>
-
+      
       <Card>
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -129,6 +146,16 @@ export default function Forecasting() {
           />
         </div>
       </Card>
+      </>
+      ) : (
+        <ForecastReport 
+          forecasts={forecasts}
+          yearType={yearType}
+          selectedYear={selectedYear}
+          onYearTypeChange={setYearType}
+          onYearChange={setSelectedYear}
+        />
+      )}
     </div>
   );
 }
