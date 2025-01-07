@@ -13,6 +13,7 @@ import Projects from '@/pages/Projects';
 import Forecasting from '@/pages/Forecasting';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
+import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
 
@@ -106,7 +107,15 @@ export default function App() {
                 </RoleProtectedRoute>
               }
             />
-            </Route>
+            <Route
+              path="admin"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Admin />
+                </RoleProtectedRoute>
+              }
+            />
+          </Route>
 
           {/* Catch all route - must be last */}
           <Route path="*" element={<Navigate to="/" replace />} />

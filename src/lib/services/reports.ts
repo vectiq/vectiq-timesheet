@@ -58,13 +58,12 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
       if (filters.roleIds.length && !filters.roleIds.includes(entry.roleId)) return null;
 
       const project = projects.get(entry.projectId);
-      const role = roles.get(entry.roleId);
+      const projectRole = project?.roles?.find(r => r.id === entry.roleId);
       const client = clients.get(entry.clientId);
       
-      if (!project || !role || !client) return null;
+      if (!project || !projectRole || !client) return null;
 
       // Get rates from project roles
-      const projectRole = projectRoles.get(`${entry.projectId}_${entry.roleId}`);
       const costRate = projectRole?.costRate || 0;
       const sellRate = projectRole?.sellRate || 0;
 
@@ -77,7 +76,7 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
         date: entry.date,
         clientName: client.name,
         projectName: project.name,
-        roleName: role.name,
+        roleName: projectRole.name,
         hours,
         cost,
         revenue,

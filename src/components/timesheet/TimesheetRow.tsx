@@ -20,6 +20,7 @@ interface TimesheetRowProps {
   weekDays: Date[];
   timeEntries: TimeEntry[];
   clients: Array<{ id: string; name: string }>;
+  projects: Project[];
   userAssignments: Array<{
     clientId: string;
     projectId: string;
@@ -44,6 +45,7 @@ export const TimesheetRow = memo(function TimesheetRow({
   weekKey,
   weekDays,
   timeEntries,
+  projects,
   clients,
   userAssignments,
   getProjectsForClient,
@@ -62,21 +64,20 @@ export const TimesheetRow = memo(function TimesheetRow({
   // Filter clients based on user assignments
   const assignedClientIds = [...new Set(userAssignments.map(a => a.clientId))];
   const filteredClients = clients.filter(client => assignedClientIds.includes(client.id));
-
+  
   // Filter projects based on selected client and user assignments
   const assignedProjects = userAssignments
     .filter(a => a.clientId === row.clientId)
     .map(a => a.projectId);
   const availableProjects = getProjectsForClient(row.clientId)
     .filter(project => assignedProjects.includes(project.id));
-
-  // Filter roles based on selected project and user assignments
-  const assignedRoles = userAssignments
+  
+  // Get available project roles based on user assignments
+  const selectedProject = projects.find(p => p.id === row.projectId);
+  const availableProjectRoles = userAssignments
     .filter(a => a.projectId === row.projectId)
-    .map(a => a.roleId);
-    
-  const availableRoles = getRolesForProject(row.projectId)
-    .filter(({ role }) => assignedRoles.includes(role.id));
+    .map(a => selectedProject?.roles?.find(r => r.id === a.roleId))
+    .filter(Boolean);
     
   // Memoize row entries
   const rowEntries = useMemo(() => {
@@ -170,9 +171,9 @@ export const TimesheetRow = memo(function TimesheetRow({
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Role</option>
-          {availableRoles.map(({ role }) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
+          {availableProjectRoles.map(projectRole => (
+            <option key={projectRole.id} value={projectRole.id}>
+              {projectRole.name}
             </option>
           ))}
         </select>

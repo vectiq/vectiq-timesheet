@@ -52,10 +52,12 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!userDoc.exists()) {
     return null;
   }
-
+  
+  const userData = userDoc.data();
   return {
     id: user.uid,
-    ...userDoc.data(),
+    ...userData,
+    projectAssignments: userData.projectAssignments || [],
   } as User;
 }
 

@@ -42,7 +42,7 @@ export function ProjectAssignmentDialog({
       userId: user.id,
       clientId: '',
       projectId: '',
-      projectRoleId: ''
+      roleId: ''
     },
   });
 
@@ -58,7 +58,7 @@ export function ProjectAssignmentDialog({
         userId: user.id,
         clientId: '',
         projectId: '',
-        projectRoleId: ''
+        roleId: ''
       });
     }
   }, [open, user.id, reset]);
@@ -109,7 +109,7 @@ export function ProjectAssignmentDialog({
 
           <FormField label="Role">
             <select
-              {...register('projectRoleId')}
+              {...register('roleId')}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               disabled={!selectedProjectId}
             >

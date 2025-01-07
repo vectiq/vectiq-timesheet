@@ -91,7 +91,7 @@ export interface ProjectAssignment {
   id: string;
   userId: string;
   projectId: string;
-  projectRoleId: string;
+  roleId: string;
   clientId: string;
 }
 
@@ -139,4 +139,33 @@ export interface Approval {
   withdrawnAt?: Date;
   userId: string;
   approverEmail: string;
+}
+
+export interface SystemConfig {
+  defaultHoursPerWeek: number;
+  defaultOvertimeType: 'no' | 'eligible' | 'all';
+  requireApprovalsByDefault: boolean;
+  allowOvertimeByDefault: boolean;
+  defaultBillableStatus: boolean;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalProjects: number;
+  totalHoursThisMonth: number;
+  totalBillableHours: number;
+  averageUtilization: number;
+}
+
+export interface TestDataOptions {
+  startDate: string;
+  endDate: string;
+  maxDailyHours: number;
+  generateApprovals: boolean;
+  approvalStatus: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    withdrawn: number;
+  };
 }
