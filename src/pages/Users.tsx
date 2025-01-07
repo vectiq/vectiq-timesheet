@@ -11,7 +11,6 @@ import type { User, ProjectAssignment } from '@/types';
 export default function Users() {
   const { 
     users, 
-    assignments,
     isLoading, 
     createUser, 
     updateUser, 
@@ -78,11 +77,10 @@ export default function Users() {
       <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg">
         <UsersTable 
           users={users}
-          assignments={assignments}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onAssignProject={handleAssignProject}
-          onRemoveAssignment={removeFromProject}
+          onRemoveAssignment={(userId, assignmentId) => removeFromProject({ userId, assignmentId })}
         />
       </div>
 

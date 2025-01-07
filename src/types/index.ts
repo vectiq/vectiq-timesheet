@@ -5,6 +5,7 @@ export interface ProjectRole {
   costRate: number;
   sellRate: number;
   billable: boolean;
+  projectId: string;
 }
 
 export interface Client {
@@ -133,15 +134,8 @@ export interface Approval {
   submittedAt: Date;
   approvedAt?: Date;
   rejectedAt?: Date;
+  name: string;
   withdrawnAt?: Date;
-  rejectionReason?: string;
-  project: Project;
-  client: Client;
-  period: {
-    startDate: string;
-    endDate: string;
-  };
-  totalHours: number;
   userId: string;
   approverEmail: string;
 }

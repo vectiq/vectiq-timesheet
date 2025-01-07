@@ -50,12 +50,10 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
               <div className="space-y-1">
                 {project.roles?.map(role => {
                   return (
-                    <div key={role.id} className="text-xs">
-                      <div className="font-medium">{role.name}</div>
-                      <div className="text-gray-500">
-                        {formatCurrency(role.costRate)}/{formatCurrency(role.sellRate)}
-                        {role.billable && <span className="ml-1 text-green-600">•</span>}
-                      </div>
+                    <div key={role.id} className="flex items-center gap-2 text-xs">
+                      <span className="font-medium w-32 truncate">{role.name}</span>
+                      <span className="text-gray-500">{formatCurrency(role.costRate)}/{formatCurrency(role.sellRate)}</span>
+                      {role.billable && <span className="text-green-600 text-[10px] uppercase font-medium">Billable</span>}
                     </div>
                   );
                 })}
