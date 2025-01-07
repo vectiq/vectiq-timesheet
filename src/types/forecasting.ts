@@ -51,5 +51,7 @@ export interface ForecastEntry {
       roleId: string;
       roleName: string;
       forecastedHours: number;
+      costRate: number;
+      sellRate: number;
     }>;
   }

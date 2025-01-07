@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card'; 
+import { formatCurrency } from '@/lib/utils/currency';
 import { Button } from '@/components/ui/Button';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { UserForecastTable } from '@/components/forecasting/UserForecastTable';
@@ -11,6 +12,23 @@ import { Calendar, TrendingUp } from 'lucide-react';
 export default function Forecasting() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const { forecasts, workingDays, userForecasts, isLoading } = useForecasting(currentDate);
+
+  // Calculate summary totals from user forecasts
+  const summary = userForecasts.reduce((acc, user) => {
+    user.projectAssignments.forEach(assignment => {
+      const hours = assignment.forecastedHours;
+      const cost = hours * assignment.costRate;
+      const revenue = hours * assignment.sellRate;
+      
+      acc.totalCost += cost;
+      acc.totalRevenue += revenue;
+    });
+    return acc;
+  }, { totalCost: 0, totalRevenue: 0 });
+
+  const grossMargin = summary.totalRevenue > 0 
+    ? ((summary.totalRevenue - summary.totalCost) / summary.totalRevenue) * 100 
+    : 0;
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -76,12 +94,20 @@ export default function Forecasting() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-gray-500">Forecasted Hours</div>
-                <div className="text-2xl font-semibold">160</div>
+                <div className="text-sm text-gray-500">Total Revenue</div>
+                <div className="text-2xl font-semibold">{formatCurrency(summary.totalRevenue)}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Forecasted GM%</div>
-                <div className="text-2xl font-semibold">50%</div>
+                <div className="text-sm text-gray-500">Total Cost</div>
+                <div className="text-2xl font-semibold">{formatCurrency(summary.totalCost)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Estimated GM</div>
+                <div className="text-2xl font-semibold">{formatCurrency(summary.totalRevenue - summary.totalCost)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">GM%</div>
+                <div className="text-2xl font-semibold">{grossMargin.toFixed(1)}%</div>
               </div>
             </div>
           </div>

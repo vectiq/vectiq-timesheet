@@ -1,6 +1,8 @@
-import { addMonths, format, parseISO } from 'date-fns';
+import { addMonths, format, parseISO, getDaysInMonth, isWeekend, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getUsers } from './users';
+import { getRoles } from './roles';
 import type { ForecastEntry, ProjectForecast, WorkingDays, UserForecast } from '@/types/forecasting';
 
 // Dummy data for holidays in Canberra
@@ -54,54 +56,92 @@ export function generateDummyForecasts(
 }
 
 export function getWorkingDays(month: string): WorkingDays {
-  // Dummy implementation - replace with actual calculation
+  const date = parseISO(month + '-01');
+  const monthStart = startOfMonth(date);
+  const monthEnd = endOfMonth(date);
+  const totalDays = getDaysInMonth(date);
+  
+  // Get all days in the month
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  
+  // Get holidays for this month
+  const holidays = CANBERRA_HOLIDAYS_2024.filter(h => h.date.startsWith(month));
+  const holidayDates = new Set(holidays.map(h => h.date));
+  
+  // Count working days (excluding weekends and holidays)
+  const workingDays = days.filter(day => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    return !isWeekend(day) && !holidayDates.has(dateStr);
+  }).length;
+  
   return {
     month,
-    totalDays: 30,
-    workingDays: 22,
-    holidays: CANBERRA_HOLIDAYS_2024.filter(h => h.date.startsWith(month))
+    totalDays,
+    workingDays,
+    holidays
   };
 }
 
 export async function getUserForecasts(month: string): Promise<UserForecast[]> {
   // Calculate working days for the month
   const { workingDays } = getWorkingDays(month);
-  const defaultMonthlyHours = workingDays * 8; // 8 hours per working day
+  
+  // Get all users and their rates
+  const users = await getUsers();
+  const roles = await getRoles();
+  
+  // Get project roles for rate overrides
+  const projectRolesSnapshot = await getDocs(collection(db, 'projectRoles'));
+  const projectRoles = new Map();
+  projectRolesSnapshot.docs.forEach(doc => {
+    const data = doc.data();
+    const key = `${data.projectId}_${data.roleId}`;
+    projectRoles.set(key, data);
+  });
 
-  // Return dummy data for testing
-  return [
-    {
-      userId: 'user1',
-      userName: 'John Doe',
-      projectAssignments: [
-        {
-          projectId: 'project1',
-          projectName: 'Website Redesign',
-          roleId: 'role1',
-          roleName: 'Senior Developer',
-          forecastedHours: defaultMonthlyHours
-        },
-        {
-          projectId: 'project2',
-          projectName: 'Mobile App',
-          roleId: 'role2',
-          roleName: 'Project Manager',
-          forecastedHours: defaultMonthlyHours / 2
-        }
-      ]
-    },
-    {
-      userId: 'user2',
-      userName: 'Jane Smith',
-      projectAssignments: [
-        {
-          projectId: 'project1',
-          projectName: 'Website Redesign',
-          roleId: 'role3',
-          roleName: 'UI Designer',
-          forecastedHours: defaultMonthlyHours
-        }
-      ]
-    }
-  ];
+  // Get all project assignments
+  const assignmentsSnapshot = await getDocs(collection(db, 'projectAssignments'));
+  const assignments = assignmentsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  // Get all projects
+  const projectsSnapshot = await getDocs(collection(db, 'projects'));
+  const projects = new Map(projectsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
+
+  return users.map(user => {
+    const userAssignments = assignments.filter(a => a.userId === user.id);
+    const defaultMonthlyHours = (user.hoursPerWeek || 40) * (workingDays / 5);
+    const hoursPerAssignment = defaultMonthlyHours / Math.max(userAssignments.length, 1);
+
+    const projectAssignments = userAssignments.map(assignment => {
+      const project = projects.get(assignment.projectId);
+      const role = roles.find(r => r.id === assignment.roleId);
+      
+      // Check for role rate override
+      const roleRateKey = `${assignment.projectId}_${assignment.roleId}`;
+      const roleRates = projectRoles.get(roleRateKey);
+      
+      // Use role rates if defined, otherwise fall back to user rates
+      const costRate = roleRates?.costRate ?? user.costRate ?? 0;
+      const sellRate = roleRates?.sellRate ?? user.sellRate ?? 0;
+
+      return {
+        projectId: assignment.projectId,
+        projectName: project?.name || 'Unknown Project',
+        roleId: assignment.roleId,
+        roleName: role?.name || 'Unknown Role',
+        forecastedHours: hoursPerAssignment,
+        costRate,
+        sellRate
+      };
+    });
+
+    return {
+      userId: user.id,
+      userName: user.name,
+      projectAssignments
+    };
+  });
 }

@@ -14,6 +14,8 @@ export function UserForecastTable({ userForecasts, onUpdateHours }: UserForecast
           <Th>User</Th>
           <Th>Project</Th>
           <Th>Role</Th>
+          <Th className="text-right">Cost Rate</Th>
+          <Th className="text-right">Sell Rate</Th>
           <Th className="text-right">Hours</Th>
         </tr>
       </TableHeader>
@@ -27,6 +29,8 @@ export function UserForecastTable({ userForecasts, onUpdateHours }: UserForecast
               </Td>
               <Td>{assignment.projectName}</Td>
               <Td>{assignment.roleName}</Td>
+              <Td className="text-right">${assignment.costRate.toFixed(2)}</Td>
+              <Td className="text-right">${assignment.sellRate.toFixed(2)}</Td>
               <Td className="text-right">
                 <input
                   type="number"
