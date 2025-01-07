@@ -80,11 +80,6 @@ export function OvertimeReport() {
                               <div key={project.projectId} className="flex justify-between">
                                 <span>{project.projectName}</span>
                                 <span className="font-medium">
-                                  {project.overtimeHours > 0 && (
-                                    <span className="text-yellow-600">
-                                      (+{project.overtimeHours.toFixed(2)})
-                                    </span>
-                                  )}
                                   <span className="ml-1">{project.hours.toFixed(2)}</span>
                                 </span>
                               </div>
