@@ -12,6 +12,7 @@ import Reports from '@/pages/Reports';
 import Projects from '@/pages/Projects';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
+import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
 
@@ -94,6 +95,14 @@ export default function App() {
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Users />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="admin"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Admin />
                 </RoleProtectedRoute>
               }
             />

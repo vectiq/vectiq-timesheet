@@ -139,3 +139,19 @@ export interface Approval {
   userId: string;
   approverEmail: string;
 }
+
+export interface SystemConfig {
+  defaultHoursPerWeek: number;
+  defaultOvertimeType: 'no' | 'eligible' | 'all';
+  requireApprovalsByDefault: boolean;
+  allowOvertimeByDefault: boolean;
+  defaultBillableStatus: boolean;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalProjects: number;
+  totalHoursThisMonth: number;
+  totalBillableHours: number;
+  averageUtilization: number;
+}
