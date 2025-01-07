@@ -11,6 +11,7 @@ import TimeEntries from '@/pages/TimeEntries';
 import Reports from '@/pages/Reports';
 import Projects from '@/pages/Projects';
 import Roles from '@/pages/Roles';
+import Forecasting from '@/pages/Forecasting';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
 import Profile from '@/pages/Profile';
@@ -75,6 +76,14 @@ export default function App() {
               }
             />
             <Route
+              path="forecasting"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Forecasting />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
               path="projects"
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
@@ -106,7 +115,7 @@ export default function App() {
                 </RoleProtectedRoute>
               }
             />
-          </Route>
+            </Route>
 
           {/* Catch all route - must be last */}
           <Route path="*" element={<Navigate to="/" replace />} />
