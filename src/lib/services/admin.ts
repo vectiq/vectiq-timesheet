@@ -1,7 +1,7 @@
-import { doc, getDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
-import type { SystemConfig, AdminStats } from '@/types';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfWeek } from 'date-fns';
+import type { SystemConfig, AdminStats, TestDataOptions } from '@/types';
 
 const CONFIG_DOC = 'system_config';
 
@@ -87,14 +87,166 @@ export async function getAdminStats(): Promise<AdminStats> {
   };
 }
 
+export async function generateTestData(options: TestDataOptions): Promise<void> {
+  const batch = writeBatch(db);
+  
+  // Get all users, projects, and roles
+  const [usersSnapshot, projectsSnapshot] = await Promise.all([
+    getDocs(collection(db, 'users')),
+    getDocs(collection(db, 'projects'))
+  ]);
+
+  const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  // Get all days and calculate weeks
+  const days = eachDayOfInterval({
+    start: parseISO(options.startDate),
+    end: parseISO(options.endDate)
+  });
+
+  // Group days by week
+  const weeks = days.reduce((acc, day) => {
+    const weekStart = startOfWeek(day, { weekStartsOn: 1 });
+    const key = format(weekStart, 'yyyy-MM-dd');
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(day);
+    return acc;
+  }, {});
+
+  // For each user
+  for (const user of users) {
+    const userAssignments = user.projectAssignments || [];
+    if (userAssignments.length === 0) continue;
+
+    // For each week
+    Object.entries(weeks).forEach(([weekStart, weekDays]) => {
+      const minWeeklyHours = user.hoursPerWeek;
+      const maxWeeklyHours = Math.min(minWeeklyHours * 1.5, weekDays.length * options.maxDailyHours);
+      const targetWeeklyHours = minWeeklyHours + Math.floor(Math.random() * (maxWeeklyHours - minWeeklyHours));
+
+      // Ensure we meet minimum weekly hours
+      let totalWeeklyHours = 0;
+      const shuffledDays = [...weekDays].sort(() => Math.random() - 0.5);
+      const dailyMinHours = Math.ceil(minWeeklyHours / weekDays.length);
+
+      for (const day of shuffledDays) {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const maxDayHours = Math.min(options.maxDailyHours, targetWeeklyHours - totalWeeklyHours);
+        let dailyHours = Math.max(dailyMinHours, Math.min(maxDayHours, Math.floor(Math.random() * 4) + 4));
+        let remainingDayHours = dailyHours;
+
+        // Distribute day's hours across projects
+        const shuffledAssignments = [...userAssignments].sort(() => Math.random() - 0.5);
+        const hoursPerAssignment = Math.max(1, Math.floor(remainingDayHours / shuffledAssignments.length));
+
+        for (const assignment of shuffledAssignments) {
+          if (remainingDayHours <= 0) break;
+
+          const hours = Math.min(
+            remainingDayHours,
+            hoursPerAssignment + Math.floor(Math.random() * 2)
+          );
+
+          const entryRef = doc(collection(db, 'timeEntries'));
+          batch.set(entryRef, {
+            id: entryRef.id,
+            userId: user.id,
+            clientId: assignment.clientId,
+            projectId: assignment.projectId,
+            roleId: assignment.roleId,
+            date: dateStr,
+            hours,
+            description: 'Test data entry',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+
+          remainingDayHours -= hours;
+          totalWeeklyHours += hours;
+        }
+      }
+    });
+  }
+
+  // Generate approvals if requested
+  if (options.generateApprovals) {
+    const totalWeight = Object.values(options.approvalStatus).reduce((a, b) => a + b, 0);
+    
+    for (const project of projects) {
+      if (!project.requiresApproval) continue;
+
+      for (const user of users) {
+        const hasAssignment = user.projectAssignments?.some(
+          a => a.projectId === project.id
+        );
+        if (!hasAssignment) continue;
+
+        // Generate approval with weighted random status
+        const rand = Math.random() * totalWeight;
+        let status: string;
+        let sum = 0;
+
+        if (rand < (sum += options.approvalStatus.pending)) {
+          status = 'pending';
+        } else if (rand < (sum += options.approvalStatus.approved)) {
+          status = 'approved';
+        } else if (rand < (sum += options.approvalStatus.rejected)) {
+          status = 'rejected';
+        } else {
+          status = 'withdrawn';
+        }
+
+        const approvalRef = doc(collection(db, 'approvals'));
+        batch.set(approvalRef, {
+          id: approvalRef.id,
+          userId: user.id,
+          project,
+          status,
+          period: {
+            startDate: options.startDate,
+            endDate: options.endDate
+          },
+          submittedAt: new Date(),
+          ...(status === 'approved' && { approvedAt: new Date() }),
+          ...(status === 'rejected' && { rejectedAt: new Date() }),
+          ...(status === 'withdrawn' && { withdrawnAt: new Date() })
+        });
+      }
+    }
+  }
+
+  await batch.commit();
+}
+
+export async function clearTestData(): Promise<void> {
+  const batch = writeBatch(db);
+  
+  // Delete all time entries
+  const timeEntriesSnapshot = await getDocs(collection(db, 'timeEntries'));
+  timeEntriesSnapshot.docs.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+
+  // Delete all approvals
+  const approvalsSnapshot = await getDocs(collection(db, 'approvals'));
+  approvalsSnapshot.docs.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+}
+
 export async function recalculateProjectTotals(): Promise<void> {
   // Implementation for recalculating project totals
-  // This would update cached totals, verify data consistency, etc.
+  console.log('Recalculating project totals');
 }
 
 export async function cleanupOrphanedData(): Promise<void> {
   // Implementation for cleaning up orphaned data
-  // This would remove entries without valid references, etc.
+  console.log('Cleaning up orphaned data');
 }
 
 export async function validateTimeEntries(): Promise<{
@@ -102,6 +254,5 @@ export async function validateTimeEntries(): Promise<{
   fixed: number;
 }> {
   // Implementation for validating time entries
-  // This would check for data consistency, fix issues, etc.
   return { invalid: 0, fixed: 0 };
 }

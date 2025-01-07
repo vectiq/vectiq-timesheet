@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAdmin } from '@/lib/hooks/useAdmin';
+import { ConfigurationTab } from '@/components/admin/ConfigurationTab';
+import { UtilitiesTab } from '@/components/admin/UtilitiesTab';
+import { CalculationsTab } from '@/components/admin/CalculationsTab';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { FormField } from '@/components/ui/FormField';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { Settings, Wrench, Calculator, Loader2 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils/currency';
+import { Settings, Wrench, Calculator } from 'lucide-react';
 
 const tabs = [
   { id: 'configuration', name: 'Configuration', icon: Settings },
@@ -19,11 +19,15 @@ export default function Admin() {
     config,
     stats,
     isLoading,
+    generateTestData,
+    clearTestData,
     updateConfig,
     recalculateProjectTotals,
     cleanupOrphanedData,
     validateTimeEntries,
     isUpdating,
+    isGenerating,
+    isClearing,
     isRecalculating,
     isCleaning,
     isValidating
@@ -93,150 +97,31 @@ export default function Admin() {
       {/* Tab Content */}
       <div className="space-y-6">
         {activeTab === 'configuration' && (
-          <Card className="p-6">
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                await updateConfig({
-                  defaultHoursPerWeek: Number(formData.get('defaultHoursPerWeek')),
-                  defaultOvertimeType: formData.get('defaultOvertimeType') as any,
-                  requireApprovalsByDefault: formData.get('requireApprovalsByDefault') === 'true',
-                  allowOvertimeByDefault: formData.get('allowOvertimeByDefault') === 'true',
-                  defaultBillableStatus: formData.get('defaultBillableStatus') === 'true',
-                });
-              }}
-              className="space-y-4"
-            >
-              <FormField label="Default Hours Per Week">
-                <input
-                  type="number"
-                  name="defaultHoursPerWeek"
-                  defaultValue={config.defaultHoursPerWeek}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </FormField>
-
-              <FormField label="Default Overtime Type">
-                <select
-                  name="defaultOvertimeType"
-                  defaultValue={config.defaultOvertimeType}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option value="no">No Overtime</option>
-                  <option value="eligible">Eligible Projects Only</option>
-                  <option value="all">All Projects</option>
-                </select>
-              </FormField>
-
-              <div className="space-y-4 pt-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="requireApprovalsByDefault"
-                    value="true"
-                    defaultChecked={config.requireApprovalsByDefault}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm text-gray-700">Require approvals by default for new projects</span>
-                </label>
-
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="allowOvertimeByDefault"
-                    value="true"
-                    defaultChecked={config.allowOvertimeByDefault}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm text-gray-700">Allow overtime by default for new projects</span>
-                </label>
-
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="defaultBillableStatus"
-                    value="true"
-                    defaultChecked={config.defaultBillableStatus}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm text-gray-700">Set roles as billable by default</span>
-                </label>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Button type="submit" disabled={isUpdating}>
-                  {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Save Configuration
-                </Button>
-              </div>
-            </form>
-          </Card>
+          <ConfigurationTab
+            config={config}
+            isUpdating={isUpdating}
+            onUpdateConfig={updateConfig}
+          />
         )}
 
         {activeTab === 'utilities' && (
-          <Card className="divide-y divide-gray-200">
-            <div className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Clean Orphaned Data</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Remove any orphaned records and clean up inconsistent data
-                  </p>
-                </div>
-                <Button
-                  onClick={() => cleanupOrphanedData()}
-                  disabled={isCleaning}
-                >
-                  {isCleaning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Run Cleanup
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Validate Time Entries</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Check for invalid time entries and fix data inconsistencies
-                  </p>
-                </div>
-                <Button
-                  onClick={async () => {
-                    const result = await validateTimeEntries();
-                    alert(`Found ${result.invalid} invalid entries, fixed ${result.fixed}`);
-                  }}
-                  disabled={isValidating}
-                >
-                  {isValidating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Validate Entries
-                </Button>
-              </div>
-            </div>
-          </Card>
+          <UtilitiesTab
+            onGenerateTestData={generateTestData}
+            onClearTestData={clearTestData}
+            onCleanupOrphanedData={cleanupOrphanedData}
+            onValidateTimeEntries={validateTimeEntries}
+            isGenerating={isGenerating}
+            isClearing={isClearing}
+            isCleaning={isCleaning}
+            isValidating={isValidating}
+          />
         )}
 
         {activeTab === 'calculations' && (
-          <Card className="divide-y divide-gray-200">
-            <div className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Recalculate Project Totals</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Update all project totals and verify calculations
-                  </p>
-                </div>
-                <Button
-                  onClick={() => recalculateProjectTotals()}
-                  disabled={isRecalculating}
-                >
-                  {isRecalculating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Recalculate
-                </Button>
-              </div>
-            </div>
-          </Card>
+          <CalculationsTab
+            onRecalculateProjectTotals={recalculateProjectTotals}
+            isRecalculating={isRecalculating}
+          />
         )}
       </div>
     </div>

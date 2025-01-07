@@ -4,11 +4,13 @@ import {
   getSystemConfig,
   updateSystemConfig,
   getAdminStats,
+  generateTestData,
+  clearTestData,
   recalculateProjectTotals,
   cleanupOrphanedData,
   validateTimeEntries
 } from '@/lib/services/admin';
-import type { SystemConfig } from '@/types';
+import type { SystemConfig, TestDataOptions } from '@/types';
 
 const QUERY_KEYS = {
   config: 'system-config',
@@ -35,6 +37,17 @@ export function useAdmin() {
     }
   });
 
+  const generateDataMutation = useMutation({
+    mutationFn: generateTestData
+  });
+
+  const clearDataMutation = useMutation({
+    mutationFn: clearTestData,
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    }
+  });
+
   const recalculateMutation = useMutation({
     mutationFn: recalculateProjectTotals
   });
@@ -56,10 +69,14 @@ export function useAdmin() {
     stats: statsQuery.data,
     isLoading: configQuery.isLoading || statsQuery.isLoading,
     updateConfig: handleUpdateConfig,
+    generateTestData: generateDataMutation.mutateAsync,
+    clearTestData: clearDataMutation.mutateAsync,
     recalculateProjectTotals: recalculateMutation.mutateAsync,
     cleanupOrphanedData: cleanupMutation.mutateAsync,
     validateTimeEntries: validateMutation.mutateAsync,
     isUpdating: updateConfigMutation.isPending,
+    isGenerating: generateDataMutation.isPending,
+    isClearing: clearDataMutation.isPending,
     isRecalculating: recalculateMutation.isPending,
     isCleaning: cleanupMutation.isPending,
     isValidating: validateMutation.isPending

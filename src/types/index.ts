@@ -155,3 +155,16 @@ export interface AdminStats {
   totalBillableHours: number;
   averageUtilization: number;
 }
+
+export interface TestDataOptions {
+  startDate: string;
+  endDate: string;
+  maxDailyHours: number;
+  generateApprovals: boolean;
+  approvalStatus: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    withdrawn: number;
+  };
+}
