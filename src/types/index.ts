@@ -1,12 +1,6 @@
-export interface Role {
-  id: string;
-  name: string;
-  isActive: boolean;
-}
-
 export interface ProjectRole {
   id: string;
-  roleId: string;
+  name: string;
   projectId: string;
   costRate: number;
   sellRate: number;
@@ -95,7 +89,7 @@ export interface ProjectAssignment {
   id: string;
   userId: string;
   projectId: string;
-  roleId: string;
+  projectRoleId: string;
   clientId: string;
 }
 

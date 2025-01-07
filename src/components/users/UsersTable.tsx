@@ -3,6 +3,7 @@ import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/lib/utils/date';
+import { formatCurrency } from '@/lib/utils/currency';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
 import { useClients } from '@/lib/hooks/useClients';
@@ -67,17 +68,19 @@ export function UsersTable({
                 <div className="space-y-2">
                   {userAssignments?.map(assignment => {
                     const project = projects.find(p => p.id === assignment.projectId);
-                    const role = roles.find(r => r.id === assignment.roleId);
+                    const projectRole = project?.roles?.find(r => r.id === assignment.projectRoleId);
                     const client = clients.find(c => c.id === assignment.clientId);
                     
-                    if (!project || !role || !client) return null;
+                    if (!project || !projectRole || !client) return null;
                     
                     return (
-                      <div key={assignment.id} className="flex items-center justify-between text-sm">
-                        <div>
-                          <div className="text-gray-500">{client?.name}</div>
-                          <div className="font-medium">{project?.name}</div>
-                          <div className="text-gray-500">{role?.name}</div>
+                      <div key={assignment.id} className="flex items-center justify-between text-sm py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500">{client?.name}</span>
+                          <span className="text-gray-400">•</span>
+                          <span className="font-medium">{project?.name}</span>
+                          <span className="text-gray-400">•</span>
+                          <span className="text-gray-500">{projectRole.name}</span>
                         </div>
                         <Button
                           variant="secondary"
