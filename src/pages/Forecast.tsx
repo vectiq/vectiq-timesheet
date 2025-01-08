@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth } from 'date-fns';
 import { useForecasts } from '@/lib/hooks/useForecasts';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import { ForecastTable } from '@/components/forecast/ForecastTable';
+import { ForecastSummary } from '@/components/forecast/ForecastSummary';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { getWorkingDaysForMonth, calculateDefaultHours } from '@/lib/utils/workingDays';
@@ -18,16 +19,86 @@ export default function Forecast() {
   const { clients, isLoading: isLoadingClients } = useClients();
   const { 
     forecasts,
+    previousForecasts,
     isLoading: isLoadingForecasts,
     createForecast,
     updateForecast
-  } = useForecasts(currentMonth);
+  } = useForecasts(currentMonth, true);
 
   const handlePrevious = () => setCurrentDate(subMonths(currentDate, 1));
   const handleNext = () => setCurrentDate(addMonths(currentDate, 1));
   const handleToday = () => setCurrentDate(startOfMonth(new Date()));
 
   const workingDays = getWorkingDaysForMonth(currentMonth);
+  
+  // Calculate summary metrics
+  const summary = useMemo(() => {
+    let revenue = 0;
+    let costs = 0;
+    let previousRevenue = 0;
+    let previousCosts = 0;
+    
+    // Helper to get hours for a user/project/role combination
+    const getHours = (userId: string, projectId: string, roleId: string, entries: any[]) => {
+      const forecast = entries.find(f => 
+        f.userId === userId && 
+        f.projectId === projectId && 
+        f.roleId === roleId
+      );
+      
+      if (forecast) {
+        return forecast.hours;
+      }
+      
+      // Calculate default hours if no forecast exists
+      const user = users.find(u => u.id === userId);
+      if (user?.projectAssignments?.some(a => 
+        a.projectId === projectId && 
+        a.roleId === roleId
+      )) {
+        return calculateDefaultHours(workingDays, user.hoursPerWeek || 40);
+      }
+      
+      return 0;
+    };
+
+    // Calculate totals for all user assignments
+    users.forEach(user => {
+      user.projectAssignments?.forEach(assignment => {
+        const project = projects.find(p => p.id === assignment.projectId);
+        const projectRole = project?.roles.find(r => r.id === assignment.roleId);
+        
+        if (project && projectRole) {
+          const hours = getHours(user.id, project.id, projectRole.id, forecasts);
+          const prevHours = getHours(user.id, project.id, projectRole.id, previousForecasts);
+          
+          const sellRate = projectRole.sellRate || user.sellRate || 0;
+          const costRate = projectRole.costRate || user.costRate || 0;
+          
+          revenue += hours * sellRate;
+          costs += hours * costRate;
+          previousRevenue += prevHours * sellRate;
+          previousCosts += prevHours * costRate;
+        }
+      });
+    });
+    
+    const margin = revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0;
+    const previousMargin = previousRevenue > 0 ? ((previousRevenue - previousCosts) / previousRevenue) * 100 : 0;
+    
+    return {
+      currentMonth: {
+        revenue,
+        costs,
+        margin
+      },
+      previousMonth: {
+        revenue: previousRevenue,
+        costs: previousCosts,
+        margin: previousMargin
+      }
+    };
+  }, [forecasts, previousForecasts, users, projects, workingDays]);
 
   if (isLoadingUsers || isLoadingProjects || isLoadingForecasts || isLoadingClients) {
     return <LoadingScreen />;
@@ -45,6 +116,11 @@ export default function Forecast() {
           formatString="MMMM yyyy"
         />
       </div>
+
+      <ForecastSummary
+        currentMonth={summary.currentMonth}
+        previousMonth={summary.previousMonth}
+      />
 
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
         <div className="flex">
