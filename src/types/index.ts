@@ -5,7 +5,6 @@ export interface ProjectRole {
   costRate: number;
   sellRate: number;
   billable: boolean;
-  projectId: string;
 }
 
 export interface Client {
@@ -78,6 +77,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  employeeType: 'employee' | 'contractor' | 'company';
+  salary?: number;
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
   hoursPerWeek: number;

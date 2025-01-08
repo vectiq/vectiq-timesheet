@@ -27,12 +27,15 @@ export function UserDialog({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors }, 
     reset,
   } = useForm<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
     defaultValues: user || {
       email: '',
       name: '',
+      employeeType: 'employee',
       role: 'user',
       projectAssignments: [],
       hoursPerWeek: 40,
@@ -40,6 +43,17 @@ export function UserDialog({
     },
   });
 
+  const employeeType = watch('employeeType');
+  const salary = watch('salary');
+
+  // Calculate cost rate from salary for employees
+  useEffect(() => {
+    if (employeeType === 'employee' && salary) {
+      const annualWorkingHours = 52 * 38; // Fixed 38 hour week
+      const costRate = salary / annualWorkingHours;
+      setValue('costRate', Math.round(costRate * 100) / 100);
+    }
+  }, [employeeType, salary, setValue]);
   useEffect(() => {
     if (open) {
       reset(user || {
@@ -74,6 +88,17 @@ export function UserDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+          <FormField label="Employee Type">
+            <select
+              {...register('employeeType')}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="employee">Employee</option>
+              <option value="contractor">Contractor</option>
+              <option value="company">Company</option>
+            </select>
+          </FormField>
+
           <FormField label="Name">
             <input
               {...register('name')}
@@ -105,6 +130,21 @@ export function UserDialog({
             </select>
           </FormField>
 
+          {employeeType === 'employee' && (
+            <FormField label="Annual Salary Package (inc. Super)">
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  {...register('salary', { valueAsNumber: true })}
+                  className="block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              </div>
+            </FormField>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Cost Rate ($/hr)">
               <div className="relative">
@@ -114,7 +154,10 @@ export function UserDialog({
                   min="0"
                   step="0.01"
                   {...register('costRate', { valueAsNumber: true })}
-                  className="block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  disabled={employeeType === 'employee'}
+                  className={`block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
+                    employeeType === 'employee' ? 'bg-gray-100' : ''
+                  }`}                 
                 />
               </div>
             </FormField>
