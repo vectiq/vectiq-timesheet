@@ -16,7 +16,10 @@ export default function TimeEntries() {
   const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [projectsWithStatus, setProjectsWithStatus] = useState<ProjectWithStatus[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
+    const savedUserId = localStorage.getItem('selectedUserId');
+    return savedUserId || null;
+  });
   const { currentUser, users, isLoading: isLoadingUsers } = useUsers();
   const dateNav = useDateNavigation({
     type: view === 'weekly' ? 'week' : 'month',
@@ -30,16 +33,17 @@ export default function TimeEntries() {
 
   useEffect(() => {
     // Set initial selected user to current user
-    if (currentUser) {
+    if (currentUser && !selectedUserId) {
       setSelectedUserId(currentUser.id);
     }
-  }, [currentUser]);
+  }, [currentUser, selectedUserId]);
 
   const handleViewChange = useCallback((newView: 'weekly' | 'monthly') => {
     setView(newView);
   }, []);
 
   const handleUserChange = useCallback((userId: string) => {
+    localStorage.setItem('selectedUserId', userId);
     setSelectedUserId(userId);
   }, []);
 
@@ -50,6 +54,13 @@ export default function TimeEntries() {
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-semibold text-gray-900">Timesheet</h1>
+          {isAdmin && !isLoadingUsers && (
+            <UserSelect
+              users={users}
+              selectedUserId={selectedUserId}
+              onChange={handleUserChange}
+            />
+          )}
           <div className="flex rounded-lg shadow-sm">
             <Button
               variant={view === 'weekly' ? 'primary' : 'secondary'}
@@ -67,13 +78,6 @@ export default function TimeEntries() {
             </Button>
           </div>
         </div>
-        {isAdmin && !isLoadingUsers && (
-          <UserSelect
-            users={users}
-            selectedUserId={selectedUserId}
-            onChange={handleUserChange}
-          />
-        )}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <DateNavigation
             currentDate={dateNav.currentDate}
