@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth } from 'date-fns';
 import { useForecasts } from '@/lib/hooks/useForecasts';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import { ForecastTable } from '@/components/forecast/ForecastTable';
+import { ForecastSummary } from '@/components/forecast/ForecastSummary';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { getWorkingDaysForMonth, calculateDefaultHours } from '@/lib/utils/workingDays';
@@ -28,6 +29,43 @@ export default function Forecast() {
   const handleToday = () => setCurrentDate(startOfMonth(new Date()));
 
   const workingDays = getWorkingDaysForMonth(currentMonth);
+  
+  // Calculate summary metrics
+  const summary = useMemo(() => {
+    let revenue = 0;
+    let costs = 0;
+    
+    forecasts.forEach(forecast => {
+      const user = users.find(u => u.id === forecast.userId);
+      const project = projects.find(p => p.id === forecast.projectId);
+      const projectRole = project?.roles.find(r => r.id === forecast.roleId);
+      
+      if (user) {
+        // Use project role rates if defined, otherwise fall back to user rates
+        const sellRate = projectRole?.sellRate || user.sellRate || 0;
+        const costRate = projectRole?.costRate || user.costRate || 0;
+        
+        revenue += forecast.hours * sellRate;
+        costs += forecast.hours * costRate;
+      }
+    });
+    
+    const margin = revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0;
+    
+    // TODO: Replace with actual previous month data
+    const previousMargin = margin - (Math.random() * 10 - 5); // Temporary random difference
+    
+    return {
+      currentMonth: {
+        revenue,
+        costs,
+        margin
+      },
+      previousMonth: {
+        margin: previousMargin
+      }
+    };
+  }, [forecasts, users, projects]);
 
   if (isLoadingUsers || isLoadingProjects || isLoadingForecasts || isLoadingClients) {
     return <LoadingScreen />;
@@ -45,6 +83,11 @@ export default function Forecast() {
           formatString="MMMM yyyy"
         />
       </div>
+
+      <ForecastSummary
+        currentMonth={summary.currentMonth}
+        previousMonth={summary.previousMonth}
+      />
 
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
         <div className="flex">
