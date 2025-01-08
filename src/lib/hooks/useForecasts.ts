@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { subMonths, format } from 'date-fns';
 import {
   getForecastEntries,
   saveForecastEntry,
@@ -9,12 +10,19 @@ import type { ForecastEntry } from '@/types';
 
 const QUERY_KEY = 'forecasts';
 
-export function useForecasts(month: string) {
+export function useForecasts(month: string, includePrevious = false) {
   const queryClient = useQueryClient();
+  const previousMonth = format(subMonths(new Date(month + '-01'), 1), 'yyyy-MM');
 
-  const query = useQuery({
+  const currentMonthQuery = useQuery({
     queryKey: [QUERY_KEY, month],
     queryFn: () => getForecastEntries(month)
+  });
+
+  const previousMonthQuery = useQuery({
+    queryKey: [QUERY_KEY, previousMonth],
+    queryFn: () => getForecastEntries(previousMonth),
+    enabled: includePrevious
   });
 
   const createMutation = useMutation({
@@ -41,9 +49,10 @@ export function useForecasts(month: string) {
   }, [updateMutation]);
 
   return {
-    forecasts: query.data ?? [],
-    isLoading: query.isLoading,
-    error: query.error,
+    forecasts: currentMonthQuery.data ?? [],
+    previousForecasts: previousMonthQuery.data ?? [],
+    isLoading: currentMonthQuery.isLoading || (includePrevious && previousMonthQuery.isLoading),
+    error: currentMonthQuery.error || previousMonthQuery.error,
     createForecast: handleCreateForecast,
     updateForecast: handleUpdateForecast,
     isCreating: createMutation.isPending,

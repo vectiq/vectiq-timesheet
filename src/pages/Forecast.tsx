@@ -19,10 +19,11 @@ export default function Forecast() {
   const { clients, isLoading: isLoadingClients } = useClients();
   const { 
     forecasts,
+    previousForecasts,
     isLoading: isLoadingForecasts,
     createForecast,
     updateForecast
-  } = useForecasts(currentMonth);
+  } = useForecasts(currentMonth, true);
 
   const handlePrevious = () => setCurrentDate(subMonths(currentDate, 1));
   const handleNext = () => setCurrentDate(addMonths(currentDate, 1));
@@ -34,6 +35,8 @@ export default function Forecast() {
   const summary = useMemo(() => {
     let revenue = 0;
     let costs = 0;
+    let previousRevenue = 0;
+    let previousCosts = 0;
     
     forecasts.forEach(forecast => {
       const user = users.find(u => u.id === forecast.userId);
@@ -50,10 +53,22 @@ export default function Forecast() {
       }
     });
     
-    const margin = revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0;
+    previousForecasts.forEach(forecast => {
+      const user = users.find(u => u.id === forecast.userId);
+      const project = projects.find(p => p.id === forecast.projectId);
+      const projectRole = project?.roles.find(r => r.id === forecast.roleId);
+      
+      if (user) {
+        const sellRate = projectRole?.sellRate || user.sellRate || 0;
+        const costRate = projectRole?.costRate || user.costRate || 0;
+        
+        previousRevenue += forecast.hours * sellRate;
+        previousCosts += forecast.hours * costRate;
+      }
+    });
     
-    // TODO: Replace with actual previous month data
-    const previousMargin = margin - (Math.random() * 10 - 5); // Temporary random difference
+    const margin = revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0;
+    const previousMargin = previousRevenue > 0 ? ((previousRevenue - previousCosts) / previousRevenue) * 100 : 0;
     
     return {
       currentMonth: {
@@ -62,10 +77,12 @@ export default function Forecast() {
         margin
       },
       previousMonth: {
+        revenue: previousRevenue,
+        costs: previousCosts,
         margin: previousMargin
       }
     };
-  }, [forecasts, users, projects]);
+  }, [forecasts, previousForecasts, users, projects]);
 
   if (isLoadingUsers || isLoadingProjects || isLoadingForecasts || isLoadingClients) {
     return <LoadingScreen />;
