@@ -98,6 +98,7 @@ export default function TimeEntries() {
       ) : (
         <MonthlyView 
           dateRange={dateNav.dateRange}
+          userId={currentUser?.role === 'admin' ? selectedUserId : currentUser?.id}
           onApprovalClick={(projects) => {
             setProjectsWithStatus(projects);
             setIsApprovalDialogOpen(true);

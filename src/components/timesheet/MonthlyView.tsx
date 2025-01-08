@@ -17,6 +17,7 @@ interface MonthlyViewProps {
     start: Date;
     end: Date;
   };
+  userId?: string | null;
   onApprovalClick: (projects: ProjectWithStatus[]) => void;
 }
 
@@ -42,13 +43,12 @@ interface GroupedData {
   >;
 }
 
-export function MonthlyView({ dateRange, onApprovalClick }: MonthlyViewProps) {
-  const { timeEntries } = useTimeEntries({ dateRange });
+export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewProps) {
+  const { timeEntries } = useTimeEntries({ dateRange, userId });
   const { clients } = useClients();
   const { projects } = useProjects();
   const { roles } = useRoles();
   const { useApprovalStatus } = useApprovals(); 
-  const userId = auth.currentUser?.uid;
   const startDate = format(dateRange.start, 'yyyy-MM-dd');
   const endDate = format(dateRange.end, 'yyyy-MM-dd');
 

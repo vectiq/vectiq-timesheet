@@ -24,7 +24,7 @@ export function UserSelect({ users, selectedUserId, onChange }: UserSelectProps)
       >
         {selectedUser?.name}
         {selectedUser?.id === currentUserId && (
-          <span className="ml-2 text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-medium">me</span>
+          <span className="ml-2 text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-medium">Me</span>
         )}
         <ChevronDown className="-mr-1 h-4 w-4 text-gray-400" aria-hidden="true" />
       </button>
@@ -36,7 +36,7 @@ export function UserSelect({ users, selectedUserId, onChange }: UserSelectProps)
       >
         {users.map((user) => (
           <option key={user.id} value={user.id}>
-            {user.name}{user.id === currentUserId ? ' • Current User' : ''}
+            {user.name}{user.id === currentUserId ? ' (Me)' : ''}
           </option>
         ))}
       </select>
