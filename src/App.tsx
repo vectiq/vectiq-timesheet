@@ -10,6 +10,7 @@ import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
 import Reports from '@/pages/Reports';
 import Forecast from '@/pages/Forecast';
+import ForecastReport from '@/pages/ForecastReport';
 import Projects from '@/pages/Projects';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
@@ -72,6 +73,14 @@ export default function App() {
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Forecast />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="forecast/report"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <ForecastReport />
                 </RoleProtectedRoute>
               }
             />
