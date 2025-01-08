@@ -38,33 +38,49 @@ export default function Forecast() {
     let previousRevenue = 0;
     let previousCosts = 0;
     
-    forecasts.forEach(forecast => {
-      const user = users.find(u => u.id === forecast.userId);
-      const project = projects.find(p => p.id === forecast.projectId);
-      const projectRole = project?.roles.find(r => r.id === forecast.roleId);
+    // Helper to get hours for a user/project/role combination
+    const getHours = (userId: string, projectId: string, roleId: string, entries: any[]) => {
+      const forecast = entries.find(f => 
+        f.userId === userId && 
+        f.projectId === projectId && 
+        f.roleId === roleId
+      );
       
-      if (user) {
-        // Use project role rates if defined, otherwise fall back to user rates
-        const sellRate = projectRole?.sellRate || user.sellRate || 0;
-        const costRate = projectRole?.costRate || user.costRate || 0;
-        
-        revenue += forecast.hours * sellRate;
-        costs += forecast.hours * costRate;
+      if (forecast) {
+        return forecast.hours;
       }
-    });
-    
-    previousForecasts.forEach(forecast => {
-      const user = users.find(u => u.id === forecast.userId);
-      const project = projects.find(p => p.id === forecast.projectId);
-      const projectRole = project?.roles.find(r => r.id === forecast.roleId);
       
-      if (user) {
-        const sellRate = projectRole?.sellRate || user.sellRate || 0;
-        const costRate = projectRole?.costRate || user.costRate || 0;
-        
-        previousRevenue += forecast.hours * sellRate;
-        previousCosts += forecast.hours * costRate;
+      // Calculate default hours if no forecast exists
+      const user = users.find(u => u.id === userId);
+      if (user?.projectAssignments?.some(a => 
+        a.projectId === projectId && 
+        a.roleId === roleId
+      )) {
+        return calculateDefaultHours(workingDays, user.hoursPerWeek || 40);
       }
+      
+      return 0;
+    };
+
+    // Calculate totals for all user assignments
+    users.forEach(user => {
+      user.projectAssignments?.forEach(assignment => {
+        const project = projects.find(p => p.id === assignment.projectId);
+        const projectRole = project?.roles.find(r => r.id === assignment.roleId);
+        
+        if (project && projectRole) {
+          const hours = getHours(user.id, project.id, projectRole.id, forecasts);
+          const prevHours = getHours(user.id, project.id, projectRole.id, previousForecasts);
+          
+          const sellRate = projectRole.sellRate || user.sellRate || 0;
+          const costRate = projectRole.costRate || user.costRate || 0;
+          
+          revenue += hours * sellRate;
+          costs += hours * costRate;
+          previousRevenue += prevHours * sellRate;
+          previousCosts += prevHours * costRate;
+        }
+      });
     });
     
     const margin = revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0;
@@ -82,7 +98,7 @@ export default function Forecast() {
         margin: previousMargin
       }
     };
-  }, [forecasts, previousForecasts, users, projects]);
+  }, [forecasts, previousForecasts, users, projects, workingDays]);
 
   if (isLoadingUsers || isLoadingProjects || isLoadingForecasts || isLoadingClients) {
     return <LoadingScreen />;
