@@ -7,8 +7,9 @@ import { auth } from '@/lib/firebase';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { Loader2, Briefcase } from 'lucide-react';
+import { Loader2, Briefcase, DollarSign } from 'lucide-react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export default function Profile() {
   const { currentUser, updateUser, isUpdating, sendPasswordReset } = useUsers();
@@ -33,7 +34,7 @@ export default function Profile() {
     if (!user) return;
 
     try {
-      await updateUser(currentUser.id, { name, email });
+      await updateUser(currentUser.id, { name });
       setMessage('Profile updated successfully');
     } catch (error) {
       setMessage('Failed to update profile');

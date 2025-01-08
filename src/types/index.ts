@@ -81,6 +81,8 @@ export interface User {
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
   hoursPerWeek: number;
+  costRate: number;
+  sellRate: number;
   xeroEmployeeId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -168,4 +170,16 @@ export interface TestDataOptions {
     rejected: number;
     withdrawn: number;
   };
+}
+
+export interface ForecastEntry {
+  id: string;
+  month: string;          // Format: YYYY-MM
+  userId: string;
+  projectId: string;
+  roleId: string;
+  hours: number;
+  isDefault: boolean;     // Indicates if this is an auto-calculated default value
+  createdAt: any;         // Firestore Timestamp
+  updatedAt: any;         // Firestore Timestamp
 }

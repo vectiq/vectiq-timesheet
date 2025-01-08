@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { userSchema } from '@/lib/schemas/user';
+import { DollarSign } from 'lucide-react';
 import type { User } from '@/types';
 
 interface UserDialogProps {
@@ -104,6 +104,34 @@ export function UserDialog({
               <option value="admin">Admin</option>
             </select>
           </FormField>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Cost Rate ($/hr)">
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  {...register('costRate', { valueAsNumber: true })}
+                  className="block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              </div>
+            </FormField>
+
+            <FormField label="Sell Rate ($/hr)">
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  {...register('sellRate', { valueAsNumber: true })}
+                  className="block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              </div>
+            </FormField>
+          </div>
 
           <FormField label="Xero Employee ID">
             <input
