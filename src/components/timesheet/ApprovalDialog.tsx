@@ -18,6 +18,7 @@ import type { ProjectWithStatus } from '@/types';
 interface ApprovalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  userId?: string | null;
   dateRange: {
     start: Date;
     end: Date;
@@ -28,12 +29,13 @@ interface ApprovalDialogProps {
 export function ApprovalDialog({
   open,
   onOpenChange,
+  userId,
   dateRange,
   projectsWithStatus,
 }: ApprovalDialogProps) {
   const { projects } = useProjects();
   const { clients } = useClients();
-  const { timeEntries } = useTimeEntries({ dateRange });
+  const { timeEntries } = useTimeEntries({ dateRange, userId });
   const { submitApproval, isSubmitting } = useApprovals();
   const [selectedProject, setSelectedProject] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export function ApprovalDialog({
     setError(null);
 
     if (!selectedProject || !auth.currentUser) return;
+    const effectiveUserId = userId || auth.currentUser.uid;
 
     const project = projects.find(p => p.id === selectedProject);
     const client = clients.find(c => c.id === project?.clientId);
@@ -66,7 +69,7 @@ export function ApprovalDialog({
         client,
         dateRange,
         entries: projectEntries,
-        userId: auth.currentUser.uid,
+        userId: effectiveUserId,
       });
       onOpenChange(false);
     } catch (error) {

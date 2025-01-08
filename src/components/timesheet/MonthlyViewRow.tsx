@@ -27,7 +27,19 @@ interface MonthlyViewRowProps {
   };
 }
 
-function ApprovalBadge({ status }: { status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn' }) {
+function ApprovalBadge({ status, requiresApproval }: { 
+  status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  requiresApproval: boolean;
+}) {
+  if (!requiresApproval) {
+    return (
+      <Badge variant="secondary" className="flex items-center gap-1.5">
+        <ChevronRight className="h-3 w-3" />
+        <span>Approval Not Required</span>
+      </Badge>
+    );
+  }
+
   let variant: BadgeVariant = 'secondary';
   let Icon = Clock;
   let text = 'Unsubmitted';
@@ -111,8 +123,11 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
             <div className="flex items-center gap-3">
               <span className="font-medium">{projectGroup.project.name}</span>
               {projectGroup.approvalStatus && (
-                <div className="flex items-center gap-2">
-                  <ApprovalBadge status={projectGroup.approvalStatus.status} />
+                <div className="flex items-center gap-2"> 
+                  <ApprovalBadge 
+                    status={projectGroup.approvalStatus.status}
+                    requiresApproval={projectGroup.project.requiresApproval}
+                  />
                   {projectGroup.approvalStatus.status === 'pending' && (
                     <Button
                       variant="secondary"

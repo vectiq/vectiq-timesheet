@@ -9,7 +9,7 @@ import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
-import { auth } from '@/lib/firebase';
+import { useUsers } from '@/lib/hooks/useUsers';
 import type { Project, ProjectWithStatus } from '@/types';
 
 interface MonthlyViewProps {
@@ -45,15 +45,24 @@ interface GroupedData {
 
 export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewProps) {
   const { timeEntries } = useTimeEntries({ dateRange, userId });
+  const { users } = useUsers();
   const { clients } = useClients();
   const { projects } = useProjects();
   const { roles } = useRoles();
   const { useApprovalStatus } = useApprovals(); 
+  const selectedUser = users.find(u => u.id === userId);
   const startDate = format(dateRange.start, 'yyyy-MM-dd');
   const endDate = format(dateRange.end, 'yyyy-MM-dd');
 
+  // Filter projects based on user assignments
+  const userProjects = useMemo(() => {
+    if (!selectedUser?.projectAssignments) return [];
+    return projects.filter(project => 
+      selectedUser.projectAssignments.some(a => a.projectId === project.id)
+    );
+  }, [selectedUser, projects]);
   // Get approval statuses for all projects
-  const approvalStatusQueries = projects
+  const approvalStatusQueries = userProjects
     .filter(p => p.requiresApproval)
     .map(project => ({
       projectId: project.id,
@@ -141,10 +150,11 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
   const projectsNeedingApproval = useMemo(() => {
     if (!userId) return [];
     const projectsWithEntries = new Set<string>(timeEntries.map(entry => entry.projectId));
+    const userProjectIds = new Set(selectedUser?.projectAssignments?.map(a => a.projectId) || []);
     const statuses: ProjectWithStatus[] = [];
 
-    for (const project of projects) {
-      if (!projectsWithEntries.has(project.id) || !project.requiresApproval) continue;
+    for (const project of userProjects) {
+      if (!projectsWithEntries.has(project.id) || !project.requiresApproval || !userProjectIds.has(project.id)) continue;
 
       const client = clients.find(c => c.id === project.clientId);
       if (!client) continue;
@@ -193,7 +203,12 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
               {totals.hours.toFixed(2)} hours
             </span>
           </div>
-          <Button onClick={handleApprovalClick}>
+          <Button 
+            onClick={handleApprovalClick}
+            disabled={projectsNeedingApproval.length === 0}
+            className={projectsNeedingApproval.length === 0 ? "opacity-50 cursor-not-allowed" : ""}
+            title={projectsNeedingApproval.length === 0 ? "No time entries require approval for this period" : undefined}
+          >
             <Send className="h-4 w-4 mr-2" />
             Submit for Approval
           </Button>

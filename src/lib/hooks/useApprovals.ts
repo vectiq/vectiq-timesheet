@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { auth } from '@/lib/firebase';
 import { 
   getApprovalsForDate,
   submitTimesheetApproval, 
@@ -31,25 +32,26 @@ interface ApprovalRequest {
 export function useApprovals() {
   const queryClient = useQueryClient();
 
-  const query = useQuery({
+  const approvalsQuery = useQuery({
     queryKey: [QUERY_KEYS.approvals],
     queryFn: getApprovals
   });
 
   const getApprovalStatusQuery = (
     projectId: string,
-    userId: string,
+    userId: string | null | undefined,
     startDate: string,
     endDate: string
   ) => useQuery({
     queryKey: QUERY_KEYS.status(projectId, userId, startDate, endDate),
-    queryFn: () => getApprovalStatus(projectId, userId, startDate, endDate)
+    queryFn: () => getApprovalStatus(projectId, userId || auth.currentUser?.uid || '', startDate, endDate),
+    enabled: !!projectId && (!!userId || !!auth.currentUser)
   });
 
-  const useApprovalsForDate = (date: string, userId: string, projectId: string) => useQuery({
+  const useApprovalsForDate = (date: string, userId: string | null | undefined, projectId: string) => useQuery({
     queryKey: QUERY_KEYS.dateApprovals(date, userId, projectId),
-    queryFn: () => getApprovalsForDate(date, userId, projectId),
-    enabled: !!userId && !!projectId
+    queryFn: () => getApprovalsForDate(date, userId || auth.currentUser?.uid || '', projectId),
+    enabled: !!projectId && (!!userId || !!auth.currentUser)
   });
 
   const submitMutation = useMutation({
@@ -87,7 +89,7 @@ export function useApprovals() {
   });
 
   return {
-    approvals: query.data || [],
+    approvals: approvalsQuery.data || [],
     submitApproval: submitMutation.mutateAsync,
     useApprovalStatus: getApprovalStatusQuery,
     useApprovalsForDate,
@@ -96,6 +98,6 @@ export function useApprovals() {
     isSubmitting: submitMutation.isPending,
     isWithdrawing: withdrawMutation.isPending,
     isRejecting: rejectMutation.isPending,
-    error: submitMutation.error,
+    error: submitMutation.error
   };
 }

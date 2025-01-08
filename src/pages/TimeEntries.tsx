@@ -109,6 +109,7 @@ export default function TimeEntries() {
       <ApprovalDialog
         open={isApprovalDialogOpen}
         onOpenChange={setIsApprovalDialogOpen}
+        userId={currentUser?.role === 'admin' ? selectedUserId : currentUser?.id}
         dateRange={dateNav.dateRange}
         projectsWithStatus={projectsWithStatus}
       />
