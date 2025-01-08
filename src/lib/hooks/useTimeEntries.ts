@@ -7,7 +7,7 @@ import {
   updateTimeEntry,
   deleteTimeEntry,
 } from '@/lib/services/timeEntries';
-import { auth } from '@/lib/firebase';
+import { useUsers } from './useUsers';
 import type { TimeEntry } from '@/types';
 
 const QUERY_KEY = 'timeEntries';
@@ -31,7 +31,8 @@ interface UseTimeEntriesOptions {
 }
 
 export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
-  const userId = auth.currentUser?.uid;
+  const { currentUser } = useUsers();
+  const effectiveUserId = options.userId || currentUser?.id;
   const queryClient = useQueryClient();
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
@@ -72,7 +73,10 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   });
 
   const handleCreateEntry = useCallback(async (data: Omit<TimeEntry, 'id'>) => {
-    return createMutation.mutateAsync(data);
+    return createMutation.mutateAsync({
+      ...data,
+      userId: effectiveUserId
+    });
   }, [createMutation]);
 
   const handleUpdateEntry = useCallback(async (id: string, data: Partial<TimeEntry>) => {
@@ -84,9 +88,9 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   }, [deleteMutation]);
 
   const query = useQuery({
-    queryKey: [QUERY_KEY, userId, options.dateRange?.start, options.dateRange?.end],
-    queryFn: () => getTimeEntries(userId, options.dateRange),
-    enabled: !!userId && !!options.dateRange,
+    queryKey: [QUERY_KEY, effectiveUserId, options.dateRange?.start, options.dateRange?.end],
+    queryFn: () => getTimeEntries(effectiveUserId, options.dateRange),
+    enabled: !!effectiveUserId && !!options.dateRange,
   });
 
   const timeEntries = useMemo(() => query.data || [], [query.data]);
@@ -100,7 +104,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   }, [timeEntries, options.dateRange]);
 
   const copyFromPreviousWeek = useCallback(async () => {
-    if (!userId || !options.dateRange) return;
+    if (!effectiveUserId || !options.dateRange) return;
 
     const previousWeekStart = new Date(options.dateRange.start);
     previousWeekStart.setDate(previousWeekStart.getDate() - 7);
@@ -108,7 +112,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
 
     // Get previous week's entries
-    const previousEntries = await getTimeEntries(userId, {
+    const previousEntries = await getTimeEntries(effectiveUserId, {
       start: previousWeekStart,
       end: previousWeekEnd
     });
@@ -120,7 +124,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
       newDate.setDate(newDate.getDate() + 7);
 
       return handleCreateEntry({
-        userId,
+        userId: effectiveUserId,
         date: newDate.toISOString().split('T')[0],
         clientId: entry.clientId,
         projectId: entry.projectId,
@@ -131,7 +135,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     });
 
     await Promise.all(promises);
-  }, [userId, options.dateRange, handleCreateEntry]);
+  }, [effectiveUserId, options.dateRange, handleCreateEntry]);
 
 
   // Combine automatic and manual rows
@@ -178,7 +182,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     row: TimesheetRow,
     value: number | null
   ) => {
-    if (!userId || !row.clientId || !row.projectId || !row.roleId) return;
+    if (!effectiveUserId || !row.clientId || !row.projectId || !row.roleId) return;
 
     const entry = timeEntries.find(e => 
       e.date === date && 
@@ -198,7 +202,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
       }
     } else if (value !== null) {
       await handleCreateEntry({
-        userId,
+        userId: effectiveUserId,
         date,
         clientId: row.clientId,
         projectId: row.projectId,
@@ -207,7 +211,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
         description: '',
       });
     }
-  }, [userId, timeEntries, handleCreateEntry, handleUpdateEntry, handleDeleteEntry]);
+  }, [effectiveUserId, timeEntries, handleCreateEntry, handleUpdateEntry, handleDeleteEntry]);
 
   const addRow = useCallback(() => {
     setManualRows(current => ({

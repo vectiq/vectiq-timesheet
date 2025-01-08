@@ -13,13 +13,14 @@ import type { Project } from '@/types';
 
 interface WeeklyViewProps {
   projects: Project[];
+  userId?: string | null;
   dateRange: {
     start: Date;
     end: Date;
   };
 }
 
-export const WeeklyView = memo(function WeeklyView({ projects, dateRange }: WeeklyViewProps) {
+export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange }: WeeklyViewProps) {
   const { currentUser } = useUsers();
   const { 
     timeEntries,
@@ -32,7 +33,10 @@ export const WeeklyView = memo(function WeeklyView({ projects, dateRange }: Week
     updateRow,
     handleCellChange,
     setEditingCell
-  } = useTimeEntries({ dateRange });
+  } = useTimeEntries({ 
+    userId: userId || currentUser?.id,
+    dateRange 
+  });
 
   const { clients } = useClients();
   const { roles: allRoles } = useRoles();

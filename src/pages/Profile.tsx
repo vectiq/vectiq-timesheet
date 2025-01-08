@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
@@ -21,7 +21,21 @@ export default function Profile() {
   const [email, setEmail] = useState(user?.email || '');
   const [message, setMessage] = useState('');
 
-  const assignments = currentUser?.projectAssignments || [];
+  // Get assignments with full details
+  const assignments = useMemo(() => {
+    return (currentUser?.projectAssignments || []).map(assignment => {
+      const project = projects.find(p => p.id === assignment.projectId);
+      const projectRole = project?.roles?.find(r => r.id === assignment.roleId);
+      const client = clients.find(c => c.id === assignment.clientId);
+      
+      return {
+        id: assignment.id,
+        client,
+        project,
+        role: projectRole,
+      };
+    }).filter(a => a.client && a.project && a.role);
+  }, [currentUser?.projectAssignments, projects, clients]);
 
   useEffect(() => {
     if (currentUser?.name) {
@@ -123,15 +137,11 @@ export default function Profile() {
                 </TableHeader>
                 <TableBody>
                   {assignments.map((assignment) => {
-                    const project = projects.find(p => p.id === assignment.projectId);
-                    const role = roles.find(r => r.id === assignment.roleId);
-                    const client = clients.find(c => c.id === assignment.clientId);
-                    
                     return (
                       <tr key={assignment.id}>
-                        <Td className="font-medium">{client?.name || 'Unknown Client'}</Td>
-                        <Td className="font-medium">{project?.name || 'Unknown Project'}</Td>
-                        <Td>{role?.name || 'Unknown Role'}</Td>
+                        <Td className="font-medium">{assignment.client.name}</Td>
+                        <Td className="font-medium">{assignment.project.name}</Td>
+                        <Td>{assignment.role.name}</Td>
                       </tr>
                     );
                   })}
