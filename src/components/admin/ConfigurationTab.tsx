@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Card } from '@/components/ui/Card';
-import { Loader2, ExternalLink } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { SystemConfig } from '@/types';
 
 interface ConfigurationTabProps {
@@ -10,7 +10,11 @@ interface ConfigurationTabProps {
   onUpdateConfig: (config: SystemConfig) => Promise<void>;
 }
 
-export function ConfigurationTab({ config, isUpdating, onUpdateConfig }: ConfigurationTabProps) {
+export function ConfigurationTab({ 
+  config, 
+  isUpdating, 
+  onUpdateConfig
+}: ConfigurationTabProps) {
   return (
     <Card className="p-6">
       <form
@@ -81,16 +85,6 @@ export function ConfigurationTab({ config, isUpdating, onUpdateConfig }: Configu
             />
             <span className="text-sm text-gray-700">Set roles as billable by default</span>
           </label>
-        </div>
-
-        <div className="pt-4 border-t">
-          <Button
-            type="button"
-            onClick={() => window.open(import.meta.env.VITE_XERO_AUTHORISATION_URL, '_blank')}
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Authorise Xero Integration
-          </Button>
         </div>
 
         <div className="pt-4 border-t">

@@ -151,6 +151,13 @@ export interface SystemConfig {
   defaultBillableStatus: boolean;
 }
 
+export interface XeroConfig {
+  clientId: string;
+  redirectUri: string;
+  tenantId: string;
+  scopes: string[];
+}
+
 export interface AdminStats {
   totalUsers: number;
   totalProjects: number;
@@ -181,5 +188,10 @@ export interface ForecastEntry {
   hours: number;
   isDefault: boolean;     // Indicates if this is an auto-calculated default value
   createdAt: any;         // Firestore Timestamp
+  updatedAt: any;         // Firestore Timestamp
+}
+
+export interface Leave {
+  leave: any;
   updatedAt: any;         // Firestore Timestamp
 }

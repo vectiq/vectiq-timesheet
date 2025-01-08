@@ -1,9 +1,31 @@
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfWeek } from 'date-fns';
-import type { SystemConfig, AdminStats, TestDataOptions } from '@/types';
+import type { SystemConfig, AdminStats, TestDataOptions, XeroConfig } from '@/types';
 
 const CONFIG_DOC = 'system_config';
+const XERO_CONFIG_DOC = 'xero_config';
+
+export async function getXeroConfig(): Promise<XeroConfig> {
+  const configRef = doc(db, 'config', XERO_CONFIG_DOC);
+  const configDoc = await getDoc(configRef);
+  
+  if (!configDoc.exists()) {
+    return {
+      clientId: '',
+      tenantId: '',
+      redirectUri: '',
+      scopes: []
+    };
+  }
+  
+  return configDoc.data() as XeroConfig;
+}
+
+export async function updateXeroConfig(config: XeroConfig): Promise<void> {
+  const configRef = doc(db, 'config', XERO_CONFIG_DOC);
+  await setDoc(configRef, config);
+}
 
 export async function getSystemConfig(): Promise<SystemConfig> {
   const configRef = doc(db, 'config', CONFIG_DOC);
