@@ -56,9 +56,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
           userName: userData.name || 'Unknown User',
           roleId: role.id,
           roleName: role.name,
-          hours,
-          payRate: role.costRate || userData.costRate || 0,
-          payrollStatus: 'pending'
+          hours
         });
       }
     }
@@ -80,8 +78,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
       clientName: client?.name || 'Unknown Client',
       totalHours,
       timesheetStatus: latestApproval?.status || 'pending',
-      invoiceStatus: 'pending',
-      payrollStatus: 'pending',
+      invoiceStatus: 'not started',
       priority: totalHours > 100 ? 'high' : 'normal',
       hasSpecialHandling: project.requiresApproval,
       type: assignments.length === 1 ? 'labor_hire' : 'team',
@@ -94,7 +91,6 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
     totalProjects: projects.length,
     approvedTimesheets: projects.filter(p => p.timesheetStatus === 'approved').length,
     generatedInvoices: projects.filter(p => p.invoiceStatus === 'generated').length,
-    processedPayroll: projects.filter(p => p.payrollStatus === 'processed').length,
     urgentItems: projects.filter(p => p.priority === 'high').length
   };
 

@@ -167,8 +167,7 @@ export interface ProcessingProject {
   clientName: string;
   totalHours: number;
   timesheetStatus: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-  invoiceStatus: 'pending' | 'generated' | 'sent';
-  payrollStatus: 'pending' | 'processed' | 'special';
+  invoiceStatus: 'not started' | 'draft' | 'sent';
   priority: 'normal' | 'high';
   hasSpecialHandling: boolean;
   type: 'labor_hire' | 'team';
@@ -177,9 +176,7 @@ export interface ProcessingProject {
     userName: string;
     roleId: string;
     roleName: string;
-    hours: number;
-    payRate: number;
-    payrollStatus: 'pending' | 'processed' | 'special';
+    hours: number
   }>;
 }
 
@@ -189,7 +186,6 @@ export interface ProcessingData {
     totalProjects: number;
     approvedTimesheets: number;
     generatedInvoices: number;
-    processedPayroll: number;
     urgentItems: number;
   };
 }

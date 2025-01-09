@@ -2,19 +2,13 @@ import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { 
-  FileText, 
-  DollarSign, 
-  Clock, 
+import {
   AlertCircle, 
   ChevronDown,
   ChevronRight,
   Users,
-  UserCheck,
-  Receipt,
   ExternalLink
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils/currency';
 import type { ProcessingProject } from '@/types';
 
 interface ProcessingTableProps {
@@ -38,19 +32,23 @@ export function ProcessingTable({ projects }: ProcessingTableProps) {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'approved':
-        return <Badge variant="success">Approved</Badge>;
-      case 'pending':
-        return <Badge variant="warning">Pending</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
-      case 'processed':
-        return <Badge variant="success">Processed</Badge>;
-      case 'special':
-        return <Badge variant="warning">Special Handling</Badge>;
+      case 'sent':
+        return <Badge variant="success">Sent</Badge>;
+      case 'draft':
+        return <Badge variant="warning">Draft</Badge>;
       default:
         return <Badge variant="default">Not Started</Badge>;
     }
+  };
+
+  const handleStatusChange = (projectId: string, currentStatus: string) => {
+    // Cycle through statuses: not started -> draft -> sent
+    const statusOrder = ['not started', 'draft', 'sent'];
+    const currentIndex = statusOrder.indexOf(currentStatus);
+    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
+    
+    // TODO: Implement status update logic here
+    console.log(`Updating project ${projectId} status to ${nextStatus}`);
   };
 
   return (
@@ -98,18 +96,16 @@ export function ProcessingTable({ projects }: ProcessingTableProps) {
                     </Badge>
                   </Td>
                   <Td>
-                    {getStatusBadge(project.timesheetStatus)}
+                    {getStatusBadge(project.invoiceStatus)}
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-2">
-                      <Button variant="secondary" size="sm">
-                        <Clock className="h-4 w-4" />
-                      </Button>
-                      <Button variant="secondary" size="sm">
-                        <Receipt className="h-4 w-4" />
-                      </Button>
-                      <Button variant="secondary" size="sm">
-                        <ExternalLink className="h-4 w-4" />
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => handleStatusChange(project.id, project.invoiceStatus)}
+                      >
+                        Change Status
                       </Button>
                     </div>
                   </Td>
@@ -134,16 +130,6 @@ export function ProcessingTable({ projects }: ProcessingTableProps) {
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex gap-2">
-                              <Button variant="secondary" size="sm">
-                                <FileText className="h-4 w-4 mr-2" />
-                                Generate Invoice
-                              </Button>
-                              <Button variant="secondary" size="sm">
-                                <DollarSign className="h-4 w-4 mr-2" />
-                                Process Payroll
-                              </Button>
-                            </div>
                           </div>
 
                           <Table>
@@ -151,9 +137,7 @@ export function ProcessingTable({ projects }: ProcessingTableProps) {
                               <tr className="border-t border-gray-200">
                                 <Th>User</Th>
                                 <Th>Role</Th>
-                                <Th className="text-right">Hours</Th>
-                                <Th className="text-right">Pay Rate</Th>
-                                <Th>Payroll Status</Th>
+                                <Th className="text-right">Total Hours</Th>
                                 <Th className="text-right">Actions</Th>
                               </tr>
                             </TableHeader>
@@ -163,18 +147,7 @@ export function ProcessingTable({ projects }: ProcessingTableProps) {
                                   <Td className="font-medium">{assignment.userName}</Td>
                                   <Td>{assignment.roleName}</Td>
                                   <Td className="text-right">{assignment.hours.toFixed(1)}</Td>
-                                  <Td className="text-right">{formatCurrency(assignment.payRate)}/hr</Td>
-                                  <Td>{getStatusBadge(assignment.payrollStatus)}</Td>
-                                  <Td>
-                                    <div className="flex justify-end gap-2">
-                                      <Button variant="secondary" size="sm">
-                                        <UserCheck className="h-4 w-4" />
-                                      </Button>
-                                      <Button variant="secondary" size="sm">
-                                        <DollarSign className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </Td>
+                                  <Td></Td>
                                 </tr>
                               ))}
                             </TableBody>
