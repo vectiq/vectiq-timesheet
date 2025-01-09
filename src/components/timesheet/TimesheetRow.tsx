@@ -1,4 +1,4 @@
-import { useMemo, useCallback, memo, useState } from 'react';
+import { memo } from 'react';
 import { format } from 'date-fns';
 import { Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils/styles';
 import { X, Lock } from 'lucide-react';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
 import { useUsers } from '@/lib/hooks/useUsers';
-import type { TimeEntry, Project, Approval } from '@/types';
+import type { TimeEntry } from '@/types';
 
 interface TimesheetRowProps {
   index: number;
@@ -19,18 +19,6 @@ interface TimesheetRowProps {
   weekKey: string;
   weekDays: Date[];
   timeEntries: TimeEntry[];
-  clients: Array<{ id: string; name: string }>;
-  projects: Project[];
-  userAssignments: Array<{
-    clientId: string;
-    projectId: string;
-    roleId: string;
-  }>;
-  getProjectsForClient: (clientId: string) => Project[];
-  getRolesForProject: (projectId: string) => Array<{ 
-    role: { id: string; name: string };
-    rates: { costRate: number; sellRate: number };
-  }>;
   editingCell: string | null;
   onUpdateRow: (index: number, updates: any) => void;
   onRemoveRow: (index: number) => void;
@@ -45,11 +33,6 @@ export const TimesheetRow = memo(function TimesheetRow({
   weekKey,
   weekDays,
   timeEntries,
-  projects,
-  clients,
-  userAssignments,
-  getProjectsForClient,
-  getRolesForProject,
   editingCell,
   onUpdateRow,
   onRemoveRow,
@@ -57,57 +40,41 @@ export const TimesheetRow = memo(function TimesheetRow({
   onStartEdit,
   onEndEdit,
 }: TimesheetRowProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
   const { effectiveUser } = useUsers();
   const { useApprovalsForDate } = useApprovals();
-  const userId = effectiveUser?.id;
 
-  // Filter clients based on user assignments
-  const assignedClientIds = useMemo(() => 
-    [...new Set(effectiveUser?.projectAssignments?.map(a => a.clientId) || [])],
-    [effectiveUser]
-  );
-  const filteredClients = clients.filter(client => assignedClientIds.includes(client.id));
+  // Get assignments for dropdowns
+  const assignments = effectiveUser?.projectAssignments || [];
+  const clientAssignments = [...new Set(assignments.map(a => ({ 
+    id: a.clientId,
+    name: a.clientName 
+  })))];
   
-  // Filter projects based on selected client and user assignments
-  const assignedProjects = effectiveUser?.projectAssignments
-    ?.filter(a => a.clientId === row.clientId)
-    ?.map(a => a.projectId) || [];
-  const availableProjects = useMemo(() => getProjectsForClient(row.clientId)
-    .filter(project => assignedProjects.includes(project.id)),
-    [row.clientId, assignedProjects, getProjectsForClient]
-  );
-
-  // Get available project roles based on user assignments
-  const availableProjectRoles = useMemo(() => {
-    if (!row.projectId || !effectiveUser?.projectAssignments) return [];
-    return effectiveUser.projectAssignments
+  const projectAssignments = assignments
     .filter(a => a.clientId === row.clientId)
-    .filter(a => a.projectId === row.projectId)
-    .map(a => {
-      const project = projects.find(p => p.id === row.projectId);
-      return project?.roles?.find(r => r.id === a.roleId);
-    })
-    .filter(Boolean);
-  }, [row.clientId, row.projectId, effectiveUser, projects]);
-    
-  // Memoize row entries
-  const rowEntries = useMemo(() => {
-    if (!row.clientId || !row.projectId || !row.roleId) return [];
-    return timeEntries.filter(entry =>
+    .map(a => ({
+      id: a.projectId,
+      name: a.projectName
+    }));
+
+  const roleAssignments = assignments
+    .filter(a => a.clientId === row.clientId && a.projectId === row.projectId)
+    .map(a => ({
+      id: a.roleId,
+      name: a.roleName
+    }));
+
+  // Get row entries
+  const rowEntries = !row.clientId || !row.projectId || !row.roleId 
+    ? []
+    : timeEntries.filter(entry =>
       entry.clientId === row.clientId &&
       entry.projectId === row.projectId &&
       entry.roleId === row.roleId
     );
-  },
-    [timeEntries, row]
-  );
 
-  // Memoize row total
-  const rowTotal = useMemo(() => 
-    rowEntries.reduce((sum, entry) => sum + entry.hours, 0),
-    [rowEntries]
-  );
+  // Calculate row total
+  const rowTotal = rowEntries.reduce((sum, entry) => sum + entry.hours, 0);
 
   // Query approvals for each date in the week
   const approvalQueries = weekDays.map(date => {
@@ -116,7 +83,7 @@ export const TimesheetRow = memo(function TimesheetRow({
     return query;
   });
 
-  // Check if the entire row is locked (all dates are covered by approvals)
+  // Check if the entire row is locked
   const hasLockedEntries = approvalQueries.some(query => 
     query.data && query.data.length > 0 && 
     query.data.some(a => ['pending', 'approved'].includes(a.status))
@@ -140,7 +107,7 @@ export const TimesheetRow = memo(function TimesheetRow({
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Client</option>
-          {filteredClients.map(client => (
+          {clientAssignments.map(client => (
             <option key={client.id} value={client.id}>
               {client.name}
             </option>
@@ -162,7 +129,7 @@ export const TimesheetRow = memo(function TimesheetRow({
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Project</option>
-          {availableProjects.map(project => (
+          {projectAssignments.map(project => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>
@@ -183,9 +150,9 @@ export const TimesheetRow = memo(function TimesheetRow({
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Role</option>
-          {availableProjectRoles.map(projectRole => (
-            <option key={projectRole.id} value={projectRole.id}>
-              {projectRole.name}
+          {roleAssignments.map(role => (
+            <option key={role.id} value={role.id}>
+              {role.name}
             </option>
           ))}
         </select>

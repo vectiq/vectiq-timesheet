@@ -96,6 +96,9 @@ export interface ProjectAssignment {
   projectId: string;
   roleId: string;
   clientId: string;
+  clientName: string;
+  projectName: string; 
+  roleName: string;
 }
 
 export interface ReportData {

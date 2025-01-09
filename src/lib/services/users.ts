@@ -130,9 +130,24 @@ export async function deleteUser(id: string): Promise<void> {
 export async function createProjectAssignment(userId: string, data: Omit<ProjectAssignment, 'id'>): Promise<void> {
   const userRef = doc(db, COLLECTION, userId);
   const userDoc = await getDoc(userRef);
+  const clientRef = doc(db, 'clients', data.clientId);
+  const projectRef = doc(db, 'projects', data.projectId);
   
-  if (!userDoc.exists()) {
+  const [clientDoc, projectDoc] = await Promise.all([
+    getDoc(clientRef),
+    getDoc(projectRef)
+  ]);
+  
+  if (!userDoc.exists() || !clientDoc.exists() || !projectDoc.exists()) {
     throw new Error('User not found');
+  }
+  
+  const client = clientDoc.data();
+  const project = projectDoc.data();
+  const projectRole = project.roles.find(r => r.id === data.roleId);
+  
+  if (!projectRole) {
+    throw new Error('Role not found');
   }
   
   const user = userDoc.data() as User;
@@ -140,7 +155,10 @@ export async function createProjectAssignment(userId: string, data: Omit<Project
   
   assignments.push({
     ...data,
-    id: crypto.randomUUID()
+    id: crypto.randomUUID(),
+    clientName: client.name,
+    projectName: project.name,
+    roleName: projectRole.name
   });
   
   await updateDoc(userRef, {

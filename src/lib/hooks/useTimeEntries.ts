@@ -37,6 +37,11 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
 
+  // Reset manual rows when effective user changes
+  useEffect(() => {
+    setManualRows({});
+  }, [effectiveUserId]);
+
   // Get current week key
   const weekKey = dateRange 
     ? format(dateRange.start, 'yyyy-MM-dd')

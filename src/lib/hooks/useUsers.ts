@@ -12,6 +12,7 @@ export function useUsers() {
   const queryClient = useQueryClient();
   const [effectiveUser, setEffectiveUser] = useState<User | null>(null);
 
+  // Only set effective user initially if not already set
   const usersQuery = useQuery({
     queryKey: [USERS_KEY],
     queryFn: getUsers,
@@ -25,7 +26,7 @@ export function useUsers() {
 
   // Reset effective user when current user changes
   useEffect(() => {
-    if (currentUserQuery.data) {
+    if (!effectiveUser && currentUserQuery.data) {
       setEffectiveUser(currentUserQuery.data);
     }
   }, [currentUserQuery.data]);
