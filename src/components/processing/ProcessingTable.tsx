@@ -13,9 +13,11 @@ import type { ProcessingProject } from '@/types';
 
 interface ProcessingTableProps {
   projects: ProcessingProject[];
+  onUpdateStatus: (args: { projectId: string; status: 'not started' | 'draft' | 'sent' }) => Promise<void>;
+  isUpdating: boolean;
 }
 
-export function ProcessingTable({ projects }: ProcessingTableProps) {
+export function ProcessingTable({ projects, onUpdateStatus, isUpdating }: ProcessingTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const toggleProject = (projectId: string) => {
@@ -41,14 +43,23 @@ export function ProcessingTable({ projects }: ProcessingTableProps) {
     }
   };
 
-  const handleStatusChange = (projectId: string, currentStatus: string) => {
+  const handleStatusChange = async (projectId: string, currentStatus: string) => {
     // Cycle through statuses: not started -> draft -> sent
     const statusOrder = ['not started', 'draft', 'sent'];
     const currentIndex = statusOrder.indexOf(currentStatus);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
-    
-    // TODO: Implement status update logic here
-    console.log(`Updating project ${projectId} status to ${nextStatus}`);
+
+    try {
+      await onUpdateStatus(
+        {
+          projectId,
+          status: nextStatus as 'not started' | 'draft' | 'sent'
+        }
+      );
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      alert('Failed to update status. Please try again.');      
+    }
   };
 
   return (
@@ -103,6 +114,7 @@ export function ProcessingTable({ projects }: ProcessingTableProps) {
                       <Button 
                         variant="secondary" 
                         size="sm"
+                        disabled={isUpdating}
                         onClick={() => handleStatusChange(project.id, project.invoiceStatus)}
                       >
                         Change Status

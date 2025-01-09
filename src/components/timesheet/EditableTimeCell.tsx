@@ -69,6 +69,7 @@ export function EditableTimeCell({
   return isEditing ? (
     <input
       ref={inputRef}
+      aria-label="Time entry hours"
       type="text"
       value={localValue}
       onChange={handleChange}
@@ -80,6 +81,9 @@ export function EditableTimeCell({
     <div className="relative">
       <div
         onClick={(isDisabled || isLocked) ? undefined : onStartEdit}
+        role="button"
+        tabIndex={0}
+        aria-label={`${value?.toFixed(2) || '-'} hours`}
         className={cn(
           "w-16 py-2 text-center cursor-pointer rounded hover:bg-gray-50",
           value === null && "text-gray-400",
@@ -87,6 +91,14 @@ export function EditableTimeCell({
           isLocked && "bg-gray-50"
         )}
         title={isLocked ? `Time entries are locked - status: ${approvalStatus}` : undefined}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (!isDisabled && !isLocked) {
+              onStartEdit();
+            }
+          }
+        }}
       >
         {value?.toFixed(2) || '-'}
       </div>

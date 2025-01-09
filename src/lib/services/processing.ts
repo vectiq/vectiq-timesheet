@@ -1,11 +1,50 @@
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
 import type { ProcessingData, ProcessingProject } from '@/types';
 
+interface ProjectStatus {
+  projectId: string;
+  month: string;
+  status: 'not started' | 'draft' | 'sent';
+  updatedAt: any;
+}
+
+export async function updateProjectStatus(
+  projectId: string,
+  month: string,
+  status: 'not started' | 'draft' | 'sent'
+): Promise<void> {
+  try {
+    // Create a composite key for the month and project
+    const statusId = `${projectId}_${month}`;
+  
+    const statusRef = doc(db, 'projectStatuses', statusId);
+    const statusData: ProjectStatus = {
+      projectId,
+      month,
+      status,
+      updatedAt: serverTimestamp()
+    };
+  
+    await setDoc(statusRef, statusData, { merge: true });
+  } catch (error) {
+    console.error('Error updating project status:', error);
+    throw error;
+  }
+}
+
 export async function getProcessingData(month: string): Promise<ProcessingData> {
   // Get all required data
-  const [timeEntriesSnapshot, approvalsSnapshot, projectsSnapshot, clientsSnapshot, usersSnapshot] = await Promise.all([
+  const [
+    timeEntriesSnapshot,
+    approvalsSnapshot,
+    projectsSnapshot,
+    clientsSnapshot,
+    usersSnapshot,
+    statusesSnapshot
+  ] = await Promise.all([
     getDocs(query(
       collection(db, 'timeEntries'),
       where('date', '>=', `${month}-01`), 
@@ -14,12 +53,22 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
     getDocs(collection(db, 'approvals')),
     getDocs(collection(db, 'projects')),
     getDocs(collection(db, 'clients')),
-    getDocs(collection(db, 'users'))
+    getDocs(collection(db, 'users')),
+    getDocs(collection(db, 'projectStatuses'))
   ]);
 
   // Create maps for quick lookups
   const clients = new Map(clientsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const users = new Map(usersSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
+  
+  // Create map of project statuses for the current month
+  const statusMap = new Map();
+  statusesSnapshot.docs.forEach(doc => {
+    const status = doc.data() as ProjectStatus;
+    if (status.month === month) {
+      statusMap.set(status.projectId, status.status);
+    }
+  });
 
   // Process projects with their statuses
   const projects = projectsSnapshot.docs.map(doc => {
@@ -78,7 +127,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
       clientName: client?.name || 'Unknown Client',
       totalHours,
       timesheetStatus: latestApproval?.status || 'pending',
-      invoiceStatus: 'not started',
+      invoiceStatus: statusMap.get(project.id) || 'not started',
       priority: totalHours > 100 ? 'high' : 'normal',
       hasSpecialHandling: project.requiresApproval,
       type: assignments.length === 1 ? 'labor_hire' : 'team',

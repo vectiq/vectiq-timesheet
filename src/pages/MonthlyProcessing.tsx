@@ -22,7 +22,7 @@ import { DateNavigation } from '@/components/timesheet/DateNavigation';
 
 export default function MonthlyProcessing() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const { data, isLoading, markAsSent } = useProcessing(selectedMonth);
+  const { data, isLoading, updateStatus, isUpdating } = useProcessing(selectedMonth);
 
   const handlePrevious = () => {
     setSelectedMonth(prev => {
@@ -71,13 +71,18 @@ export default function MonthlyProcessing() {
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-8">
           <Card>
-            <div className="p-4 border-b border-gray-200">
-              <ProcessingFilters />
-            </div>
-            <ProcessingTable 
-              projects={data.projects}
-              onMarkAsSent={markAsSent}
-            />
+            {data && (
+              <>
+                <div className="p-4 border-b border-gray-200">
+                  <ProcessingFilters />
+                </div>
+                <ProcessingTable 
+                  projects={data.projects}
+                  onUpdateStatus={updateStatus}
+                  isUpdating={isUpdating}
+                />
+              </>
+            )}
           </Card>
         </div>
 
