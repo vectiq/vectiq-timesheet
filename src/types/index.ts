@@ -33,6 +33,7 @@ export interface Project {
   requiresApproval: boolean;
   roles: ProjectRole[];
   overtimeInclusive: boolean;
+  xeroLeaveTypeId?: string;
 }
 
 export interface TimeEntry {

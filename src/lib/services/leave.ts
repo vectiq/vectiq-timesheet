@@ -67,7 +67,7 @@ export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; 
 
   // Try cache first unless force refresh
     const cached = await getCachedLeave(userId);
-    if (cached) return cached;
+    if (cached && Date.now() - cached.lastRefreshed.getTime() < 30 * 60 * 1000) return cached;
 
   // Get user's Xero employee ID
   const userRef = doc(db, 'users', userId);

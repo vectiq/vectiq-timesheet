@@ -32,7 +32,7 @@ interface UseTimeEntriesOptions {
 
 export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   const { currentUser } = useUsers();
-  const effectiveUserId = options.userId || currentUser?.id;
+  const effectiveUserId = currentUser?.role === 'admin' ? (options.userId || currentUser.id) : currentUser?.id;
   const queryClient = useQueryClient();
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
