@@ -16,38 +16,27 @@ export default function TimeEntries() {
   const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [projectsWithStatus, setProjectsWithStatus] = useState<ProjectWithStatus[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
-    const savedUserId = localStorage.getItem('selectedUserId');
-    return savedUserId || null;
-  });
-  const { currentUser, users, isLoading: isLoadingUsers } = useUsers();
+  const { currentUser, effectiveUser, setEffectiveUser, isAdmin, users, isLoading: isLoadingUsers } = useUsers();
   const dateNav = useDateNavigation({
     type: view === 'weekly' ? 'week' : 'month',
   });
   const { isLoading: isLoadingEntries } = useTimeEntries({ 
-    userId: currentUser?.role === 'admin' ? selectedUserId : currentUser?.id,
+    userId: effectiveUser?.id,
     dateRange: dateNav.dateRange
   });
   const { projects, isLoading: isLoadingProjects } = useProjects();
   
-
-  useEffect(() => {
-    // Set initial selected user to current user
-    if (currentUser && !selectedUserId) {
-      setSelectedUserId(currentUser.id);
-    }
-  }, [currentUser, selectedUserId]);
 
   const handleViewChange = useCallback((newView: 'weekly' | 'monthly') => {
     setView(newView);
   }, []);
 
   const handleUserChange = useCallback((userId: string) => {
-    localStorage.setItem('selectedUserId', userId);
-    setSelectedUserId(userId);
-  }, []);
-
-  const isAdmin = currentUser?.role === 'admin';
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setEffectiveUser(user);
+    }
+  }, [users, setEffectiveUser]);
 
   return (
     <div className="space-y-6">
@@ -57,7 +46,7 @@ export default function TimeEntries() {
           {isAdmin && !isLoadingUsers && (
             <UserSelect
               users={users}
-              selectedUserId={selectedUserId}
+              selectedUserId={effectiveUser?.id}
               onChange={handleUserChange}
             />
           )}
@@ -93,12 +82,12 @@ export default function TimeEntries() {
         <WeeklyView
           projects={projects}
           dateRange={dateNav.dateRange}
-          userId={selectedUserId}
+          userId={effectiveUser?.id}
         />
       ) : (
         <MonthlyView 
           dateRange={dateNav.dateRange}
-          userId={currentUser?.role === 'admin' ? selectedUserId : currentUser?.id}
+          userId={effectiveUser?.id}
           onApprovalClick={(projects) => {
             setProjectsWithStatus(projects);
             setIsApprovalDialogOpen(true);
@@ -109,7 +98,7 @@ export default function TimeEntries() {
       <ApprovalDialog
         open={isApprovalDialogOpen}
         onOpenChange={setIsApprovalDialogOpen}
-        userId={currentUser?.role === 'admin' ? selectedUserId : currentUser?.id}
+        userId={effectiveUser?.id}
         dateRange={dateNav.dateRange}
         projectsWithStatus={projectsWithStatus}
       />

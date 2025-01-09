@@ -6,8 +6,8 @@ import { EditableTimeCell } from './EditableTimeCell';
 import { cn } from '@/lib/utils/styles';
 import { X, Lock } from 'lucide-react';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
+import { useUsers } from '@/lib/hooks/useUsers';
 import type { TimeEntry, Project, Approval } from '@/types';
-import { auth } from '@/lib/firebase';
 
 interface TimesheetRowProps {
   index: number;
@@ -58,26 +58,38 @@ export const TimesheetRow = memo(function TimesheetRow({
   onEndEdit,
 }: TimesheetRowProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const { effectiveUser } = useUsers();
   const { useApprovalsForDate } = useApprovals();
-  const userId = auth.currentUser?.uid;
+  const userId = effectiveUser?.id;
 
   // Filter clients based on user assignments
-  const assignedClientIds = [...new Set(userAssignments.map(a => a.clientId))];
+  const assignedClientIds = useMemo(() => 
+    [...new Set(effectiveUser?.projectAssignments?.map(a => a.clientId) || [])],
+    [effectiveUser]
+  );
   const filteredClients = clients.filter(client => assignedClientIds.includes(client.id));
   
   // Filter projects based on selected client and user assignments
-  const assignedProjects = userAssignments
-    .filter(a => a.clientId === row.clientId)
-    .map(a => a.projectId);
-  const availableProjects = getProjectsForClient(row.clientId)
-    .filter(project => assignedProjects.includes(project.id));
-  
+  const assignedProjects = effectiveUser?.projectAssignments
+    ?.filter(a => a.clientId === row.clientId)
+    ?.map(a => a.projectId) || [];
+  const availableProjects = useMemo(() => getProjectsForClient(row.clientId)
+    .filter(project => assignedProjects.includes(project.id)),
+    [row.clientId, assignedProjects, getProjectsForClient]
+  );
+
   // Get available project roles based on user assignments
-  const selectedProject = projects.find(p => p.id === row.projectId);
-  const availableProjectRoles = userAssignments
+  const availableProjectRoles = useMemo(() => {
+    if (!row.projectId || !effectiveUser?.projectAssignments) return [];
+    return effectiveUser.projectAssignments
+    .filter(a => a.clientId === row.clientId)
     .filter(a => a.projectId === row.projectId)
-    .map(a => selectedProject?.roles?.find(r => r.id === a.roleId))
+    .map(a => {
+      const project = projects.find(p => p.id === row.projectId);
+      return project?.roles?.find(r => r.id === a.roleId);
+    })
     .filter(Boolean);
+  }, [row.clientId, row.projectId, effectiveUser, projects]);
     
   // Memoize row entries
   const rowEntries = useMemo(() => {
@@ -100,7 +112,7 @@ export const TimesheetRow = memo(function TimesheetRow({
   // Query approvals for each date in the week
   const approvalQueries = weekDays.map(date => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const query = useApprovalsForDate(dateStr, userId, row.projectId);
+    const query = useApprovalsForDate(dateStr, effectiveUser?.id, row.projectId);
     return query;
   });
 

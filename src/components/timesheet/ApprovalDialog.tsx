@@ -10,15 +10,15 @@ import { FormField } from '@/components/ui/FormField';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
+import { useUsers } from '@/lib/hooks/useUsers';
 import { useApprovals } from '@/lib/hooks/useApprovals';
-import { auth } from '@/lib/firebase';
 import { format } from 'date-fns';
 import type { ProjectWithStatus } from '@/types';
 
 interface ApprovalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userId?: string | null;
+  userId?: string;
   dateRange: {
     start: Date;
     end: Date;
@@ -36,6 +36,7 @@ export function ApprovalDialog({
   const { projects } = useProjects();
   const { clients } = useClients();
   const { timeEntries } = useTimeEntries({ dateRange, userId });
+  const { effectiveUser } = useUsers();
   const { submitApproval, isSubmitting } = useApprovals();
   const [selectedProject, setSelectedProject] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +52,7 @@ export function ApprovalDialog({
     e.preventDefault();
     setError(null);
 
-    if (!selectedProject || !auth.currentUser) return;
-    const effectiveUserId = userId || auth.currentUser.uid;
+    if (!selectedProject || !effectiveUser) return;
 
     const project = projects.find(p => p.id === selectedProject);
     const client = clients.find(c => c.id === project?.clientId);
@@ -69,7 +69,7 @@ export function ApprovalDialog({
         client,
         dateRange,
         entries: projectEntries,
-        userId: effectiveUserId,
+        userId: effectiveUser.id,
       });
       onOpenChange(false);
     } catch (error) {

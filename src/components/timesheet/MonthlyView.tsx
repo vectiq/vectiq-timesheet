@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,7 +17,7 @@ interface MonthlyViewProps {
     start: Date;
     end: Date;
   };
-  userId?: string | null;
+  userId?: string;
   onApprovalClick: (projects: ProjectWithStatus[]) => void;
 }
 
@@ -46,21 +46,19 @@ interface GroupedData {
 export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewProps) {
   const { timeEntries } = useTimeEntries({ dateRange, userId });
   const { users } = useUsers();
+  const selectedUser = users.find(u => u.id === userId);
   const { clients } = useClients();
   const { projects } = useProjects();
   const { roles } = useRoles();
   const { useApprovalStatus } = useApprovals(); 
-  const selectedUser = users.find(u => u.id === userId);
   const startDate = format(dateRange.start, 'yyyy-MM-dd');
   const endDate = format(dateRange.end, 'yyyy-MM-dd');
 
   // Filter projects based on user assignments
-  const userProjects = useMemo(() => {
-    if (!selectedUser?.projectAssignments) return [];
-    return projects.filter(project => 
-      selectedUser.projectAssignments.some(a => a.projectId === project.id)
-    );
-  }, [selectedUser, projects]);
+  const userProjects = projects.filter(project => 
+    selectedUser?.projectAssignments?.some(a => a.projectId === project.id)
+  );
+
   // Get approval statuses for all projects
   const approvalStatusQueries = userProjects
     .filter(p => p.requiresApproval)
@@ -70,85 +68,74 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
     }));
 
   // Combine all status results into a map
-  const approvalStatusMap = useMemo(() => {
-    const map = new Map();
-    approvalStatusQueries.forEach(({ projectId, query }) => {
-      if (query.data) {
-        map.set(projectId, query.data);
-      }
-    });
-    return map;
-  }, [approvalStatusQueries]);
+  const approvalStatusMap = new Map();
+  approvalStatusQueries.forEach(({ projectId, query }) => {
+    if (query.data) {
+      approvalStatusMap.set(projectId, query.data);
+    }
+  });
 
   // Group entries by client and project
-  const groupedEntries = useMemo(() => {
-    const groups = new Map<string, GroupedData>();
+  const groups = new Map<string, GroupedData>();
 
-    timeEntries.forEach(entry => {
-      const client = clients.find(c => c.id === entry.clientId);
-      const project = projects.find(p => p.id === entry.projectId);
-      const projectRole = project?.roles?.find(r => r.id === entry.roleId);
+  timeEntries.forEach(entry => {
+    const client = clients.find(c => c.id === entry.clientId);
+    const project = projects.find(p => p.id === entry.projectId);
+    const projectRole = project?.roles?.find(r => r.id === entry.roleId);
 
-      if (!client || !project || !projectRole) return;
+    if (!client || !project || !projectRole) return;
 
-      const clientKey = client.id;
-      const projectKey = `${client.id}-${project.id}`;
+    const clientKey = client.id;
+    const projectKey = `${client.id}-${project.id}`;
 
-      // Initialize client group if it doesn't exist
-      if (!groups.has(clientKey)) {
-        groups.set(clientKey, {
-          client,
-          totalHours: 0,
-          projects: new Map<string, GroupedData['projects'] extends Map<string, infer V> ? V : never>(),
-        });
-      }
-
-      // Initialize project group if it doesn't exist
-      const clientGroup = groups.get(clientKey);
-      if (!clientGroup.projects.has(projectKey)) {
-        const approval = approvalStatusMap.get(project.id);
-
-        clientGroup.projects.set(projectKey, {
-          project,
-          approvalStatus: {
-            status: approval?.status || 'unsubmitted',
-            approvalId: approval?.approvalId || ''
-          },
-          totalHours: 0,
-          entries: [],
-        });
-      }
-
-      // Add entry to project group
-      const projectGroup = clientGroup.projects.get(projectKey);
-      projectGroup.entries.push({
-        ...entry,
-        role: { name: projectRole.name },
-        compositeKey: entry.compositeKey
+    // Initialize client group if it doesn't exist
+    if (!groups.has(clientKey)) {
+      groups.set(clientKey, {
+        client,
+        totalHours: 0,
+        projects: new Map<string, GroupedData['projects'] extends Map<string, infer V> ? V : never>(),
       });
+    }
 
-      // Update totals
-      projectGroup.totalHours += entry.hours;
-      clientGroup.totalHours += entry.hours;
+    // Initialize project group if it doesn't exist
+    const clientGroup = groups.get(clientKey);
+    if (!clientGroup.projects.has(projectKey)) {
+      const approval = approvalStatusMap.get(project.id);
+
+      clientGroup.projects.set(projectKey, {
+        project,
+        approvalStatus: {
+          status: approval?.status || 'unsubmitted',
+          approvalId: approval?.approvalId || ''
+        },
+        totalHours: 0,
+        entries: [],
+      });
+    }
+
+    // Add entry to project group
+    const projectGroup = clientGroup.projects.get(projectKey);
+    projectGroup.entries.push({
+      ...entry,
+      role: { name: projectRole.name },
+      compositeKey: entry.compositeKey
     });
 
-    return groups;
-  }, [timeEntries, clients, projects, roles, approvalStatusMap]);
+    // Update totals
+    projectGroup.totalHours += entry.hours;
+    clientGroup.totalHours += entry.hours;
+  });
 
   // Calculate grand totals
-  const totals = useMemo(() => {
-    let hours = 0.0;
-
-    groupedEntries.forEach(group => {
-      hours += group.totalHours;
-    });
-
-    return { hours };
-  }, [groupedEntries]);
+  let totalHours = 0;
+  groups.forEach(group => {
+    totalHours += group.totalHours;
+  });
 
   // Get projects that need approval
-  const projectsNeedingApproval = useMemo(() => {
-    if (!userId) return [];
+  const projectsNeedingApproval = (() => {
+    if (!userId || !selectedUser) return [];
+
     const projectsWithEntries = new Set<string>(timeEntries.map(entry => entry.projectId));
     const userProjectIds = new Set(selectedUser?.projectAssignments?.map(a => a.projectId) || []);
     const statuses: ProjectWithStatus[] = [];
@@ -176,7 +163,7 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
     }
 
     return statuses;
-  }, [timeEntries, projects, clients, userId, approvalStatusMap]);
+  })();
 
   const handleApprovalClick = () => {
     if (!userId) return;
@@ -186,7 +173,7 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
   return (
     <Card>
       <div className="divide-y divide-gray-200">
-        {Array.from(groupedEntries.values()).map(clientGroup => (
+        {Array.from(groups.values()).map(clientGroup => (
           <MonthlyViewRow
             key={clientGroup.client.id}
             clientGroup={clientGroup}
@@ -200,7 +187,7 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
           <div className="text-sm">
             <span className="font-medium text-gray-700">Monthly Total:</span>
             <span className="ml-2 font-semibold text-gray-900">
-              {totals.hours.toFixed(2)} hours
+              {totalHours.toFixed(2)} hours
             </span>
           </div>
           <Button 

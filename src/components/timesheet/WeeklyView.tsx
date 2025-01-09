@@ -13,7 +13,7 @@ import type { Project } from '@/types';
 
 interface WeeklyViewProps {
   projects: Project[];
-  userId?: string | null;
+  userId?: string;
   dateRange: {
     start: Date;
     end: Date;
@@ -21,7 +21,7 @@ interface WeeklyViewProps {
 }
 
 export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange }: WeeklyViewProps) {
-  const { currentUser } = useUsers();
+  const { effectiveUser } = useUsers();
   const { 
     timeEntries,
     rows,
@@ -34,14 +34,13 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     handleCellChange,
     setEditingCell
   } = useTimeEntries({ 
-    userId: userId || currentUser?.id,
+    userId,
     dateRange 
   });
 
   const { clients } = useClients();
   const { roles: allRoles } = useRoles();
 
-  const userAssignments = currentUser?.projectAssignments || [];
   const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
   const weekDays = useMemo(() => {
@@ -107,7 +106,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 timeEntries={timeEntries}
                 projects={projects}
                 clients={clients}
-                userAssignments={userAssignments}
+                userAssignments={effectiveUser?.projectAssignments || []}
                 getProjectsForClient={getProjectsForClient}
                 getRolesForProject={getRolesForProject}
                 editingCell={editingCell}

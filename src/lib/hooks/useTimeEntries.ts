@@ -23,23 +23,23 @@ interface WeeklyRows {
 }
 
 interface UseTimeEntriesOptions {
-  userId?: string;
+  userId?: string | null;
   dateRange?: {
     start: Date;
     end: Date;
   };
 }
 
-export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
-  const { currentUser } = useUsers();
-  const effectiveUserId = currentUser?.role === 'admin' ? (options.userId || currentUser.id) : currentUser?.id;
+export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}) {
+  const { effectiveUser } = useUsers();
+  const effectiveUserId = userId || effectiveUser?.id;
   const queryClient = useQueryClient();
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
 
   // Get current week key
-  const weekKey = options.dateRange 
-    ? format(options.dateRange.start, 'yyyy-MM-dd')
+  const weekKey = dateRange 
+    ? format(dateRange.start, 'yyyy-MM-dd')
     : '';
 
   const createMutation = useMutation({
@@ -88,27 +88,27 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   }, [deleteMutation]);
 
   const query = useQuery({
-    queryKey: [QUERY_KEY, effectiveUserId, options.dateRange?.start, options.dateRange?.end],
-    queryFn: () => getTimeEntries(effectiveUserId, options.dateRange),
-    enabled: !!effectiveUserId && !!options.dateRange,
+    queryKey: [QUERY_KEY, effectiveUserId, dateRange?.start, dateRange?.end],
+    queryFn: () => getTimeEntries(effectiveUserId, dateRange),
+    enabled: !!effectiveUserId && !!dateRange,
   });
 
   const timeEntries = useMemo(() => query.data || [], [query.data]);
 
   const hasEntriesForCurrentWeek = useMemo(() => {
-    if (!options.dateRange) return false;
+    if (!dateRange) return false;
     return timeEntries.some(entry => {
       const entryDate = new Date(entry.date);
-      return entryDate >= options.dateRange.start && entryDate <= options.dateRange.end;
+      return entryDate >= dateRange.start && entryDate <= dateRange.end;
     });
-  }, [timeEntries, options.dateRange]);
+  }, [timeEntries, dateRange]);
 
   const copyFromPreviousWeek = useCallback(async () => {
-    if (!effectiveUserId || !options.dateRange) return;
+    if (!effectiveUserId || !dateRange) return;
 
-    const previousWeekStart = new Date(options.dateRange.start);
+    const previousWeekStart = new Date(dateRange.start);
     previousWeekStart.setDate(previousWeekStart.getDate() - 7);
-    const previousWeekEnd = new Date(options.dateRange.end);
+    const previousWeekEnd = new Date(dateRange.end);
     previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
 
     // Get previous week's entries
@@ -135,8 +135,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     });
 
     await Promise.all(promises);
-  }, [effectiveUserId, options.dateRange, handleCreateEntry]);
-
+  }, [effectiveUserId, dateRange, handleCreateEntry]);
 
   // Combine automatic and manual rows
   const rows = useMemo(() => {

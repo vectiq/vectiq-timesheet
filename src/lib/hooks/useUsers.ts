@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
-import { updateProfile as updateFirebaseProfile, updateEmail, sendPasswordResetEmail } from 'firebase/auth';
+import { useCallback, useState, useEffect } from 'react';
+import { updateProfile as updateFirebaseProfile, updateEmail, sendPasswordResetEmail, onAuthStateChanged } from 'firebase/auth';
 import { getUsers, getCurrentUser, createUser, updateUser, deleteUser, createProjectAssignment, deleteProjectAssignment } from '@/lib/services/users';
 import { auth } from '@/lib/firebase';
 import type { User, ProjectAssignment } from '@/types';
@@ -10,6 +10,7 @@ const CURRENT_USER_KEY = 'currentUser';
 
 export function useUsers() {
   const queryClient = useQueryClient();
+  const [effectiveUser, setEffectiveUser] = useState<User | null>(null);
 
   const usersQuery = useQuery({
     queryKey: [USERS_KEY],
@@ -21,6 +22,25 @@ export function useUsers() {
     queryKey: [CURRENT_USER_KEY],
     queryFn: getCurrentUser
   });
+
+  // Reset effective user when current user changes
+  useEffect(() => {
+    if (currentUserQuery.data) {
+      setEffectiveUser(currentUserQuery.data);
+    }
+  }, [currentUserQuery.data]);
+
+  const handleSetEffectiveUser = useCallback((user: User) => {
+    if (currentUserQuery.data?.role === 'admin') {
+      setEffectiveUser(user);
+    }
+  }, [currentUserQuery.data?.role]);
+
+  const resetEffectiveUser = useCallback(() => {
+    if (currentUserQuery.data) {
+      setEffectiveUser(currentUserQuery.data);
+    }
+  }, [currentUserQuery.data]);
 
   const createUserMutation = useMutation({
     mutationFn: createUser,
@@ -86,6 +106,10 @@ export function useUsers() {
   return {
     users: usersQuery.data ?? [],
     currentUser: currentUserQuery.data ?? null,
+    effectiveUser: effectiveUser ?? currentUserQuery.data ?? null,
+    setEffectiveUser: handleSetEffectiveUser,
+    resetEffectiveUser,
+    isAdmin: currentUserQuery.data?.role === 'admin',
     isLoading: usersQuery.isLoading,
     error: usersQuery.error,
     createUser: handleCreateUser,

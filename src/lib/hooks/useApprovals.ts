@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { auth } from '@/lib/firebase';
 import { 
   getApprovalsForDate,
   submitTimesheetApproval, 
@@ -8,6 +7,7 @@ import {
   getApprovals,
   getApprovalStatus
 } from '@/lib/services/approvals';
+import { useUsers } from './useUsers';
 import type { Project, Client, TimeEntry, Approval } from '@/types';
 
 const QUERY_KEYS = {
@@ -31,6 +31,7 @@ interface ApprovalRequest {
 
 export function useApprovals() {
   const queryClient = useQueryClient();
+  const { effectiveUser } = useUsers();
 
   const approvalsQuery = useQuery({
     queryKey: [QUERY_KEYS.approvals],
@@ -39,19 +40,19 @@ export function useApprovals() {
 
   const getApprovalStatusQuery = (
     projectId: string,
-    userId: string | null | undefined,
+    userId: string | undefined,
     startDate: string,
     endDate: string
   ) => useQuery({
     queryKey: QUERY_KEYS.status(projectId, userId, startDate, endDate),
-    queryFn: () => getApprovalStatus(projectId, userId || auth.currentUser?.uid || '', startDate, endDate),
-    enabled: !!projectId && (!!userId || !!auth.currentUser)
+    queryFn: () => getApprovalStatus(projectId, userId || effectiveUser?.id || '', startDate, endDate),
+    enabled: !!projectId && (!!userId || !!effectiveUser)
   });
 
-  const useApprovalsForDate = (date: string, userId: string | null | undefined, projectId: string) => useQuery({
+  const useApprovalsForDate = (date: string, userId: string | undefined, projectId: string) => useQuery({
     queryKey: QUERY_KEYS.dateApprovals(date, userId, projectId),
-    queryFn: () => getApprovalsForDate(date, userId || auth.currentUser?.uid || '', projectId),
-    enabled: !!projectId && (!!userId || !!auth.currentUser)
+    queryFn: () => getApprovalsForDate(date, userId || effectiveUser?.id || '', projectId),
+    enabled: !!projectId && (!!userId || !!effectiveUser)
   });
 
   const submitMutation = useMutation({

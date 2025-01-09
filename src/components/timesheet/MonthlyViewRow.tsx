@@ -4,6 +4,7 @@ import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useApprovals } from '@/lib/hooks/useApprovals';
+import { useUsers } from '@/lib/hooks/useUsers';
 import type { BadgeVariant } from '@/components/ui/Badge';
 
 interface MonthlyViewRowProps {
@@ -77,6 +78,7 @@ function ApprovalBadge({ status, requiresApproval }: {
 
 export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { effectiveUser } = useUsers();
   const { withdrawApproval, isWithdrawing } = useApprovals();
 
   const handleWithdraw = async (approvalId: string) => {
