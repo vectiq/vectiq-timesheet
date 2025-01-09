@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { getLeave, createLeave, updateLeave, deleteLeave } from '@/lib/services/leave';
+import { formatDistanceToNow } from 'date-fns';
 import type { Leave } from '@/types';
 
 const QUERY_KEY = 'leave';
@@ -7,17 +9,24 @@ const QUERY_KEY = 'leave';
 export function useLeave() {
   const queryClient = useQueryClient();
 
-  // Query for fetching leave
-  const query = useQuery({
+  // Query for fetching leave with caching strategy
+  const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: [QUERY_KEY],
-    queryFn: getLeave,
-    // Refresh data every 5 minutes since Xero is source of truth
-    staleTime: 1000 * 60 * 5,
-    // Retry up to 3 times on failure
-    retry: 3,
-    // Show stale data while revalidating
-    keepPreviousData: true
+    queryFn: () => getLeave(),
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
+
+  // Function to manually refresh data
+  const refresh = useCallback(async () => {
+    await queryClient.fetchQuery({ 
+      queryKey: [QUERY_KEY],
+      queryFn: () => getLeave(true)
+    });
+  }, [queryClient]);
+
+  const lastRefreshedText = data?.lastRefreshed 
+    ? formatDistanceToNow(data.lastRefreshed, { addSuffix: true })
+    : 'Never';
 
   // Create leave mutation
   const createMutation = useMutation({
@@ -57,11 +66,13 @@ export function useLeave() {
 
   return {
     // Data and loading states
-    leave: query.data || [],
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error,
-    isRefetching: query.isRefetching,
+    leave: data?.leave || [],
+    isLoading,
+    isError,
+    error,
+    lastRefreshed: lastRefreshedText,
+    refresh,
+    isRefreshing: isFetching,
 
     // Mutations
     createLeave: createMutation.mutateAsync,
@@ -76,9 +87,6 @@ export function useLeave() {
     // Mutation errors
     createError: createMutation.error,
     updateError: updateMutation.error,
-    deleteError: deleteMutation.error,
-
-    // Refetch function
-    refetch: query.refetch
+    deleteError: deleteMutation.error
   };
 }

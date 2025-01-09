@@ -1,158 +1,220 @@
 import { 
-    collection,
-    doc,
-    getDocs, 
-    getDoc,
-    setDoc,
-    deleteDoc,
-    serverTimestamp,
-    query,
-    where,
-  } from 'firebase/firestore';
-  import { getFunctions, httpsCallable } from 'firebase/functions';
-  import { db } from '@/lib/firebase';
-  import { auth } from '@/lib/firebase';
-  import type { Leave } from '@/types';
-  
-  const COLLECTION = 'employeeLeave';
-  const functions = getFunctions();
-  
-  // Get leave requests from Xero and sync to Firestore
-  export async function getLeave(): Promise<Leave[]> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return [];
-    
-    // Get user's Xero employee ID
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
-      throw new Error('User not found or no Xero Employee ID set');
-    }
-    const xeroEmployeeId = userDoc.data().xeroEmployeeId;
+  collection,
+  doc,
+  getDocs, 
+  getDoc,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
+  query,
+  where,
+} from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase'; 
+import type { Leave, XeroLeaveResponse } from '@/types';
 
-    // Get tenant ID from Firestore
-    const tenantRef = doc(db, 'config', 'xero_config');
-    const tenantDoc = await getDoc(tenantRef);
-    if (!tenantDoc.exists() || !tenantDoc.data().tenantId) {
-      throw new Error('Xero tenant ID not found');
-    }
+const COLLECTION = 'employeeLeave';
+const CACHE_TIME = 60 * 60 * 1000; // 1 hour in milliseconds
+const functions = getFunctions();
+
+function parseXeroDate(xeroDate: string): string {
+  // Extract timestamp from "/Date(1234567890000+0000)/" format
+  const timestamp = parseInt(xeroDate.match(/\d+/)[0]);
+  return new Date(timestamp).toISOString();
+}
+
+function transformXeroLeave(xeroLeave: XeroLeaveResponse['LeaveApplications'][0]): Leave {
+  // Get the first leave period for status and units
+  const leavePeriod = xeroLeave.LeavePeriods[0];
   
-    // Get leave from Xero
-    const getXeroLeave = httpsCallable(functions, 'getLeave');
-    const xeroResponse = await getXeroLeave({ employeeId: xeroEmployeeId, tenantId: tenantDoc.data().tenantId });
-    const xeroLeave = xeroResponse.data;
+  return {
+    id: xeroLeave.LeaveApplicationID ?? '',
+    employeeId: xeroLeave.EmployeeID ?? '',
+    leaveTypeId: xeroLeave.LeaveTypeID ?? '',
+    title: xeroLeave.Title ?? '',
+    description: xeroLeave.Description ?? '',
+    startDate: parseXeroDate(xeroLeave.StartDate ?? ''),
+    endDate: parseXeroDate(xeroLeave.EndDate ?? ''),
+    status: leavePeriod?.LeavePeriodStatus as Leave['status'] ?? 'Unknown',
+    numberOfUnits: leavePeriod?.NumberOfUnits ?? 0,
+    updatedAt: xeroLeave.UpdatedDateUTC ? parseXeroDate(xeroLeave.UpdatedDateUTC) : new Date().toISOString()
+  };
+}
+
+async function getCachedLeave(userId: string): Promise<{ leave: Leave[]; lastRefreshed: Date } | null> {
+  const leaveDoc = await getDoc(doc(db, COLLECTION, userId));
+  if (!leaveDoc.exists()) return null;
+
+  const data = leaveDoc.data();
+  const updatedAt = data.updatedAt?.toDate();
   
-    // Sync with Firestore
-    const employeeLeaveRef = doc(db, COLLECTION, userId);
-    await setDoc(employeeLeaveRef, {
-      userId,
-      leave: xeroLeave,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  
-    return xeroLeave;
+  // Check if cache is still valid (less than 1 hour old)
+  if (updatedAt && Date.now() - updatedAt.getTime() < CACHE_TIME) {
+    return {
+      leave: data.leave,
+      lastRefreshed: updatedAt
+    };
   }
   
-  export async function createLeave(leaveData: Omit<Leave, 'id' | 'status' | 'xeroLeaveId'>): Promise<Leave> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('User not authenticated');
-    
-    // Get user's Xero employee ID
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
-      throw new Error('User not found or no Xero Employee ID set');
-    }
-    const xeroEmployeeId = userDoc.data().xeroEmployeeId;
+  return null;
+}
+
+// Get leave requests from Xero and sync to Firestore
+export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; lastRefreshed: Date }> {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return { leave: [], lastRefreshed: new Date() };
+
+  // Try cache first unless force refresh
+    const cached = await getCachedLeave(userId);
+    if (cached) return cached;
+
+  // Get user's Xero employee ID
+  const userRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userRef);
+  if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
+    throw new Error('User not found or no Xero Employee ID set');
+  }
+  const xeroEmployeeId = userDoc.data().xeroEmployeeId;
+
+  // Get tenant ID from Firestore
+  const tenantRef = doc(db, 'config', 'xero_config');
+  const tenantDoc = await getDoc(tenantRef);
+  if (!tenantDoc.exists() || !tenantDoc.data().tenantId) {
+    throw new Error('Xero tenant ID not found');
+  }
   
-    // Create in Xero first
-    const createXeroLeave = httpsCallable(functions, 'createLeave');
-    const xeroResponse = await createXeroLeave({
-      employeeId: xeroEmployeeId,
-      startDate: leaveData.startDate,
-      endDate: leaveData.endDate,
-      leaveTypeId: leaveData.leaveTypeId,
-      description: leaveData.description || ''
+  // Get leave from Xero
+  const getXeroLeave = httpsCallable(functions, 'getLeave');
+  const response = await getXeroLeave({ 
+    employeeId: xeroEmployeeId, 
+    tenantId: tenantDoc.data().tenantId 
+  });
+  
+  const xeroResponse = response.data as XeroLeaveResponse;
+  const transformedLeave = xeroResponse.LeaveApplications ? xeroResponse.LeaveApplications.map(transformXeroLeave) : [];
+  
+  const now = new Date();
+  
+  // Sync with Firestore
+  const employeeLeaveRef = doc(db, COLLECTION, userId);
+  try {
+    await setDoc(employeeLeaveRef, {
+      userId,
+      leave: transformedLeave || [],
+      updatedAt: now
     });
-    
-    // Get updated leave from Xero
-    const getXeroLeave = httpsCallable(functions, 'getLeave');
-    const updatedLeave = await getXeroLeave();
-    
-    // Update Firestore
-    const employeeLeaveRef = doc(db, COLLECTION, userId);
-    await setDoc(employeeLeaveRef, {
-      userId,
-      leave: updatedLeave.data,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  
-    return xeroResponse.data;
+  } catch (error) {
+    console.error('Error updating Firestore:', error);
+    throw new Error('Failed to update leave data');
   }
   
-  export async function updateLeave(id: string, data: Partial<Leave>): Promise<void> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('User not authenticated');
-    
-    // Get user's Xero employee ID
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
-      throw new Error('User not found or no Xero Employee ID set');
+  return {
+    leave: transformedLeave,
+    lastRefreshed: now
+  };
+}
+
+export async function createLeave(leaveData: Omit<Leave, 'id' | 'status' | 'xeroLeaveId'>): Promise<Leave> {
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error('User not authenticated');
+  
+  // Get user's Xero employee ID
+  const userRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userRef);
+  if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
+    throw new Error('User not found or no Xero Employee ID set');
+  }
+  const xeroEmployeeId = userDoc.data().xeroEmployeeId;
+
+  // Create in Xero first
+  const createXeroLeave = httpsCallable(functions, 'createLeave');
+  const xeroResponse = await createXeroLeave({
+    employeeId: xeroEmployeeId,
+    startDate: leaveData.startDate,
+    endDate: leaveData.endDate,
+    leaveTypeId: leaveData.leaveTypeId,
+    description: leaveData.description || ''
+  });
+  
+  // Get updated leave from Xero
+  const getXeroLeave = httpsCallable(functions, 'getLeave');
+  const updatedLeave = await getXeroLeave();
+  
+  // Update Firestore
+  const employeeLeaveRef = doc(db, COLLECTION, userId);
+  await setDoc(employeeLeaveRef, {
+    userId,
+    leave: updatedLeave.data?.LeaveApplications ? updatedLeave.data.LeaveApplications.map(transformXeroLeave) : [],
+    updatedAt: serverTimestamp()
+  });
+
+  return xeroResponse.data;
+}
+
+export async function updateLeave(id: string, data: Partial<Leave>): Promise<void> {
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error('User not authenticated');
+  
+  // Get user's Xero employee ID
+  const userRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userRef);
+  if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
+    throw new Error('User not found or no Xero Employee ID set');
+  }
+  const xeroEmployeeId = userDoc.data().xeroEmployeeId;
+
+  // Update in Xero first
+  const updateXeroLeave = httpsCallable(functions, 'updateLeave');
+  await updateXeroLeave({ 
+    employeeId: xeroEmployeeId,
+    leaveId: id,
+    leaveData: {
+      startDate: data.startDate,
+      endDate: data.endDate,
+      leaveTypeId: data.leaveTypeId,
+      description: data.description
     }
-    const xeroEmployeeId = userDoc.data().xeroEmployeeId;
+  });
+
+  // Get updated leave from Xero
+  const getXeroLeave = httpsCallable(functions, 'getLeave');
+  const updatedLeave = await getXeroLeave();
   
-    // Update in Xero first
-    const updateXeroLeave = httpsCallable(functions, 'updateLeave');
-    await updateXeroLeave({ 
-      employeeId: xeroEmployeeId,
-      leaveId: id,
-      leaveData: {
-        startDate: data.startDate,
-        endDate: data.endDate,
-        leaveTypeId: data.leaveTypeId,
-        description: data.description
-      }
-    });
+  // Update Firestore
+  const employeeLeaveRef = doc(db, COLLECTION, userId);
+  await setDoc(employeeLeaveRef, {
+    userId,
+    leave: updatedLeave.data?.LeaveApplications ? updatedLeave.data.LeaveApplications.map(transformXeroLeave) : [],
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function deleteLeave(id: string): Promise<void> {
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error('User not authenticated');
   
-    // Get updated leave from Xero
-    const getXeroLeave = httpsCallable(functions, 'getLeave');
-    const updatedLeave = await getXeroLeave();
-    
-    // Update Firestore
-    const employeeLeaveRef = doc(db, COLLECTION, userId);
-    await setDoc(employeeLeaveRef, {
-      userId,
-      leave: updatedLeave.data,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+  // Get user's Xero employee ID
+  const userRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userRef);
+  if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
+    throw new Error('User not found or no Xero Employee ID set');
   }
+  const xeroEmployeeId = userDoc.data().xeroEmployeeId;
+
+  // Delete from Xero first
+  const deleteXeroLeave = httpsCallable(functions, 'deleteLeave');
+  await deleteXeroLeave({ employeeId: xeroEmployeeId, leaveId: id });
+
+  // Get updated leave from Xero
+  const getXeroLeave = httpsCallable(functions, 'getLeave');
+  const updatedLeave = await getXeroLeave();
   
-  export async function deleteLeave(id: string): Promise<void> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('User not authenticated');
-    
-    // Get user's Xero employee ID
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists() || !userDoc.data().xeroEmployeeId) {
-      throw new Error('User not found or no Xero Employee ID set');
-    }
-    const xeroEmployeeId = userDoc.data().xeroEmployeeId;
-  
-    // Delete from Xero first
-    const deleteXeroLeave = httpsCallable(functions, 'deleteLeave');
-    await deleteXeroLeave({ employeeId: xeroEmployeeId, leaveId: id });
-  
-    // Get updated leave from Xero
-    const getXeroLeave = httpsCallable(functions, 'getLeave');
-    const updatedLeave = await getXeroLeave();
-    
-    // Update Firestore
-    const employeeLeaveRef = doc(db, COLLECTION, userId);
-    await setDoc(employeeLeaveRef, {
-      userId,
-      leave: updatedLeave.data,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  }
+  // Update Firestore
+  const employeeLeaveRef = doc(db, COLLECTION, userId);
+  await setDoc(employeeLeaveRef, {
+    userId,
+    leave: updatedLeave.data?.LeaveApplications ? updatedLeave.data.LeaveApplications.map(transformXeroLeave) : [],
+    updatedAt: serverTimestamp()
+  });
+}

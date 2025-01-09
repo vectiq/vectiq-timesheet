@@ -8,12 +8,13 @@ import {
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import type { Leave } from '@/types';
 
 interface LeaveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  leave?: any;
-  onSubmit: (data: any) => void;
+  leave?: Leave | null;
+  onSubmit: (data: Omit<Leave, 'id' | 'status' | 'employeeId' | 'numberOfUnits' | 'updatedAt'>) => void;
 }
 
 export function LeaveDialog({
@@ -29,6 +30,7 @@ export function LeaveDialog({
     formState: { errors },
   } = useForm({
     defaultValues: leave || {
+      title: '',
       startDate: '',
       endDate: '',
       leaveTypeId: '',
@@ -39,6 +41,7 @@ export function LeaveDialog({
   useEffect(() => {
     if (open) {
       reset(leave || {
+        title: '',
         startDate: '',
         endDate: '',
         leaveTypeId: '',
@@ -62,6 +65,17 @@ export function LeaveDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+          <FormField label="Title">
+            <input
+              {...register('title', { required: 'Title is required' })}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              placeholder="e.g., Annual Leave"
+            />
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+            )}
+          </FormField>
+
           <FormField label="Start Date">
             <input
               type="date"

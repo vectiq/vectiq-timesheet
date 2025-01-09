@@ -192,6 +192,43 @@ export interface ForecastEntry {
 }
 
 export interface Leave {
-  leave: any;
-  updatedAt: any;         // Firestore Timestamp
+  id: string;
+  employeeId: string;
+  leaveTypeId: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  status: 'REQUESTED' | 'SCHEDULED' | 'REJECTED';
+  numberOfUnits: number;
+  updatedAt: string;
+}
+
+export interface LeaveCache {
+  leave: Leave[];
+  lastRefreshed: any; // Firestore Timestamp
+}
+
+export interface XeroLeaveResponse {
+  Id: string;
+  Status: string;
+  ProviderName: string;
+  DateTimeUTC: string;
+  LeaveApplications: Array<{
+    LeaveApplicationID: string;
+    EmployeeID: string;
+    LeaveTypeID: string;
+    LeavePeriods: Array<{
+      PayPeriodStartDate: string;
+      PayPeriodEndDate: string;
+      LeavePeriodStatus: string;
+      NumberOfUnits: number;
+    }>;
+    Title: string;
+    Description?: string;
+    StartDate: string;
+    EndDate: string;
+    UpdatedDateUTC?: string;
+    PayOutType: string;
+  }>;
 }
