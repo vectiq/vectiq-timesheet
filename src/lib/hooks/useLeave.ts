@@ -9,11 +9,9 @@ const QUERY_KEY = 'leave';
 export function useLeave() {
   const queryClient = useQueryClient();
 
-  // Query for fetching leave with caching strategy
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: [QUERY_KEY],
-    queryFn: () => getLeave(),
-    staleTime: 60 * 60 * 1000, // 1 hour
+    queryFn: () => getLeave()
   });
 
   // Function to manually refresh data

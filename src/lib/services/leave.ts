@@ -67,7 +67,7 @@ export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; 
 
   // Try cache first unless force refresh
     const cached = await getCachedLeave(userId);
-    if (cached && Date.now() - cached.lastRefreshed.getTime() < 30 * 60 * 1000) return cached;
+    if (!forceRefresh) return cached;
 
   // Get user's Xero employee ID
   const userRef = doc(db, 'users', userId);
@@ -76,19 +76,11 @@ export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; 
     throw new Error('User not found or no Xero Employee ID set');
   }
   const xeroEmployeeId = userDoc.data().xeroEmployeeId;
-
-  // Get tenant ID from Firestore
-  const tenantRef = doc(db, 'config', 'xero_config');
-  const tenantDoc = await getDoc(tenantRef);
-  if (!tenantDoc.exists() || !tenantDoc.data().tenantId) {
-    throw new Error('Xero tenant ID not found');
-  }
   
   // Get leave from Xero
   const getXeroLeave = httpsCallable(functions, 'getLeave');
   const response = await getXeroLeave({ 
-    employeeId: xeroEmployeeId, 
-    tenantId: tenantDoc.data().tenantId 
+    employeeId: xeroEmployeeId
   });
   
   const xeroResponse = response.data as XeroLeaveResponse;
