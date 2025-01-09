@@ -8,6 +8,7 @@ import { RoleProtectedRoute } from '@/components/auth/RoleProtectedRoute';
 import { Layout } from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
+import MonthlyProcessing from '@/pages/MonthlyProcessing';
 import Reports from '@/pages/Reports';
 import Forecast from '@/pages/Forecast';
 import ForecastReport from '@/pages/ForecastReport';
@@ -68,6 +69,14 @@ export default function App() {
           >
             <Route index element={<TimeEntries />} />
             <Route path="profile" element={<Profile />} />
+            <Route
+              path="processing"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <MonthlyProcessing />
+                </RoleProtectedRoute>
+              }
+            />
             <Route
               path="forecast"
               element={

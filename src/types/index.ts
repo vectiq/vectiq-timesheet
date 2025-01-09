@@ -160,6 +160,40 @@ export interface AdminStats {
   averageUtilization: number;
 }
 
+export interface ProcessingProject {
+  id: string;
+  name: string;
+  clientId: string;
+  clientName: string;
+  totalHours: number;
+  timesheetStatus: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  invoiceStatus: 'pending' | 'generated' | 'sent';
+  payrollStatus: 'pending' | 'processed' | 'special';
+  priority: 'normal' | 'high';
+  hasSpecialHandling: boolean;
+  type: 'labor_hire' | 'team';
+  assignments: Array<{
+    userId: string;
+    userName: string;
+    roleId: string;
+    roleName: string;
+    hours: number;
+    payRate: number;
+    payrollStatus: 'pending' | 'processed' | 'special';
+  }>;
+}
+
+export interface ProcessingData {
+  projects: ProcessingProject[];
+  summary: {
+    totalProjects: number;
+    approvedTimesheets: number;
+    generatedInvoices: number;
+    processedPayroll: number;
+    urgentItems: number;
+  };
+}
+
 export interface TestDataOptions {
   startDate: string;
   endDate: string;
