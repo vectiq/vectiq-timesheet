@@ -16,13 +16,60 @@ import { ProcessingFilters } from '@/components/processing/ProcessingFilters';
 import { ProcessingNotes } from '@/components/processing/ProcessingNotes';
 import { ProcessingSummary } from '@/components/processing/ProcessingSummary';
 import { useProcessing } from '@/lib/hooks/useProcessing';
+import { useMemo } from 'react';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Badge } from '@/components/ui/Badge';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 
 export default function MonthlyProcessing() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [filters, setFilters] = useState({
+    search: '',
+    clientId: '',
+    status: '',
+    priority: '',
+    type: ''
+  });
+
   const { data, isLoading, updateStatus, isUpdating } = useProcessing(selectedMonth);
+
+  // Filter projects based on current filters
+  const filteredProjects = useMemo(() => {
+    if (!data?.projects) return [];
+    
+    return data.projects.filter(project => {
+      // Search filter
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase();
+        const matchesSearch = 
+          project.name.toLowerCase().includes(searchTerm) ||
+          project.clientName.toLowerCase().includes(searchTerm);
+        if (!matchesSearch) return false;
+      }
+
+      // Client filter
+      if (filters.clientId && project.clientId !== filters.clientId) {
+        return false;
+      }
+
+      // Status filter
+      if (filters.status && project.invoiceStatus !== filters.status) {
+        return false;
+      }
+
+      // Priority filter
+      if (filters.priority && project.priority !== filters.priority) {
+        return false;
+      }
+
+      // Type filter
+      if (filters.type && project.type !== filters.type) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [data?.projects, filters]);
 
   const handlePrevious = () => {
     setSelectedMonth(prev => {
@@ -73,11 +120,11 @@ export default function MonthlyProcessing() {
           <Card>
             {data && (
               <>
-                <div className="p-4 border-b border-gray-200">
-                  <ProcessingFilters />
+                <div className="p-6 border-b border-gray-200">
+                  <ProcessingFilters onFilterChange={setFilters} />
                 </div>
                 <ProcessingTable 
-                  projects={data.projects}
+                  projects={filteredProjects}
                   onUpdateStatus={updateStatus}
                   isUpdating={isUpdating}
                 />
