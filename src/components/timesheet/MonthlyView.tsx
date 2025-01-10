@@ -10,7 +10,7 @@ import { useProjects } from '@/lib/hooks/useProjects';
 import { useRoles } from '@/lib/hooks/useRoles';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
 import { useUsers } from '@/lib/hooks/useUsers';
-import type { Project, ProjectWithStatus } from '@/types';
+import type { Project, ProjectWithStatus, User } from '@/types';
 
 interface MonthlyViewProps {
   dateRange: {
@@ -44,19 +44,17 @@ interface GroupedData {
 }
 
 export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewProps) {
-  const { timeEntries } = useTimeEntries({ dateRange, userId });
-  const { users } = useUsers();
-  const selectedUser = users.find(u => u.id === userId);
+  const { effectiveUser } = useUsers();
+  const { timeEntries } = useTimeEntries({ userId, dateRange });
   const { clients } = useClients();
   const { projects } = useProjects();
-  const { roles } = useRoles();
   const { useApprovalStatus } = useApprovals(); 
   const startDate = format(dateRange.start, 'yyyy-MM-dd');
   const endDate = format(dateRange.end, 'yyyy-MM-dd');
 
   // Filter projects based on user assignments
-  const userProjects = projects.filter(project => 
-    selectedUser?.projectAssignments?.some(a => a.projectId === project.id)
+  const userProjects = projects.filter(project =>
+    effectiveUser?.projectAssignments?.some(a => a.projectId === project.id)
   );
 
   // Get approval statuses for all projects
@@ -77,7 +75,6 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
 
   // Group entries by client and project
   const groups = new Map<string, GroupedData>();
-
   timeEntries.forEach(entry => {
     const client = clients.find(c => c.id === entry.clientId);
     const project = projects.find(p => p.id === entry.projectId);
@@ -134,10 +131,10 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
 
   // Get projects that need approval
   const projectsNeedingApproval = (() => {
-    if (!userId || !selectedUser) return [];
+    if (!effectiveUser) return [];
 
     const projectsWithEntries = new Set<string>(timeEntries.map(entry => entry.projectId));
-    const userProjectIds = new Set(selectedUser?.projectAssignments?.map(a => a.projectId) || []);
+    const userProjectIds = new Set(effectiveUser.projectAssignments?.map(a => a.projectId) || []);
     const statuses: ProjectWithStatus[] = [];
 
     for (const project of userProjects) {
@@ -166,7 +163,7 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
   })();
 
   const handleApprovalClick = () => {
-    if (!userId) return;
+    if (!effectiveUser) return;
     onApprovalClick(projectsNeedingApproval);
   };
 

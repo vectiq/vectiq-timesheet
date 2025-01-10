@@ -45,22 +45,28 @@ export const TimesheetRow = memo(function TimesheetRow({
 
   // Get assignments for dropdowns
   const assignments = effectiveUser?.projectAssignments || [];
-  const clientAssignments = [...new Set(assignments.map(a => ({ 
-    id: a.clientId,
-    name: a.clientName 
-  })))];
+  const clientAssignments = Array.from(
+    new Map(
+      assignments.map(a => [
+        a.clientId,
+        { id: a.clientId, name: a.clientName }
+      ])
+    ).values()
+  );
   
   const projectAssignments = assignments
     .filter(a => a.clientId === row.clientId)
     .map(a => ({
-      id: a.projectId,
+      id: a.id,
+      projectId: a.projectId,
       name: a.projectName
     }));
 
   const roleAssignments = assignments
     .filter(a => a.clientId === row.clientId && a.projectId === row.projectId)
     .map(a => ({
-      id: a.roleId,
+      id: a.id,
+      roleId: a.roleId,
       name: a.roleName
     }));
 
@@ -130,7 +136,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <option value="">Select Project</option>
           {projectAssignments.map(project => (
-            <option key={project.id} value={project.id}>
+            <option key={project.id} value={project.projectId}>
               {project.name}
             </option>
           ))}
@@ -151,7 +157,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <option value="">Select Role</option>
           {roleAssignments.map(role => (
-            <option key={role.id} value={role.id}>
+            <option key={role.id} value={role.roleId}>
               {role.name}
             </option>
           ))}
