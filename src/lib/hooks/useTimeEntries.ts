@@ -15,7 +15,7 @@ const QUERY_KEY = 'timeEntries';
 interface TimesheetRow {
   clientId: string;
   projectId: string;
-  roleId: string;
+  taskId: string;
 }
 
 interface WeeklyRows {
@@ -133,7 +133,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         date: newDate.toISOString().split('T')[0],
         clientId: entry.clientId,
         projectId: entry.projectId,
-        roleId: entry.roleId,
+        taskId: entry.taskId,
         hours: entry.hours,
         description: entry.description || '',
       });
@@ -151,21 +151,21 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     
     // Add rows from time entries
     timeEntries.forEach(entry => {
-      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.roleId}`;
+      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.taskId}`;
       if (!uniqueRowKeys.has(rowKey)) {
         uniqueRowKeys.add(rowKey);
         allRows.push({
           clientId: entry.clientId,
           projectId: entry.projectId,
-          roleId: entry.roleId,
+          taskId: entry.taskId,
         });
       }
     });
     
     // Add manual rows that don't already exist
     currentWeekManualRows.forEach(row => {
-      const rowKey = `${row.clientId}-${row.projectId}-${row.roleId}`;
-      if (!uniqueRowKeys.has(rowKey) && (row.clientId || row.projectId || row.roleId)) {
+      const rowKey = `${row.clientId}-${row.projectId}-${row.taskId}`;
+      if (!uniqueRowKeys.has(rowKey) && (row.clientId || row.projectId || row.taskId)) {
         uniqueRowKeys.add(rowKey);
         allRows.push(row);
       }
@@ -173,7 +173,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
 
     // Add empty manual rows at the end
     currentWeekManualRows.forEach(row => {
-      if (!row.clientId && !row.projectId && !row.roleId) {
+      if (!row.clientId && !row.projectId && !row.taskId) {
         allRows.push(row);
       }
     });
@@ -186,13 +186,13 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     row: TimesheetRow,
     value: number | null
   ) => {
-    if (!effectiveUserId || !row.clientId || !row.projectId || !row.roleId) return;
+    if (!effectiveUserId || !row.clientId || !row.projectId || !row.taskId) return;
 
     const entry = timeEntries.find(e => 
       e.date === date && 
       e.clientId === row.clientId &&
       e.projectId === row.projectId &&
-      e.roleId === row.roleId
+      e.taskId === row.taskId
     );
 
     if (entry) {
@@ -210,7 +210,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         date,
         clientId: row.clientId,
         projectId: row.projectId,
-        roleId: row.roleId,
+        taskId: row.taskId,
         hours: value,
         description: '',
       });
@@ -220,7 +220,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const addRow = useCallback(() => {
     setManualRows(current => ({
       ...current,
-      [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', roleId: '' }]
+      [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', taskId: '' }]
     }));
   }, [weekKey]);
   
@@ -229,7 +229,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     const rowEntries = timeEntries.filter(entry =>
       entry.clientId === row.clientId &&
       entry.projectId === row.projectId &&
-      entry.roleId === row.roleId
+      entry.taskId === row.taskId
     );
 
     if (rowEntries.length > 0) {
@@ -270,13 +270,13 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         newRows[manualIndex] = { 
           clientId: updates.clientId || '',
           projectId: '',
-          roleId: ''
+          taskId: ''
         };
       } else if ('projectId' in updates) {
         newRows[manualIndex] = { 
           ...newRows[manualIndex],
           projectId: updates.projectId || '',
-          roleId: ''
+          taskId: ''
         };
       } else {
         newRows[manualIndex] = { ...newRows[manualIndex], ...updates };

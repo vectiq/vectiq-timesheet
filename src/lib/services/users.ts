@@ -144,10 +144,10 @@ export async function createProjectAssignment(userId: string, data: Omit<Project
   
   const client = clientDoc.data();
   const project = projectDoc.data();
-  const projectRole = project.roles.find(r => r.id === data.roleId);
+  const projectTask = project.tasks.find(r => r.id === data.taskId);
   
-  if (!projectRole) {
-    throw new Error('Role not found');
+  if (!projectTask) {
+    throw new Error('Task not found');
   }
   
   const user = userDoc.data() as User;
@@ -158,7 +158,7 @@ export async function createProjectAssignment(userId: string, data: Omit<Project
     id: crypto.randomUUID(),
     clientName: client.name,
     projectName: project.name,
-    roleName: projectRole.name
+    taskName: projectTask.name
   });
   
   await updateDoc(userRef, {

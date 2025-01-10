@@ -21,7 +21,7 @@ interface MonthlyViewRowProps {
       entries: Array<{
         date: string;
         hours: number;
-        role: { name: string };
+        task: { name: string };
         approvalKey?: string;
       }>;
     }>;
@@ -158,7 +158,7 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
                 <div>
                   <span className="text-gray-500">{formatDate(entry.date)}</span>
                   <span className="mx-2">·</span>
-                  <span>{entry.role.name}</span>
+                  <span>{entry.task.name}</span>
                 </div>
                 <span>
                   <span className="text-gray-500">Hours:</span>

@@ -7,7 +7,7 @@ import { MonthlyViewRow } from './MonthlyViewRow';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
 import { useUsers } from '@/lib/hooks/useUsers';
 import type { Project, ProjectWithStatus, User } from '@/types';
@@ -36,7 +36,7 @@ interface GroupedData {
     entries: Array<{
       date: string;
       hours: number;
-      role: { name: string };
+      task: { name: string };
       compositeKey?: string;
     }>;
     }
@@ -78,9 +78,9 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
   timeEntries.forEach(entry => {
     const client = clients.find(c => c.id === entry.clientId);
     const project = projects.find(p => p.id === entry.projectId);
-    const projectRole = project?.roles?.find(r => r.id === entry.roleId);
+    const projectTask = project?.tasks?.find(r => r.id === entry.taskId);
 
-    if (!client || !project || !projectRole) return;
+    if (!client || !project || !projectTask) return;
 
     const clientKey = client.id;
     const projectKey = `${client.id}-${project.id}`;
@@ -114,7 +114,7 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
     const projectGroup = clientGroup.projects.get(projectKey);
     projectGroup.entries.push({
       ...entry,
-      role: { name: projectRole.name },
+      task: { name: projectTask.name },
       compositeKey: entry.compositeKey
     });
 

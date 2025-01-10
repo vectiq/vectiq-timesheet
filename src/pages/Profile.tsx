@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
 import { useClients } from '@/lib/hooks/useClients';
 import { auth } from '@/lib/firebase';
 import { Card } from '@/components/ui/Card';
@@ -14,7 +14,7 @@ import { formatCurrency } from '@/lib/utils/currency';
 export default function Profile() {
   const { currentUser, updateUser, isUpdating, sendPasswordReset } = useUsers();
   const { projects } = useProjects();
-  const { roles } = useRoles();
+  const { tasks } = useTasks();
   const { clients } = useClients();
   const user = auth.currentUser;
   const [name, setName] = useState(currentUser?.name || '');
@@ -25,16 +25,16 @@ export default function Profile() {
   const assignments = useMemo(() => {
     return (currentUser?.projectAssignments || []).map(assignment => {
       const project = projects.find(p => p.id === assignment.projectId);
-      const projectRole = project?.roles?.find(r => r.id === assignment.roleId);
+      const projectTask = project?.tasks?.find(r => r.id === assignment.taskId);
       const client = clients.find(c => c.id === assignment.clientId);
       
       return {
         id: assignment.id,
         client,
         project,
-        role: projectRole,
+        task: projectTask,
       };
-    }).filter(a => a.client && a.project && a.role);
+    }).filter(a => a.client && a.project && a.task);
   }, [currentUser?.projectAssignments, projects, clients]);
 
   useEffect(() => {
@@ -132,7 +132,7 @@ export default function Profile() {
                   <tr>
                     <Th>Client</Th>
                     <Th>Project</Th>
-                    <Th>Role</Th>
+                    <Th>Task</Th>
                   </tr>
                 </TableHeader>
                 <TableBody>
@@ -141,7 +141,7 @@ export default function Profile() {
                       <tr key={assignment.id}>
                         <Td className="font-medium">{assignment.client.name}</Td>
                         <Td className="font-medium">{assignment.project.name}</Td>
-                        <Td>{assignment.role.name}</Td>
+                        <Td>{assignment.task.name}</Td>
                       </tr>
                     );
                   })}

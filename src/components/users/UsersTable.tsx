@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/lib/utils/date';
 import { formatCurrency } from '@/lib/utils/currency';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
 import { useClients } from '@/lib/hooks/useClients';
 import type { User, ProjectAssignment } from '@/types';
 
@@ -25,7 +25,7 @@ export function UsersTable({
   onRemoveAssignment,
 }: UsersTableProps) {
   const { projects } = useProjects();
-  const { roles } = useRoles();
+  const { tasks } = useTasks();
   const { clients } = useClients();
 
   return (
@@ -67,9 +67,9 @@ export function UsersTable({
                   {userAssignments?.map(assignment => {
                     const project = projects.find(p => p.id === assignment.projectId);
                     const client = clients.find(c => c.id === assignment.clientId);
-                    const projectRole = project?.roles?.find(r => r.id === assignment.roleId);
+                    const projectTask = project?.tasks?.find(r => r.id === assignment.taskId);
                     
-                    if (!project || !projectRole || !client) return null;
+                    if (!project || !projectTask || !client) return null;
                     
                     return (
                       <div key={assignment.id} className="flex items-center justify-between text-sm py-1">
@@ -78,7 +78,7 @@ export function UsersTable({
                           <span className="text-gray-400 shrink-0">-</span>
                           <span className="font-gray-500 truncate">{project.name}</span>
                           <span className="text-gray-400 shrink-0">-</span>
-                          <span className="text-gray-500 truncate">{projectRole?.name}</span>
+                          <span className="text-gray-500 truncate">{projectTask?.name}</span>
                         </div>
                         <Button
                           variant="secondary"

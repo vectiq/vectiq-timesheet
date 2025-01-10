@@ -47,7 +47,7 @@ export function useProjects() {
     if (!data.id) throw new Error('Project ID is required for update');
     return updateMutation.mutateAsync({
       ...data,
-      roles: data.roles || []
+      tasks: data.tasks || []
     });
   }, [updateMutation]);
 

@@ -4,20 +4,20 @@ import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import type { Project } from '@/types';
 
-interface ProjectRolesProps {
+interface ProjectTasksProps {
   control: Control<Project>;
 }
 
-export function ProjectRoles({ control }: ProjectRolesProps) {
+export function ProjectTasks({ control }: ProjectTasksProps) {
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'roles',
+    name: 'tasks',
   });
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-sm font-medium text-gray-700">Project Roles</h3>
+        <h3 className="text-sm font-medium text-gray-700">Project Tasks</h3>
         <Button
           type="button"
           variant="secondary"
@@ -25,7 +25,7 @@ export function ProjectRoles({ control }: ProjectRolesProps) {
           onClick={() => append({ id: crypto.randomUUID(), name: '', costRate: 0, sellRate: 0 })}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Role
+          Add Task
         </Button>
       </div>
 
@@ -33,9 +33,9 @@ export function ProjectRoles({ control }: ProjectRolesProps) {
         {fields.map((field, index) => (
           <div key={field.id} className="flex gap-4 items-start">
             <div className="flex-1 grid grid-cols-3 gap-4">
-              <FormField label="Role Name">
+              <FormField label="Task Name">
                 <input
-                  {...control.register(`roles.${index}.name`)}
+                  {...control.register(`tasks.${index}.name`)}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </FormField>
@@ -43,7 +43,7 @@ export function ProjectRoles({ control }: ProjectRolesProps) {
               <FormField label="Cost Rate">
                 <input
                   type="number"
-                  {...control.register(`roles.${index}.costRate`, { valueAsNumber: true })}
+                  {...control.register(`tasks.${index}.costRate`, { valueAsNumber: true })}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </FormField>
@@ -51,7 +51,7 @@ export function ProjectRoles({ control }: ProjectRolesProps) {
               <FormField label="Sell Rate">
                 <input
                   type="number"
-                  {...control.register(`roles.${index}.sellRate`, { valueAsNumber: true })}
+                  {...control.register(`tasks.${index}.sellRate`, { valueAsNumber: true })}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </FormField>

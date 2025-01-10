@@ -1,4 +1,4 @@
-export interface ProjectRole {
+export interface ProjectTask {
   id: string;
   name: string;
   projectId: string;
@@ -30,9 +30,9 @@ export interface Project {
   endDate: string;
   approverEmail: string;
   requiresApproval: boolean;
-  roles: ProjectRole[];
+  tasks: ProjectTask[];
   overtimeInclusive: boolean;
-  xeroLeaveTypeId?: string;
+  xetaskaveTypeId?: string;
 }
 
 export interface TimeEntry {
@@ -40,7 +40,7 @@ export interface TimeEntry {
   userId: string;
   clientId: string;
   projectId: string;
-  roleId: string;
+  taskId: string;
   date: string;
   hours: number;
   description?: string;
@@ -52,7 +52,7 @@ export interface ReportFilters {
   endDate: string;
   clientIds: string[];
   projectIds: string[];
-  roleIds: string[];
+  taskIds: string[];
 }
 
 export interface ReportEntry {
@@ -60,7 +60,7 @@ export interface ReportEntry {
   date: string;
   clientName: string;
   projectName: string;
-  roleName: string;
+  taskName: string;
   hours: number;
   cost: number;
   revenue: number;
@@ -95,11 +95,11 @@ export interface ProjectAssignment {
   id: string;
   userId: string;
   projectId: string;
-  roleId: string;
+  taskId: string;
   clientId: string;
   clientName: string;
   projectName: string; 
-  roleName: string;
+  taskName: string;
 }
 
 export interface ReportData {
@@ -185,8 +185,8 @@ export interface ProcessingProject {
   assignments: Array<{
     userId: string;
     userName: string;
-    roleId: string;
-    roleName: string;
+    taskId: string;
+    taskName: string;
     hours: number
   }>;
 }
@@ -219,7 +219,7 @@ export interface ForecastEntry {
   month: string;          // Format: YYYY-MM
   userId: string;
   projectId: string;
-  roleId: string;
+  taskId: string;
   hours: number;
   isDefault: boolean;     // Indicates if this is an auto-calculated default value
   createdAt: any;         // Firestore Timestamp

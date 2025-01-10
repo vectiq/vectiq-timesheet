@@ -1,35 +1,35 @@
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
 import { formatCurrency } from '@/lib/utils/currency';
 import { Plus, X } from 'lucide-react';
-import type { ProjectRole } from '@/types';
+import type { ProjectTask } from '@/types';
 
-interface ProjectRolesTableProps {
-  selectedRoleIds: string[];
-  rates: Record<string, ProjectRole>;
-  onRateChange: (roleId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => void;
-  onAddRole: (roleId: string) => void;
-  onRemoveRole: (roleId: string) => void;
+interface ProjectTasksTableProps {
+  selectedTaskIds: string[];
+  rates: Record<string, ProjectTask>;
+  onRateChange: (taskId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => void;
+  onAddTask: (taskId: string) => void;
+  onRemoveTask: (taskId: string) => void;
 }
 
-export function ProjectRolesTable({ 
-  selectedRoleIds, 
+export function ProjectTasksTable({ 
+  selectedTaskIds, 
   rates, 
   onRateChange,
-  onAddRole,
-  onRemoveRole,
-}: ProjectRolesTableProps) {
-  const { roles } = useRoles();
-  const selectedRoles = roles.filter(role => selectedRoleIds.includes(role.id));
-  const availableRoles = roles.filter(role => 
-    role.isActive && !selectedRoleIds.includes(role.id)
+  onAddTask,
+  onRemoveTask,
+}: ProjectTasksTableProps) {
+  const { tasks } = useTasks();
+  const selectedTasks = tasks.filter(task => selectedTaskIds.includes(task.id));
+  const availableTasks = tasks.filter(task => 
+    task.isActive && !selectedTaskIds.includes(task.id)
   );
 
-  const handleRateChange = (roleId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => {
-    const currentRoles = roles.filter(r => r.roleId !== roleId);
-    setValue('roles', [...currentRoles, { 
-      roleId,
+  const handleRateChange = (taskId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => {
+    const currentTasks = tasks.filter(r => r.taskId !== taskId);
+    setValue('tasks', [...currentTasks, { 
+      taskId,
       projectId: project?.id || crypto.randomUUID(),
       costRate: rates.costRate,
       sellRate: rates.sellRate,
@@ -39,18 +39,18 @@ export function ProjectRolesTable({
 
   return (
     <div className="space-y-4">
-      {/* Add Role Control */}
-      {availableRoles.length > 0 && (
+      {/* Add Task Control */}
+      {availableTasks.length > 0 && (
         <div className="flex gap-2">
           <select
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            onChange={(e) => onAddRole(e.target.value)}
+            onChange={(e) => onAddTask(e.target.value)}
             value=""
           >
-            <option value="">Add role to project...</option>
-            {availableRoles.map(role => (
-              <option key={role.id} value={role.id}>
-                {role.name}
+            <option value="">Add task to project...</option>
+            {availableTasks.map(task => (
+              <option key={task.id} value={task.id}>
+                {task.name}
               </option>
             ))}
           </select>
@@ -59,7 +59,7 @@ export function ProjectRolesTable({
             onClick={() => {
               const select = document.querySelector('select') as HTMLSelectElement;
               if (select.value) {
-                onAddRole(select.value);
+                onAddTask(select.value);
                 select.value = '';
               }
             }}
@@ -69,12 +69,12 @@ export function ProjectRolesTable({
         </div>
       )}
 
-      {/* Roles Table */}
-      {selectedRoles.length > 0 && (
+      {/* Tasks Table */}
+      {selectedTasks.length > 0 && (
         <Table>
           <TableHeader>
             <tr className="border-b border-gray-200">
-              <Th>Role</Th>
+              <Th>Task</Th>
               <Th>Cost Rate ($/hr)</Th>
               <Th>Sell Rate ($/hr)</Th>
               <Th>Billable</Th>
@@ -83,22 +83,22 @@ export function ProjectRolesTable({
             </tr>
           </TableHeader>
           <TableBody>
-            {selectedRoles.map(role => {
-              const rate = rates[role.id] || { costRate: 0, sellRate: 0 };
+            {selectedTasks.map(task => {
+              const rate = rates[task.id] || { costRate: 0, sellRate: 0 };
               const margin = rate.sellRate > 0 
                 ? ((rate.sellRate - rate.costRate) / rate.sellRate * 100).toFixed(1)
                 : '0.0';
 
               return (
-                <tr key={role.id}>
-                  <Td className="font-medium">{role.name}</Td>
+                <tr key={task.id}>
+                  <Td className="font-medium">{task.name}</Td>
                   <Td>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={rate.costRate || ''}
-                      onChange={(e) => onRateChange(role.id, {
+                      onChange={(e) => onRateChange(task.id, {
                         costRate: parseFloat(e.target.value) || 0,
                         sellRate: rate.sellRate || 0,
                         billable: rate.billable || false
@@ -112,7 +112,7 @@ export function ProjectRolesTable({
                       min="0"
                       step="0.01"
                       value={rate.sellRate || ''}
-                      onChange={(e) => onRateChange(role.id, {
+                      onChange={(e) => onRateChange(task.id, {
                         costRate: rate.costRate || 0,
                         sellRate: parseFloat(e.target.value) || 0,
                         billable: rate.billable || false
@@ -124,7 +124,7 @@ export function ProjectRolesTable({
                     <input
                       type="checkbox"
                       checked={rate.billable || false}
-                      onChange={(e) => onRateChange(role.id, {
+                      onChange={(e) => onRateChange(task.id, {
                         costRate: rate.costRate || 0,
                         sellRate: rate.sellRate || 0,
                         billable: e.target.checked
@@ -138,7 +138,7 @@ export function ProjectRolesTable({
                       type="button"
                       variant="secondary"
                       size="sm"
-                      onClick={() => onRemoveRole(role.id)}
+                      onClick={() => onRemoveTask(task.id)}
                     >
                       <X className="h-4 w-4" />
                     </Button>

@@ -75,22 +75,22 @@ export default function ForecastReport() {
       users.forEach(user => {
         user.projectAssignments?.forEach(assignment => {
           const project = projects.find(p => p.id === assignment.projectId);
-          const projectRole = project?.roles?.find(r => r.id === assignment.roleId);
+          const projectTask = project?.tasks?.find(r => r.id === assignment.taskId);
           
-          if (!project || !projectRole) return;
+          if (!project || !projectTask) return;
           
           // Find explicit forecast entry or use default hours
           const forecast = monthForecast.find(f => 
             f.userId === user.id && 
             f.projectId === project.id && 
-            f.roleId === projectRole.id
+            f.taskId === projectTask.id
           );
           
           const hours = forecast?.hours ?? calculateDefaultHours(workingDays, user.hoursPerWeek || 40);
           
-          // Use project role rates if available, otherwise fall back to user rates
-          const sellRate = projectRole.sellRate || user.sellRate || 0;
-          const costRate = projectRole.costRate || user.costRate || 0;
+          // Use project task rates if available, otherwise fall back to user rates
+          const sellRate = projectTask.sellRate || user.sellRate || 0;
+          const costRate = projectTask.costRate || user.costRate || 0;
           
           forecastRevenue += hours * sellRate;
           forecastCosts += hours * costRate;
@@ -116,11 +116,11 @@ export default function ForecastReport() {
           if (format(new Date(entry.date), 'yyyy-MM') !== monthStr) return;
           
           const project = projects.find(p => p.id === entry.projectId);
-          const projectRole = project?.roles?.find(r => r.id === entry.roleId);
+          const projectTask = project?.tasks?.find(r => r.id === entry.taskId);
           const user = users.find(u => u.id === entry.userId);
           
-          const sellRate = projectRole?.sellRate || user?.sellRate || 0;
-          const costRate = projectRole?.costRate || user?.costRate || 0;
+          const sellRate = projectTask?.sellRate || user?.sellRate || 0;
+          const costRate = projectTask?.costRate || user?.costRate || 0;
           
           monthActuals.actualRevenue += entry.hours * sellRate;
           monthActuals.actualCosts += entry.hours * costRate;

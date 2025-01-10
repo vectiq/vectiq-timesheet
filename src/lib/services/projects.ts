@@ -11,7 +11,7 @@ import {
   where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Project, ProjectRole } from '@/types';
+import type { Project, ProjectTask } from '@/types';
 
 const COLLECTION = 'projects';
 
@@ -22,7 +22,7 @@ export async function getProjects(): Promise<Project[]> {
       return {
         ...projectData,
         id: projectDoc.id,
-        roles: projectData.roles || [],
+        tasks: projectData.tasks || [],
       } as Project;
     });
 
@@ -32,11 +32,11 @@ export async function getProjects(): Promise<Project[]> {
 export async function createProject(projectData: Omit<Project, 'id'>): Promise<Project> {
   // Create project document
   const projectRef = doc(collection(db, COLLECTION));
-  const { roles, ...projectFields } = projectData;
+  const { tasks, ...projectFields } = projectData;
   const project = {
     ...projectFields,
-    roles: (roles || []).map(role => ({
-      ...role,
+    tasks: (tasks || []).map(task => ({
+      ...task,
       id: crypto.randomUUID(),
       projectId: projectRef.id
     })),
@@ -50,19 +50,19 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
   return {
     ...projectFields,
     id: projectRef.id,
-    roles: project.roles,
+    tasks: project.tasks,
   } as Project;
 }
 
 export async function updateProject(projectData: Project): Promise<void> {
-  const { id, roles, ...projectFields } = projectData;
+  const { id, tasks, ...projectFields } = projectData;
   if (!id) throw new Error('Project ID is required for update');
 
   const projectRef = doc(db, COLLECTION, id);
   const projectUpdate = {
     ...projectFields, 
-    roles: roles.map(role => ({
-      ...role,
+    tasks: tasks.map(task => ({
+      ...task,
       projectId: id
     })),
     updatedAt: serverTimestamp(),

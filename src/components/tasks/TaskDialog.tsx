@@ -8,28 +8,28 @@ import {
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { roleSchema } from '@/lib/schemas/role';
-import type { Role } from '@/types';
+import { taskSchema } from '@/lib/schemas/task';
+import type { Task } from '@/types';
 
-interface RoleDialogProps {
+interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  role?: Role | null;
-  onSubmit: (data: Role) => void;
+  task?: Task | null;
+  onSubmit: (data: Task) => void;
 }
 
-export function RoleDialog({
+export function TaskDialog({
   open,
   onOpenChange,
-  role,
+  task,
   onSubmit,
-}: RoleDialogProps) {
+}: TaskDialogProps) {
   const {
     register,
     handleSubmit,
     reset,
   } = useForm({
-    defaultValues: role || {
+    defaultValues: task || {
       name: '',
       isActive: true,
     },
@@ -37,15 +37,15 @@ export function RoleDialog({
 
   useEffect(() => {
     if (open) {
-      reset(role || {
+      reset(task || {
         name: '',
         isActive: true,
       });
     }
-  }, [open, role, reset]);
+  }, [open, task, reset]);
 
   const handleFormSubmit = async (data: any) => {
-    await onSubmit({ ...data, id: role?.id });
+    await onSubmit({ ...data, id: task?.id });
     onOpenChange(false);
   };
 
@@ -54,7 +54,7 @@ export function RoleDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {role ? 'Edit Role' : 'New Role'}
+            {task ? 'Edit Task' : 'New Task'}
           </DialogTitle>
         </DialogHeader>
 
@@ -87,7 +87,7 @@ export function RoleDialog({
               Cancel
             </Button>
             <Button type="submit">
-              {role ? 'Update' : 'Create'} Role
+              {task ? 'Update' : 'Create'} Task
             </Button>
           </div>
         </form>

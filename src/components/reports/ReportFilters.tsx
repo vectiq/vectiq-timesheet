@@ -1,6 +1,6 @@
 import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
@@ -15,7 +15,7 @@ interface ReportFiltersProps {
 export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
   const { clients } = useClients();
   const { projects } = useProjects();
-  const { roles } = useRoles();
+  const { tasks } = useTasks();
 
   const handleChange = (key: keyof ReportFilters, value: any) => {
     onChange({ ...filters, [key]: value });
@@ -79,16 +79,16 @@ export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
             </select>
           </FormField>
 
-          <FormField label="Roles">
+          <FormField label="Tasks">
             <select
               multiple
-              value={filters.roleIds}
-              onChange={(e) => handleChange('roleIds', Array.from(e.target.selectedOptions, option => option.value))}
+              value={filters.taskIds}
+              onChange={(e) => handleChange('taskIds', Array.from(e.target.selectedOptions, option => option.value))}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
-              {roles.map(role => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
+              {tasks.map(task => (
+                <option key={task.id} value={task.id}>
+                  {task.name}
                 </option>
               ))}
             </select>

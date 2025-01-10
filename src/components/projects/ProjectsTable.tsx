@@ -24,7 +24,7 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approver Email</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approval Required</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Overtime</th>
-          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Roles</th>
+          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tasks</th>
           <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
         </tr>
       </TableHeader>
@@ -48,12 +48,12 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
             </Td>
             <Td>
               <div className="space-y-1">
-                {project.roles?.map(role => {
+                {project.tasks?.map(task => {
                   return (
-                    <div key={role.id} className="flex items-center gap-2 text-xs">
-                      <span className="font-medium w-32 truncate">{role.name}</span>
-                      <span className="text-gray-500">{formatCurrency(role.costRate)}/{formatCurrency(role.sellRate)}</span>
-                      {role.billable && <span className="text-green-600 text-[10px] uppercase font-medium">Billable</span>}
+                    <div key={task.id} className="flex items-center gap-2 text-xs">
+                      <span className="font-medium w-32 truncate">{task.name}</span>
+                      <span className="text-gray-500">{formatCurrency(task.costRate)}/{formatCurrency(task.sellRate)}</span>
+                      {task.billable && <span className="text-green-600 text-[10px] uppercase font-medium">Billable</span>}
                     </div>
                   );
                 })}

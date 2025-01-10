@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Plus, X } from 'lucide-react';
 import { useClients } from '@/lib/hooks/useClients';
-import type { Project, ProjectRole } from '@/types';
+import type { Project, ProjectTask } from '@/types';
 
 interface ProjectFormProps {
   project?: Project | null;
@@ -31,8 +31,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       endDate: '',
       requiresApproval: false,
       overtimeInclusive: true,
-      roles: [],
-      xeroLeaveTypeId: '',
+      tasks: [],
+      xetaskaveTypeId: '',
     },
   });
 
@@ -42,7 +42,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     }
   }, [project, reset]);
 
-  const roles = watch('roles') || [];
+  const tasks = watch('tasks') || [];
 
   const handleFormSubmit = async (data: any) => {
     const projectId = project?.id || crypto.randomUUID();
@@ -56,8 +56,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       approverEmail: data.approverEmail || '',
       requiresApproval: data.requiresApproval || false,
       overtimeInclusive: data.overtimeInclusive || false,
-      roles: data.roles || [],
-      xeroLeaveTypeId: data.xeroLeaveTypeId || '',
+      tasks: data.tasks || [],
+      xetaskaveTypeId: data.xetaskaveTypeId || '',
     };
     
     try {
@@ -68,8 +68,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     }
   };
 
-  const addRole = () => {
-    const newRole: ProjectRole = {
+  const addTask = () => {
+    const newTask: ProjectTask = {
       id: crypto.randomUUID(),
       name: '',
       projectId: project?.id || '',
@@ -77,13 +77,13 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       sellRate: 0,
       billable: false
     };
-    setValue('roles', [...roles, newRole]);
+    setValue('tasks', [...tasks, newTask]);
   };
 
-  const removeRole = (index: number) => {
-    const newRoles = [...roles];
-    newRoles.splice(index, 1);
-    setValue('roles', newRoles);
+  const removeTask = (index: number) => {
+    const newTasks = [...tasks];
+    newTasks.splice(index, 1);
+    setValue('tasks', newTasks);
   };
 
   return (
@@ -172,7 +172,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
 
         <FormField label="Xero Leave Type ID">
           <input
-            {...register('xeroLeaveTypeId')}
+            {...register('xetaskaveTypeId')}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
           />
@@ -183,25 +183,25 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <h3 className="text-sm font-medium text-gray-700">Project Roles</h3>
+            <h3 className="text-sm font-medium text-gray-700">Project Tasks</h3>
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              onClick={addRole}
+              onClick={addTask}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Role
+              Add Task
             </Button>
           </div>
           
           <div className="space-y-2 mt-2">
-            {roles.map((role, index) => (
-              <div key={role.id} className="flex gap-2 items-start bg-gray-50 p-2 rounded-lg">
+            {tasks.map((task, index) => (
+              <div key={task.id} className="flex gap-2 items-start bg-gray-50 p-2 rounded-lg">
                 <div className="flex-1 grid grid-cols-4 gap-4">
-                  <FormField label="Role Name">
+                  <FormField label="Task Name">
                     <input
-                      {...register(`roles.${index}.name`)}
+                      {...register(`tasks.${index}.name`)}
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                       placeholder="e.g., Senior Developer"
                     />
@@ -212,7 +212,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
                       type="number"
                       step="0.01"
                       min="0"
-                      {...register(`roles.${index}.costRate`, { valueAsNumber: true })}
+                      {...register(`tasks.${index}.costRate`, { valueAsNumber: true })}
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </FormField>
@@ -222,7 +222,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
                       type="number"
                       step="0.01"
                       min="0"
-                      {...register(`roles.${index}.sellRate`, { valueAsNumber: true })}
+                      {...register(`tasks.${index}.sellRate`, { valueAsNumber: true })}
                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </FormField>
@@ -231,7 +231,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
                     <div className="flex items-center h-10">
                       <input
                         type="checkbox"
-                        {...register(`roles.${index}.billable`)}
+                        {...register(`tasks.${index}.billable`)}
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                     </div>
@@ -242,7 +242,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => removeRole(index)} 
+                  onClick={() => removeTask(index)} 
                   className="mt-7">
                   <X className="h-4 w-4" />
                 </Button>

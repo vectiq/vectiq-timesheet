@@ -11,7 +11,7 @@ import { FormField } from '@/components/ui/FormField';
 import { formatCurrency } from '@/lib/utils/currency';
 import { projectAssignmentSchema } from '@/lib/schemas/user';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
 import { useClients } from '@/lib/hooks/useClients';
 import type { ProjectAssignment, User } from '@/types';
 
@@ -29,7 +29,7 @@ export function ProjectAssignmentDialog({
   onSubmit,
 }: ProjectAssignmentDialogProps) {
   const { projects } = useProjects();
-  const { roles } = useRoles();
+  const { tasks } = useTasks();
   const { clients } = useClients();
 
   const {
@@ -42,7 +42,7 @@ export function ProjectAssignmentDialog({
       userId: user.id,
       clientId: '',
       projectId: '',
-      roleId: ''
+      taskId: ''
     },
   });
 
@@ -50,7 +50,7 @@ export function ProjectAssignmentDialog({
   const filteredProjects = projects.filter(p => p.clientId === selectedClientId);
   const selectedProjectId = watch('projectId');
   const selectedProject = projects.find(p => p.id === selectedProjectId);
-  const availableRoles = selectedProject?.roles || [];
+  const availableTasks = selectedProject?.tasks || [];
 
   useEffect(() => {
     if (open) {
@@ -58,7 +58,7 @@ export function ProjectAssignmentDialog({
         userId: user.id,
         clientId: '',
         projectId: '',
-        roleId: ''
+        taskId: ''
       });
     }
   }, [open, user.id, reset]);
@@ -107,16 +107,16 @@ export function ProjectAssignmentDialog({
             </select>
           </FormField>
 
-          <FormField label="Role">
+          <FormField label="Task">
             <select
-              {...register('roleId')}
+              {...register('taskId')}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               disabled={!selectedProjectId}
             >
-              <option value="">Select Role</option>
-              {availableRoles.map(role => (
-                <option key={role.id} value={role.id}>
-                  {role.name} ({formatCurrency(role.sellRate)}/hr)
+              <option value="">Select Task</option>
+              {availableTasks.map(task => (
+                <option key={task.id} value={task.id}>
+                  {task.name} ({formatCurrency(task.sellRate)}/hr)
                 </option>
               ))}
             </select>

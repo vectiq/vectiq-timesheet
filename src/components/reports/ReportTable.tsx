@@ -24,7 +24,7 @@ export function ReportTable({ data }: ReportTableProps) {
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Client</th>
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project</th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Role</th>
+            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Task</th>
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Hours</th>
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Cost</th>
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Revenue</th>
@@ -37,7 +37,7 @@ export function ReportTable({ data }: ReportTableProps) {
               <Td>{formatDate(entry.date)}</Td>
               <Td>{entry.clientName}</Td>
               <Td>{entry.projectName}</Td>
-              <Td>{entry.roleName}</Td>
+              <Td>{entry.taskName}</Td>
               <Td>{entry.hours}</Td>
               <Td>{formatCurrency(entry.cost)}</Td>
               <Td>{formatCurrency(entry.revenue)}</Td>

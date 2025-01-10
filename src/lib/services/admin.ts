@@ -73,12 +73,12 @@ export async function getAdminStats(): Promise<AdminStats> {
   let totalHours = 0;
   let billableHours = 0;
   
-  // Create a map of project roles for billable status lookup
-  const projectRoles = new Map();
+  // Create a map of project tasks for billable status lookup
+  const projectTasks = new Map();
   projectsSnapshot.docs.forEach(doc => {
     const project = doc.data();
-    project.roles?.forEach(role => {
-      projectRoles.set(`${project.id}_${role.id}`, role.billable);
+    project.tasks?.forEach(task => {
+      projectTasks.set(`${project.id}_${task.id}`, task.billable);
     });
   });
 
@@ -88,9 +88,9 @@ export async function getAdminStats(): Promise<AdminStats> {
     const hours = entry.hours || 0;
     totalHours += hours;
     
-    // Check if the role is billable
-    const roleKey = `${entry.projectId}_${entry.roleId}`;
-    if (projectRoles.get(roleKey)) {
+    // Check if the task is billable
+    const taskKey = `${entry.projectId}_${entry.taskId}`;
+    if (projectTasks.get(taskKey)) {
       billableHours += hours;
     }
   });
@@ -112,7 +112,7 @@ export async function getAdminStats(): Promise<AdminStats> {
 export async function generateTestData(options: TestDataOptions): Promise<void> {
   const batch = writeBatch(db);
   
-  // Get all users, projects, and roles
+  // Get all users, projects, and tasks
   const [usersSnapshot, projectsSnapshot] = await Promise.all([
     getDocs(collection(db, 'users')),
     getDocs(collection(db, 'projects'))
@@ -180,7 +180,7 @@ export async function generateTestData(options: TestDataOptions): Promise<void> 
             userId: user.id,
             clientId: assignment.clientId,
             projectId: assignment.projectId,
-            roleId: assignment.roleId,
+            taskId: assignment.taskId,
             date: dateStr,
             hours,
             description: 'Test data entry',

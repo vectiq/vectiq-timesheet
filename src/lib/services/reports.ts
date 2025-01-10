@@ -26,25 +26,25 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
   );
 
   // Get all required data
-  const [timeEntriesSnapshot, projectsSnapshot, rolesSnapshot, clientsSnapshot] = await Promise.all([
+  const [timeEntriesSnapshot, projectsSnapshot, tasksSnapshot, clientsSnapshot] = await Promise.all([
     getDocs(timeEntriesQuery),
     getDocs(collection(db, 'projects')),
-    getDocs(collection(db, 'roles')),
+    getDocs(collection(db, 'tasks')),
     getDocs(collection(db, 'clients'))
   ]);
 
   // Create lookup maps
   const projects = new Map(projectsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
-  const roles = new Map(rolesSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
+  const tasks = new Map(tasksSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const clients = new Map(clientsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
 
-  // Get project roles for rate calculations
-  const projectRolesSnapshot = await getDocs(collection(db, 'projectRoles'));
-  const projectRoles = new Map();
-  projectRolesSnapshot.docs.forEach(doc => {
+  // Get project tasks for rate calculations
+  const projectTasksSnapshot = await getDocs(collection(db, 'projectTasks'));
+  const projectTasks = new Map();
+  projectTasksSnapshot.docs.forEach(doc => {
     const data = doc.data();
-    const key = `${data.projectId}_${data.roleId}`;
-    projectRoles.set(key, data);
+    const key = `${data.projectId}_${data.taskId}`;
+    projectTasks.set(key, data);
   });
 
   // Filter and transform time entries
@@ -55,17 +55,17 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
       // Apply filters
       if (filters.clientIds.length && !filters.clientIds.includes(entry.clientId)) return null;
       if (filters.projectIds.length && !filters.projectIds.includes(entry.projectId)) return null;
-      if (filters.roleIds.length && !filters.roleIds.includes(entry.roleId)) return null;
+      if (filters.taskIds.length && !filters.taskIds.includes(entry.taskId)) return null;
 
       const project = projects.get(entry.projectId);
-      const projectRole = project?.roles?.find(r => r.id === entry.roleId);
+      const projectTask = project?.tasks?.find(r => r.id === entry.taskId);
       const client = clients.get(entry.clientId);
       
-      if (!project || !projectRole || !client) return null;
+      if (!project || !projectTask || !client) return null;
 
-      // Get rates from project roles
-      const costRate = projectRole?.costRate || 0;
-      const sellRate = projectRole?.sellRate || 0;
+      // Get rates from project tasks
+      const costRate = projectTask?.costRate || 0;
+      const sellRate = projectTask?.sellRate || 0;
 
       const hours = entry.hours || 0;
       const cost = hours * costRate;
@@ -76,7 +76,7 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
         date: entry.date,
         clientName: client.name,
         projectName: project.name,
-        roleName: projectRole.name,
+        taskName: projectTask.name,
         hours,
         cost,
         revenue,

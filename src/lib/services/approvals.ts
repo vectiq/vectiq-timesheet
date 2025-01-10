@@ -127,16 +127,16 @@ export async function submitTimesheetApproval(request: ApprovalRequest) {
   const startDate = format(dateRange.start, 'MMM d, yyyy');
   const endDate = format(dateRange.end, 'MMM d, yyyy');
 
-  // Get roles from project
-  const roles = project.roles.map(role => ({
-    id: role.id,
-    name: role.name
+  // Get tasks from project
+  const tasks = project.tasks.map(task => ({
+    id: task.id,
+    name: task.name
   }));
 
   // Generate timesheet breakdown table
-  const timesheetTable = formatTimesheetBreakdown(entries, roles.map(role => ({
-    id: role.id,
-    name: role.name
+  const timesheetTable = formatTimesheetBreakdown(entries, tasks.map(task => ({
+    id: task.id,
+    name: task.name
   })));
 
   // Get user details

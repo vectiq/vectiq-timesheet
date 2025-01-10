@@ -1,63 +1,63 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import {
-  getRoles,
-  createRole,
-  updateRole,
-  deleteRole,
-} from '@/lib/services/roles';
-import type { Role } from '@/types';
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+} from '@/lib/services/tasks';
+import type { Task } from '@/types';
 
-const QUERY_KEY = 'roles';
+const QUERY_KEY = 'tasks';
 
-export function useRoles() {
+export function useTasks() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: [QUERY_KEY],
-    queryFn: getRoles
+    queryFn: getTasks
   });
 
   const createMutation = useMutation({
-    mutationFn: createRole,
+    mutationFn: createTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Role> }) => updateRole(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Task> }) => updateTask(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteRole,
+    mutationFn: deleteTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
   });
 
-  const handleCreateRole = useCallback(async (data: Omit<Role, 'id'>) => {
+  const handleCreateTask = useCallback(async (data: Omit<Task, 'id'>) => {
     return createMutation.mutateAsync(data);
   }, [createMutation]);
 
-  const handleUpdateRole = useCallback(async (id: string, data: Partial<Role>) => {
+  const handleUpdateTask = useCallback(async (id: string, data: Partial<Task>) => {
     return updateMutation.mutateAsync({ id, data });
   }, [updateMutation]);
 
-  const handleDeleteRole = useCallback(async (id: string) => {
+  const handleDeleteTask = useCallback(async (id: string) => {
     return deleteMutation.mutateAsync(id);
   }, [deleteMutation]);
 
   return {
-    roles: query.data ?? [],
+    tasks: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
-    createRole: handleCreateRole,
-    updateRole: handleUpdateRole,
-    deleteRole: handleDeleteRole,
+    createTask: handleCreateTask,
+    updateTask: handleUpdateTask,
+    deleteTask: handleDeleteTask,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,

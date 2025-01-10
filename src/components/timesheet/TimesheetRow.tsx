@@ -14,7 +14,7 @@ interface TimesheetRowProps {
   row: {
     clientId: string;
     projectId: string;
-    roleId: string;
+    taskId: string;
   };
   weekKey: string;
   weekDays: Date[];
@@ -62,21 +62,21 @@ export const TimesheetRow = memo(function TimesheetRow({
       name: a.projectName
     }));
 
-  const roleAssignments = assignments
+  const taskAssignments = assignments
     .filter(a => a.clientId === row.clientId && a.projectId === row.projectId)
     .map(a => ({
       id: a.id,
-      roleId: a.roleId,
-      name: a.roleName
+      taskId: a.taskId,
+      name: a.taskName
     }));
 
   // Get row entries
-  const rowEntries = !row.clientId || !row.projectId || !row.roleId 
+  const rowEntries = !row.clientId || !row.projectId || !row.taskId 
     ? []
     : timeEntries.filter(entry =>
       entry.clientId === row.clientId &&
       entry.projectId === row.projectId &&
-      entry.roleId === row.roleId
+      entry.taskId === row.taskId
     );
 
   // Calculate row total
@@ -104,7 +104,7 @@ export const TimesheetRow = memo(function TimesheetRow({
           onChange={(e) => onUpdateRow(index, { 
             clientId: e.target.value,
             projectId: '',
-            roleId: ''
+            taskId: ''
           })}
           className={cn(
             "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
@@ -125,7 +125,7 @@ export const TimesheetRow = memo(function TimesheetRow({
           value={row.projectId}
           onChange={(e) => onUpdateRow(index, {
             projectId: e.target.value,
-            roleId: ''
+            taskId: ''
           })}
           disabled={!row.clientId || hasLockedEntries}
           className={cn(
@@ -144,9 +144,9 @@ export const TimesheetRow = memo(function TimesheetRow({
       </Td>
       <Td>
         <select
-          value={row.roleId}
+          value={row.taskId}
           onChange={(e) => onUpdateRow(index, {
-            roleId: e.target.value
+            taskId: e.target.value
           })}
           disabled={!row.projectId || hasLockedEntries}
           className={cn(
@@ -155,10 +155,10 @@ export const TimesheetRow = memo(function TimesheetRow({
           )}
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
-          <option value="">Select Role</option>
-          {roleAssignments.map(role => (
-            <option key={role.id} value={role.roleId}>
-              {role.name}
+          <option value="">Select Task</option>
+          {taskAssignments.map(task => (
+            <option key={task.id} value={task.taskId}>
+              {task.name}
             </option>
           ))}
         </select>
@@ -166,11 +166,11 @@ export const TimesheetRow = memo(function TimesheetRow({
       {weekDays.map(date => {
         const dateStr = format(date, 'yyyy-MM-dd');
         const entry = rowEntries.find(e => e.date === dateStr);
-        const cellKey = `${dateStr}-${row.projectId}-${row.roleId}`;
+        const cellKey = `${dateStr}-${row.projectId}-${row.taskId}`;
         const approvalQuery = approvalQueries[weekDays.indexOf(date)];
         const isLocked = approvalQuery.data && approvalQuery.data.length > 0;
         const approvalStatus = isLocked ? approvalQuery.data[0].status : undefined;
-        const isRowComplete = row.clientId && row.projectId && row.roleId;
+        const isRowComplete = row.clientId && row.projectId && row.taskId;
         
         return (
           <Td key={dateStr} className="text-center p-0">

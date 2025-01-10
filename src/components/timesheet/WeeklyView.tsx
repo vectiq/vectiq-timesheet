@@ -8,7 +8,7 @@ import { TimesheetRow } from './TimesheetRow';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
 import type { Project } from '@/types';
 
 interface WeeklyViewProps {
@@ -39,7 +39,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
   });
 
   const { clients } = useClients();
-  const { roles: allRoles } = useRoles();
+  const { tasks: allTasks } = useTasks();
 
   const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
@@ -57,16 +57,16 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
   const getProjectsForClient = (clientId: string) => 
     projects.filter(p => p.clientId === clientId);
 
-  const getRolesForProject = (projectId: string) => {
+  const getTasksForProject = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return [];
 
-    return project.roles.map(projectRole => ({
-      role: { 
-        id: projectRole.projectRoleId, 
-        name: allRoles.find(r => r.id === projectRole.projectRoleId)?.name || 'Unknown Role'
+    return project.tasks.map(projectTask => ({
+      task: { 
+        id: projectTask.projectTaskId, 
+        name: allTasks.find(r => r.id === projectTask.projectTaskId)?.name || 'Unknown Task'
       },
-      rates: projectRole
+      rates: projectTask
     }));
   };
 
@@ -84,7 +84,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
             <tr className="border-b border-gray-200">
               <Th className="w-[200px]">Client</Th>
               <Th className="w-[200px]">Project</Th>
-              <Th className="w-[200px]">Role</Th>
+              <Th className="w-[200px]">Task</Th>
               {weekDays.map(day => (
                 <Th key={day.toISOString()} className="w-[100px] text-center">
                   <div>{format(day, 'EEE')}</div>
@@ -108,7 +108,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 clients={clients}
                 userAssignments={effectiveUser?.projectAssignments || []}
                 getProjectsForClient={getProjectsForClient}
-                getRolesForProject={getRolesForProject}
+                getTasksForProject={getTasksForProject}
                 editingCell={editingCell}
                 onUpdateRow={updateRow}
                 onRemoveRow={removeRow}
