@@ -80,7 +80,7 @@ export function NotificationDropdown() {
   return (
     <Menu as="div" className="relative">
       <Menu.Button className="relative rounded-full p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <Bell className="h-5 w-5 text-gray-600" />
+        <Bell className="h-5 w-5 text-gray-600 bell-icon" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white ring-2 ring-white">
             {unreadCount}

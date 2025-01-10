@@ -9,11 +9,11 @@ interface FormFieldProps {
 
 export function FormField({ label, error, children }: FormFieldProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 form-field">
       <Label>{label}</Label>
       {children}
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600 animate-slide-up">{error}</p>
       )}
     </div>
   );
