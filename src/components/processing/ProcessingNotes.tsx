@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Sheet, SheetContent } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { cn } from '@/lib/utils/styles';
 import { useNotes } from '@/lib/hooks/useNotes';
 import { 
   Plus, 
@@ -10,7 +11,7 @@ import {
   Info, 
   Clock, 
   CheckCircle,
-  X,
+  X, Edit,
   StickyNote
 } from 'lucide-react';
 
@@ -25,6 +26,7 @@ interface ProcessingNotesProps {
 
 export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotesProps) {
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteType, setNoteType] = useState<'action' | 'info'>('info');
   const [noteText, setNoteText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,6 +78,17 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
       console.error('Failed to create note:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditNote = async (noteId: string, newText: string) => {
+    if (!newText.trim()) return;
+    
+    try {
+      await updateNote(noteId, { text: newText });
+      setEditingNoteId(null);
+    } catch (error) {
+      console.error('Failed to update note:', error);
     }
   };
 
@@ -200,56 +213,91 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
             {notes.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {notes.map(note => (
-                  <div 
-                    key={note.id}
-                    className="p-4 hover:bg-gray-50"
+                  <div
+                    key={note.id} 
+                    className={cn(
+                      "p-4 relative group transition-all duration-200",
+                      note.type === 'action' && note.status === 'completed' && "bg-green-50/50",
+                      "hover:bg-gray-50 hover:shadow-sm rounded-lg my-2 mx-2"
+                    )}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className={`mt-1 p-1.5 rounded-lg ${
-                          note.type === 'action' 
-                            ? 'bg-yellow-100' 
-                            : 'bg-blue-100'
-                        }`}>
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        "p-2 rounded-lg transition-colors shrink-0",
+                        note.type === 'action' 
+                          ? note.status === 'completed'
+                            ? 'bg-green-100'
+                            : 'bg-yellow-100'
+                          : 'bg-blue-100'
+                      )}>
                           {note.type === 'action' ? (
                             <AlertCircle className={`h-4 w-4 ${
                               note.status === 'completed' 
-                                ? 'text-green-600' 
+                                ? 'text-green-600'
                                 : 'text-yellow-600'
                             }`} />
                           ) : (
                             <Info className="h-4 w-4 text-blue-600" />
                           )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4">
+                          {editingNoteId === note.id ? (
+                            <textarea
+                              defaultValue={note.text}
+                              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none py-2"
+                              onBlur={(e) => handleEditNote(note.id, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleEditNote(note.id, e.currentTarget.value);
+                                } else if (e.key === 'Escape') {
+                                  setEditingNoteId(null);
+                                }
+                              }}
+                              autoFocus
+                            />
+                          ) : (
+                            <p className="text-gray-900 whitespace-pre-wrap break-words">{note.text}</p>
+                          )}
+                          {note.type === 'action' && (
+                            <Badge 
+                              variant={note.status === 'completed' ? 'success' : 'warning'}
+                              className="shrink-0 ml-2"
+                            >
+                              {note.status === 'completed' ? 'Completed' : 'Pending'}
+                            </Badge>
+                          )}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-gray-900">{note.text}</p>
-                            {note.type === 'action' && (
-                              <Badge 
-                                variant={note.status === 'completed' ? 'success' : 'warning'}
-                                className="text-xs"
-                              >
-                                {note.status === 'completed' ? 'Completed' : 'Pending'}
-                              </Badge>
-                            )}
+                        <div className="mt-3 flex items-center justify-between">
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {note.createdAt ? format(new Date(note.createdAt), 'MMM d, yyyy') : ''}
+                          </span>
                           </div>
-                          <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {note.createdAt ? format(new Date(note.createdAt), 'MMM d, yyyy') : ''}
-                            </span>
-                          </div>
-                          <div className="flex gap-2">
+                          
+                          {/* Action Buttons - Inline with date */}
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setEditingNoteId(note.id)}
+                              className="bg-white hover:bg-gray-50"
+                            >
+                              <Edit className="h-3.5 w-3.5 text-blue-600" />
+                            </Button>
                             {note.type === 'action' && (
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => handleToggleStatus(note.id, note.status || 'pending')}
+                                className="bg-white hover:bg-gray-50"
                               >
                                 {note.status === 'completed' ? (
-                                  <Clock className="h-4 w-4 text-yellow-600" />
+                                  <Clock className="h-3.5 w-3.5 text-yellow-600" />
                                 ) : (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                  <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                                 )}
                               </Button>
                             )}
@@ -257,8 +305,9 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
                               variant="secondary" 
                               size="sm"
                               onClick={() => handleDeleteNote(note.id)}
+                              className="bg-white hover:bg-gray-50"
                             >
-                              <X className="h-4 w-4" />
+                              <X className="h-3.5 w-3.5 text-red-500" />
                             </Button>
                           </div>
                         </div>
