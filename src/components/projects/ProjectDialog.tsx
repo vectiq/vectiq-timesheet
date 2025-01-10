@@ -1,10 +1,6 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/Dialog';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { ProjectForm } from './ProjectForm';
+import { FolderKanban } from 'lucide-react';
 import type { Project } from '@/types';
 
 interface ProjectDialogProps {
@@ -21,20 +17,19 @@ export function ProjectDialog({
   onSubmit,
 }: ProjectDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>
-            {project ? 'Edit Project' : 'New Project'}
-          </DialogTitle>
-        </DialogHeader>
-
+    <SlidePanel
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={project ? 'Edit Project' : 'New Project'}
+      icon={<FolderKanban className="h-5 w-5 text-indigo-500" />}
+    >
+      <div className="p-6">
         <ProjectForm
           project={project}
           onSubmit={onSubmit}
           onCancel={() => onOpenChange(false)}
         />
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlidePanel>
   );
 }

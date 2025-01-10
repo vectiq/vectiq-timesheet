@@ -1,14 +1,9 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/Dialog';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { roleSchema } from '@/lib/schemas/role';
+import { UserCircle } from 'lucide-react';
 import type { Role } from '@/types';
 
 interface RoleDialogProps {
@@ -50,14 +45,13 @@ export function RoleDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {role ? 'Edit Role' : 'New Role'}
-          </DialogTitle>
-        </DialogHeader>
-
+    <SlidePanel
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={role ? 'Edit Role' : 'New Role'}
+      icon={<UserCircle className="h-5 w-5 text-indigo-500" />}
+    >
+      <div className="p-6">
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <FormField label="Name">
             <input
@@ -91,7 +85,7 @@ export function RoleDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlidePanel>
   );
 }

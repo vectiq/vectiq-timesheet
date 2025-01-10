@@ -6,6 +6,8 @@ import { UsersTable } from '@/components/users/UsersTable';
 import { UserDialog } from '@/components/users/UserDialog';
 import { ProjectAssignmentDialog } from '@/components/users/ProjectAssignmentDialog';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { useConfirm } from '@/lib/hooks/useConfirm';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { User, ProjectAssignment } from '@/types';
 
 export default function Users() {
@@ -22,6 +24,7 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const { confirm, dialog, handleClose } = useConfirm();
 
   const handleOpenCreateDialog = () => {
     setSelectedUser(null);
@@ -34,12 +37,7 @@ export default function Users() {
     } else {
       await createUser(data);
     }
-    handleCloseDialog();
-  };
-
-  const handleCloseDialog = () => {
     setIsUserDialogOpen(false);
-    setSelectedUser(null);
   };
 
   const handleEdit = (user: User) => {
@@ -48,7 +46,14 @@ export default function Users() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    const confirmed = await confirm({
+      title: 'Delete User',
+      message: 'Are you sure you want to delete this user? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+    });
+
+    if (confirmed) {
       await deleteUser(id);
     }
   };
@@ -100,6 +105,18 @@ export default function Users() {
           onOpenChange={setIsAssignmentDialogOpen}
           user={selectedUser}
           onSubmit={handleProjectAssignment}
+        />
+      )}
+
+      {dialog && (
+        <ConfirmDialog
+          open={dialog.isOpen}
+          title={dialog.title}
+          message={dialog.message}
+          confirmText={dialog.confirmText}
+          cancelText={dialog.cancelText}
+          onConfirm={() => handleClose(true)}
+          onCancel={() => handleClose(false)}
         />
       )}
     </div>

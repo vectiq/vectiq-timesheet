@@ -4,7 +4,7 @@ import { ClientsTable } from '@/components/clients/ClientsTable';
 import { ClientDialog } from '@/components/clients/ClientDialog';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useConfirm } from '@/lib/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Client } from '@/types';
@@ -67,7 +67,6 @@ export default function Clients() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
         <Button onClick={handleOpenCreateDialog} disabled={isProcessing}>
-          {isProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           <Plus className="h-4 w-4 mr-2" />
           New Client
         </Button>

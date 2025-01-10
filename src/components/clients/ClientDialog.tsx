@@ -1,13 +1,9 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/Dialog';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Building2 } from 'lucide-react';
 import type { Client } from '@/types';
 
 interface ClientDialogProps {
@@ -34,7 +30,6 @@ export function ClientDialog({
     },
   });
 
-  // Reset form when client changes or dialog opens
   useEffect(() => {
     if (open) {
       reset(client || {
@@ -50,14 +45,13 @@ export function ClientDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {client ? 'Edit Client' : 'New Client'}
-          </DialogTitle>
-        </DialogHeader>
-
+    <SlidePanel
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={client ? 'Edit Client' : 'New Client'}
+      icon={<Building2 className="h-5 w-5 text-indigo-500" />}
+    >
+      <div className="p-6">
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <FormField label="Name">
             <input
@@ -87,7 +81,7 @@ export function ClientDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlidePanel>
   );
 }
