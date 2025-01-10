@@ -23,6 +23,7 @@ import { DateNavigation } from '@/components/timesheet/DateNavigation';
 
 export default function MonthlyProcessing() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     search: '',
     clientId: '',
@@ -96,7 +97,7 @@ export default function MonthlyProcessing() {
   }
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-[1800px] mx-auto">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Monthly Processing</h1>
@@ -115,28 +116,26 @@ export default function MonthlyProcessing() {
 
       <ProcessingSummary data={data} />
       
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8">
-          <Card>
-            {data && (
-              <>
-                <div className="p-6 border-b border-gray-200">
-                  <ProcessingFilters onFilterChange={setFilters} />
-                </div>
-                <ProcessingTable 
-                  projects={filteredProjects}
-                  onUpdateStatus={updateStatus}
-                  isUpdating={isUpdating}
-                />
-              </>
-            )}
-          </Card>
-        </div>
+      <Card>
+        {data && (
+          <>
+            <div className="p-6 border-b border-gray-200">
+              <ProcessingFilters onFilterChange={setFilters} />
+            </div>
+            <ProcessingTable 
+              projects={filteredProjects}
+              onUpdateStatus={updateStatus}
+              isUpdating={isUpdating}
+              onShowNotes={(projectId) => setSelectedProjectId(projectId)}
+            />
+          </>
+        )}
+      </Card>
 
-        <div className="col-span-4 space-y-6">
-          <ProcessingNotes />
-        </div>
-      </div>
+        <ProcessingNotes 
+          projectId={selectedProjectId}
+          onClose={() => setSelectedProjectId(null)}
+        />
     </div>
   );
 }

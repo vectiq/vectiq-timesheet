@@ -203,6 +203,17 @@ export interface TestDataOptions {
   };
 }
 
+export interface Note {
+  id: string;
+  projectId: string;
+  month: string;          // Format: YYYY-MM
+  type: 'action' | 'info';
+  text: string;
+  status?: 'pending' | 'completed';
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface ForecastEntry {
   id: string;
   month: string;          // Format: YYYY-MM
