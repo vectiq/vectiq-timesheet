@@ -45,13 +45,13 @@ import {
   
     const noteRef = await addDoc(collection(db, COLLECTION), {
       ...data,
-      createdAt: serverTimestamp()
+      createdAt: new Date().toISOString()
     });
   
     const newNote = {
       id: noteRef.id,
       ...data,
-      createdAt: serverTimestamp()
+      createdAt: new Date().toISOString()
     };
   
     console.log('Created note:', newNote);
