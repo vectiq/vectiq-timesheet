@@ -5,7 +5,6 @@ export interface ProjectRole {
   costRate: number;
   sellRate: number;
   billable: boolean;
-  projectId: string;
 }
 
 export interface Client {
@@ -79,6 +78,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  employeeType: 'employee' | 'contractor' | 'company';
+  salary?: number;
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
   hoursPerWeek: number;
@@ -168,6 +169,36 @@ export interface AdminStats {
   totalHoursThisMonth: number;
   totalBillableHours: number;
   averageUtilization: number;
+}
+
+export interface ProcessingProject {
+  id: string;
+  name: string;
+  clientId: string;
+  clientName: string;
+  totalHours: number;
+  timesheetStatus: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  invoiceStatus: 'not started' | 'draft' | 'sent';
+  priority: 'normal' | 'high';
+  hasSpecialHandling: boolean;
+  type: 'labor_hire' | 'team';
+  assignments: Array<{
+    userId: string;
+    userName: string;
+    roleId: string;
+    roleName: string;
+    hours: number
+  }>;
+}
+
+export interface ProcessingData {
+  projects: ProcessingProject[];
+  summary: {
+    totalProjects: number;
+    approvedTimesheets: number;
+    generatedInvoices: number;
+    urgentItems: number;
+  };
 }
 
 export interface TestDataOptions {

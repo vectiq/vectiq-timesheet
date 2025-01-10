@@ -83,6 +83,7 @@ export function ApprovalDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Submit Time for Approval</DialogTitle>
+          <DialogTitle>Submit Time for Approval</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
