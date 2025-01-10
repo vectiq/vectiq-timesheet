@@ -1,21 +1,16 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/Dialog';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { taskSchema } from '@/lib/schemas/task';
-import type { Task } from '@/types';
+import { UserCircle } from 'lucide-react';
+import type { ProjectTask } from '@/types';
 
 interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task?: Task | null;
-  onSubmit: (data: Task) => void;
+  task?: ProjectTask | null;
+  onSubmit: (data: ProjectTask) => void;
 }
 
 export function TaskDialog({
@@ -50,14 +45,13 @@ export function TaskDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {task ? 'Edit Task' : 'New Task'}
-          </DialogTitle>
-        </DialogHeader>
-
+    <SlidePanel
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={task ? 'Edit ProjectTask' : 'New ProjectTask'}
+      icon={<UserCircle className="h-5 w-5 text-indigo-500" />}
+    >
+      <div className="p-6">
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <FormField label="Name">
             <input
@@ -87,11 +81,11 @@ export function TaskDialog({
               Cancel
             </Button>
             <Button type="submit">
-              {task ? 'Update' : 'Create'} Task
+              {task ? 'Update' : 'Create'} ProjectTask
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlidePanel>
   );
 }

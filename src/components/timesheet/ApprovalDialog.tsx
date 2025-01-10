@@ -1,10 +1,5 @@
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/Dialog';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { useProjects } from '@/lib/hooks/useProjects';
@@ -13,6 +8,7 @@ import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useApprovals } from '@/lib/hooks/useApprovals';
 import { format } from 'date-fns';
+import { FileCheck } from 'lucide-react';
 import type { ProjectWithStatus } from '@/types';
 
 interface ApprovalDialogProps {
@@ -79,13 +75,14 @@ export function ApprovalDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Submit Time for Approval</DialogTitle>
-          <DialogTitle>Submit Time for Approval</DialogTitle>
-        </DialogHeader>
-
+    <SlidePanel
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="Submit Time for Approval"
+      subtitle={`${format(dateRange.start, 'MMM d, yyyy')} - ${format(dateRange.end, 'MMM d, yyyy')}`}
+      icon={<FileCheck className="h-5 w-5 text-indigo-500" />}
+    >
+      <div className="p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormField label="Project">
             <select
@@ -114,13 +111,6 @@ export function ApprovalDialog({
             </div>
           )}
 
-          <div className="pt-4 border-t space-y-2 text-sm text-gray-600">
-            <p>This will submit your timesheet for the period:</p>
-            <p className="font-medium">
-              {format(dateRange.start, 'MMM d, yyyy')} - {format(dateRange.end, 'MMM d, yyyy')}
-            </p>
-          </div>
-
           <div className="flex justify-end gap-3">
             <Button
               type="button"
@@ -134,7 +124,7 @@ export function ApprovalDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlidePanel>
   );
 }

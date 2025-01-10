@@ -2,22 +2,28 @@ import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import {
-  AlertCircle, 
-  ChevronDown,
-  ChevronRight,
-  Users,
-  ExternalLink
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, AlertTriangle } from 'lucide-react';
 import type { ProcessingProject } from '@/types';
+
+// Temporary mock data - will be replaced with real data later
+const MOCK_NOTES: Record<string, { total: number; pending: number }> = {
+  'project1': { total: 3, pending: 2 },
+  'project2': { total: 1, pending: 0 },
+};
 
 interface ProcessingTableProps {
   projects: ProcessingProject[];
   onUpdateStatus: (args: { projectId: string; status: 'not started' | 'draft' | 'sent' }) => Promise<void>;
   isUpdating: boolean;
+  onShowNotes: (projectId: string) => void;
 }
 
-export function ProcessingTable({ projects, onUpdateStatus, isUpdating }: ProcessingTableProps) {
+export function ProcessingTable({ 
+  projects, 
+  onUpdateStatus,
+  isUpdating,
+  onShowNotes
+}: ProcessingTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const toggleProject = (projectId: string) => {
@@ -111,6 +117,31 @@ export function ProcessingTable({ projects, onUpdateStatus, isUpdating }: Proces
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onShowNotes(project.id)}
+                        className="mr-2 relative"
+                      >
+                        {MOCK_NOTES[project.id]?.pending > 0 ? (
+                          <div className="relative">
+                            <StickyNote className="h-4 w-4 text-amber-600" />
+                            <div className="absolute -top-2 -right-2 h-3.5 w-3.5 rounded-full bg-amber-500 border-2 border-white" />
+                          </div>
+                        ) : MOCK_NOTES[project.id]?.total > 0 ? (
+                          <div className="relative">
+                            <StickyNote className="h-4 w-4 text-blue-600" />
+                            <div className="absolute -top-2 -right-2 h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-white" />
+                          </div>
+                        ) : (
+                          <StickyNote className="h-4 w-4" />
+                        )}
+                        {MOCK_NOTES[project.id]?.pending > 0 && (
+                          <span className="sr-only">
+                            {MOCK_NOTES[project.id].pending} pending actions
+                          </span>
+                        )}
+                      </Button>
                       <Button 
                         variant="secondary" 
                         size="sm"

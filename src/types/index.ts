@@ -5,6 +5,7 @@ export interface ProjectTask {
   costRate: number;
   sellRate: number;
   billable: boolean;
+  active: boolean;
 }
 
 export interface Client {
@@ -212,6 +213,17 @@ export interface TestDataOptions {
     rejected: number;
     withdrawn: number;
   };
+}
+
+export interface Note {
+  id: string;
+  projectId: string;
+  month: string;          // Format: YYYY-MM
+  type: 'action' | 'info';
+  text: string;
+  status?: 'pending' | 'completed';
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ForecastEntry {
