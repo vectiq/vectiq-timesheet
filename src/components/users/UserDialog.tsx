@@ -1,12 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { cn } from '@/lib/utils/styles';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/Dialog';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { DollarSign, UserIcon, Mail, Shield, Briefcase, Calculator, Link } from 'lucide-react';
@@ -75,19 +70,14 @@ export function UserDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <UserIcon className="h-5 w-5 text-indigo-500" />
-            {user ? 'Edit User' : 'New User'}
-          </DialogTitle>
-          {!user && (
-            <p className="mt-2 text-sm text-gray-500 bg-blue-50 p-3 rounded-md border border-blue-100">
-              A temporary password will be generated and a password reset email will be sent to the user.
-            </p>
-          )}
-        </DialogHeader>
+    <SlidePanel
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={user ? 'Edit User' : 'New User'}
+      subtitle={!user ? 'A temporary password will be generated and a password reset email will be sent.' : undefined}
+      icon={<UserIcon className="h-5 w-5 text-indigo-500" />}
+    >
+      <div className="p-6">
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
@@ -261,7 +251,7 @@ export function UserDialog({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChange(false)} 
             >
               Cancel
             </Button>
@@ -270,7 +260,7 @@ export function UserDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlidePanel>
   );
 }

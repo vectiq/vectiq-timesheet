@@ -30,13 +30,16 @@ export default function Users() {
 
   const handleSubmit = async (data: Omit<User, 'id'>) => {
     if (selectedUser) {
-      // Remove email and projectAssignments from update data
-      const { email, projectAssignments, ...updateData } = data;
-      await updateUser(selectedUser.id, updateData);
+      await updateUser(selectedUser.id, data);
     } else {
       await createUser(data);
     }
+    handleCloseDialog();
+  };
+
+  const handleCloseDialog = () => {
     setIsUserDialogOpen(false);
+    setSelectedUser(null);
   };
 
   const handleEdit = (user: User) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Sheet, SheetContent } from '@/components/ui/Sheet';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils/styles';
@@ -11,7 +11,7 @@ import {
   Info, 
   Clock, 
   CheckCircle,
-  X, Edit,
+  Edit,
   StickyNote
 } from 'lucide-react';
 
@@ -111,232 +111,199 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
   }, [projectId]);
 
   return (
-    <Sheet open={!!projectId} onOpenChange={() => onClose()}>
-      <SheetContent className="w-[600px] sm:max-w-[600px]">
-        <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between py-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <StickyNote className="h-5 w-5 text-gray-600" />
+    <SlidePanel
+      open={!!projectId}
+      onClose={onClose}
+      title={project?.name || 'Project Notes'}
+      subtitle={project?.clientName}
+      icon={<StickyNote className="h-5 w-5 text-gray-600" />}
+      headerAction={
+        <Button onClick={() => setIsAddingNote(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Note
+        </Button>
+      }
+      stats={[
+        { value: pendingActions.length, label: 'Pending', color: 'text-yellow-600' },
+        { value: actionNotes.filter(n => n.status === 'completed').length, label: 'Completed', color: 'text-green-600' },
+        { value: infoNotes.length, label: 'Info Notes', color: 'text-blue-600' }
+      ]}
+    >
+      {/* Notes List */}
+      <div className="flex-1">
+        {/* Add Note Form */}
+        {isAddingNote && (
+          <div className="p-4 border-b bg-gray-50">
+            <form onSubmit={handleAddNote} className="flex items-start gap-2">
+              <div className="flex-1 relative">
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder={noteType === 'action' ? 'What needs to be done?' : 'Add a note...'}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none py-2 pr-10 min-h-[80px]"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setNoteType(noteType === 'info' ? 'action' : 'info')}
+                  className="absolute right-2 top-2 p-1.5 rounded-md hover:bg-gray-100"
+                >
+                  {noteType === 'info' ? (
+                    <Info className="h-4 w-4 text-blue-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                  )}
+                </button>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {project?.name || 'Project Notes'}
-                </h2>
-                {project && (
-                  <p className="text-sm text-gray-500">{project.clientName}</p>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  type="submit"
+                  disabled={!noteText.trim()}
+                  className="p-2 text-green-600 hover:bg-green-50 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingNote(false);
+                    setNoteText('');
+                  }} 
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                >
+                  <span className="text-sm">Cancel</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {notes.length > 0 ? (
+          <div className="divide-y divide-gray-100">
+            {notes.map(note => (
+              <div
+                key={note.id} 
+                className={cn(
+                  "p-4 relative group transition-all duration-200",
+                  note.type === 'action' && note.status === 'completed' && "bg-green-50/50",
+                  "hover:bg-gray-50 hover:shadow-sm rounded-lg my-2 mx-2"
                 )}
-                <p className="text-sm text-gray-500">
-                  {actionNotes.length} actions • {infoNotes.length} notes
-                </p>
-              </div>
-            </div>
-            <Button onClick={() => setIsAddingNote(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Note
-            </Button>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-4 py-4 border-b">
-            <div className="text-center">
-              <div className="text-2xl font-semibold text-yellow-600">
-                {pendingActions.length}
-              </div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-semibold text-green-600">
-                {actionNotes.filter(n => n.status === 'completed').length}
-              </div>
-              <div className="text-sm text-gray-600">Completed</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-semibold text-blue-600">
-                {infoNotes.length}
-              </div>
-              <div className="text-sm text-gray-600">Info Notes</div>
-            </div>
-          </div>
-
-          {/* Notes List */}
-          <div className="flex-1 overflow-y-auto">
-            {/* Add Note Form */}
-            {isAddingNote && (
-              <div className="p-4 border-b bg-gray-50">
-                <form onSubmit={handleAddNote} className="flex items-start gap-2">
-                  <div className="flex-1 relative">
-                    <textarea
-                      value={noteText}
-                      onChange={(e) => setNoteText(e.target.value)}
-                      placeholder={noteType === 'action' ? 'What needs to be done?' : 'Add a note...'}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none py-2 pr-10 min-h-[80px]"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setNoteType(noteType === 'info' ? 'action' : 'info')}
-                      className="absolute right-2 top-2 p-1.5 rounded-md hover:bg-gray-100"
-                    >
-                      {noteType === 'info' ? (
-                        <Info className="h-4 w-4 text-blue-600" />
+              >
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    "p-2 rounded-lg transition-colors shrink-0",
+                    note.type === 'action' 
+                      ? note.status === 'completed'
+                        ? 'bg-green-100'
+                        : 'bg-yellow-100'
+                      : 'bg-blue-100'
+                  )}>
+                      {note.type === 'action' ? (
+                        <AlertCircle className={`h-4 w-4 ${
+                          note.status === 'completed' 
+                            ? 'text-green-600'
+                            : 'text-yellow-600'
+                        }`} />
                       ) : (
-                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <Info className="h-4 w-4 text-blue-600" />
                       )}
-                    </button>
                   </div>
-
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="submit"
-                      disabled={!noteText.trim()}
-                      className="p-2 text-green-600 hover:bg-green-50 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <CheckCircle className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAddingNote(false);
-                        setNoteText('');
-                      }}
-                      className="p-2 text-gray-400 hover:bg-gray-50 rounded-md"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {notes.length > 0 ? (
-              <div className="divide-y divide-gray-100">
-                {notes.map(note => (
-                  <div
-                    key={note.id} 
-                    className={cn(
-                      "p-4 relative group transition-all duration-200",
-                      note.type === 'action' && note.status === 'completed' && "bg-green-50/50",
-                      "hover:bg-gray-50 hover:shadow-sm rounded-lg my-2 mx-2"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "p-2 rounded-lg transition-colors shrink-0",
-                        note.type === 'action' 
-                          ? note.status === 'completed'
-                            ? 'bg-green-100'
-                            : 'bg-yellow-100'
-                          : 'bg-blue-100'
-                      )}>
-                          {note.type === 'action' ? (
-                            <AlertCircle className={`h-4 w-4 ${
-                              note.status === 'completed' 
-                                ? 'text-green-600'
-                                : 'text-yellow-600'
-                            }`} />
-                          ) : (
-                            <Info className="h-4 w-4 text-blue-600" />
-                          )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4">
+                      {editingNoteId === note.id ? (
+                        <textarea
+                          defaultValue={note.text}
+                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none py-2"
+                          onBlur={(e) => handleEditNote(note.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleEditNote(note.id, e.currentTarget.value);
+                            } else if (e.key === 'Escape') {
+                              setEditingNoteId(null);
+                            }
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <p className="text-gray-900 whitespace-pre-wrap break-words">{note.text}</p>
+                      )}
+                      {note.type === 'action' && (
+                        <Badge 
+                          variant={note.status === 'completed' ? 'success' : 'warning'}
+                          className="shrink-0 ml-2"
+                        >
+                          {note.status === 'completed' ? 'Completed' : 'Pending'}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {note.createdAt ? format(new Date(note.createdAt), 'MMM d, yyyy') : ''}
+                      </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-                          {editingNoteId === note.id ? (
-                            <textarea
-                              defaultValue={note.text}
-                              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none py-2"
-                              onBlur={(e) => handleEditNote(note.id, e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  handleEditNote(note.id, e.currentTarget.value);
-                                } else if (e.key === 'Escape') {
-                                  setEditingNoteId(null);
-                                }
-                              }}
-                              autoFocus
-                            />
-                          ) : (
-                            <p className="text-gray-900 whitespace-pre-wrap break-words">{note.text}</p>
-                          )}
-                          {note.type === 'action' && (
-                            <Badge 
-                              variant={note.status === 'completed' ? 'success' : 'warning'}
-                              className="shrink-0 ml-2"
-                            >
-                              {note.status === 'completed' ? 'Completed' : 'Pending'}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {note.createdAt ? format(new Date(note.createdAt), 'MMM d, yyyy') : ''}
-                          </span>
-                          </div>
-                          
-                          {/* Action Buttons - Inline with date */}
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setEditingNoteId(note.id)}
-                              className="bg-white hover:bg-gray-50"
-                            >
-                              <Edit className="h-3.5 w-3.5 text-blue-600" />
-                            </Button>
-                            {note.type === 'action' && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleToggleStatus(note.id, note.status || 'pending')}
-                                className="bg-white hover:bg-gray-50"
-                              >
-                                {note.status === 'completed' ? (
-                                  <Clock className="h-3.5 w-3.5 text-yellow-600" />
-                                ) : (
-                                  <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                                )}
-                              </Button>
+                      
+                      {/* Action Buttons - Inline with date */}
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setEditingNoteId(note.id)}
+                          className="bg-white hover:bg-gray-50"
+                        >
+                          <Edit className="h-3.5 w-3.5 text-blue-600" />
+                        </Button>
+                        {note.type === 'action' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleToggleStatus(note.id, note.status || 'pending')}
+                            className="bg-white hover:bg-gray-50"
+                          >
+                            {note.status === 'completed' ? (
+                              <Clock className="h-3.5 w-3.5 text-yellow-600" />
+                            ) : (
+                              <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                             )}
-                            <Button 
-                              variant="secondary" 
-                              size="sm"
-                              onClick={() => handleDeleteNote(note.id)}
-                              className="bg-white hover:bg-gray-50"
-                            >
-                              <X className="h-3.5 w-3.5 text-red-500" />
-                            </Button>
-                          </div>
-                        </div>
+                          </Button>
+                        )}
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="bg-white hover:bg-gray-50"
+                        >
+                          <span className="text-xs text-red-500">Delete</span>
+                        </Button>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <div className="p-3 bg-gray-100 rounded-full mb-4">
-                  <StickyNote className="h-6 w-6 text-gray-400" />
                 </div>
-                <h3 className="text-sm font-medium text-gray-900">No notes yet</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Get started by adding a note or action item
-                </p>
-                <Button 
-                  onClick={() => setIsAddingNote(true)}
-                  className="mt-4"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add First Note
-                </Button>
               </div>
-            )}
+            ))}
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <div className="p-3 bg-gray-100 rounded-full mb-4">
+              <StickyNote className="h-6 w-6 text-gray-400" />
+            </div>
+            <h3 className="text-sm font-medium text-gray-900">No notes yet</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Get started by adding a note or action item
+            </p>
+            <Button 
+              onClick={() => setIsAddingNote(true)}
+              className="mt-4"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Note
+            </Button>
+          </div>
+        )}
+      </div>
+    </SlidePanel>
   );
 }
