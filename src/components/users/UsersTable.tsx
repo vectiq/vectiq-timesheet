@@ -75,9 +75,9 @@ export function UsersTable({
                       <div key={assignment.id} className="flex items-center justify-between text-sm py-1">
                         <div className="flex-1 flex items-center gap-2">
                           <span className="text-gray-500 truncate">{client.name}</span>
-                          <span className="text-gray-400 shrink-0">•</span>
-                          <span className="font-medium truncate">{project.name}</span>
-                          <span className="text-gray-400 shrink-0">•</span>
+                          <span className="text-gray-400 shrink-0">-</span>
+                          <span className="font-gray-500 truncate">{project.name}</span>
+                          <span className="text-gray-400 shrink-0">-</span>
                           <span className="text-gray-500 truncate">{projectRole?.name}</span>
                         </div>
                         <Button

@@ -32,6 +32,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       requiresApproval: false,
       overtimeInclusive: true,
       roles: [],
+      xeroLeaveTypeId: '',
     },
   });
 
@@ -55,7 +56,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       approverEmail: data.approverEmail || '',
       requiresApproval: data.requiresApproval || false,
       overtimeInclusive: data.overtimeInclusive || false,
-      roles: data.roles || []
+      roles: data.roles || [],
+      xeroLeaveTypeId: data.xeroLeaveTypeId || '',
     };
     
     try {
@@ -167,6 +169,17 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             </div>
           </div>
         </div>
+
+        <FormField label="Xero Leave Type ID">
+          <input
+            {...register('xeroLeaveTypeId')}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            The Xero Leave Type ID is used to sync leave requests with Xero
+          </p>
+        </FormField>
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
