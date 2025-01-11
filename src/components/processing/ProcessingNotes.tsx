@@ -12,11 +12,14 @@ import {
   Clock, 
   CheckCircle,
   Edit,
-  StickyNote
+  StickyNote,
+  Pin,
+  PinOff
 } from 'lucide-react';
 
 interface ProcessingNotesProps {
   projectId: string | null;
+  date: Date;
   project?: {
     name: string;
     clientName: string;
@@ -24,12 +27,13 @@ interface ProcessingNotesProps {
   onClose: () => void;
 }
 
-export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotesProps) {
+export function ProcessingNotes({ projectId, project, date, onClose }: ProcessingNotesProps) {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteType, setNoteType] = useState<'action' | 'info'>('info');
   const [noteText, setNoteText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const month = format(date, 'yyyy-MM');
   
   const {
     notes,
@@ -40,7 +44,7 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
     error,
     isCreating,
     isDeleting
-  } = useNotes(projectId, new Date());
+  } = useNotes(projectId, date);
 
   // Log query state
   useEffect(() => {
@@ -66,7 +70,9 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
     try {
       await createNote({
         projectId: projectId!,
-        month: format(new Date(), 'yyyy-MM'),
+        month: month,
+        originalMonth: month,
+        isPinned: false,
         type: noteType,
         text: noteText,
         ...(noteType === 'action' && { status: 'pending' })
@@ -102,6 +108,23 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
     await updateNote(noteId, {
       status: currentStatus === 'pending' ? 'completed' : 'pending'
     });
+  };
+
+  const handleTogglePin = async (note: Note) => {
+    try {
+      if (note.isPinned) {
+        // If unpinning in a future month, keep the note in its original month
+        if (month > note.originalMonth) {
+          await updateNote(note.id, { isPinned: false, month: note.originalMonth });
+        } else {
+          await updateNote(note.id, { isPinned: false });
+        }
+      } else {
+        await updateNote(note.id, { isPinned: true });
+      }
+    } catch (error) {
+      console.error('Failed to toggle pin:', error);
+    }
   };
 
   // Reset form when project changes
@@ -239,15 +262,33 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
                       )}
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {note.createdAt ? format(new Date(note.createdAt), 'MMM d, yyyy') : ''}
+                        {note.createdAt ? format(new Date(note.createdAt), 'MMM d, yyyy') : ''} 
+                        {note.isPinned && (
+                          <span className="ml-2 text-indigo-600 font-medium">
+                            Pinned
+                          </span>
+                        )}
                       </span>
                       </div>
                       
                       {/* Action Buttons - Inline with date */}
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleTogglePin(note)}
+                          className="bg-white hover:bg-gray-50"
+                          title={note.isPinned ? "Unpin note" : "Pin note"}
+                        >
+                          {note.isPinned ? (
+                            <PinOff className="h-3.5 w-3.5 text-gray-500" />
+                          ) : (
+                            <Pin className="h-3.5 w-3.5 text-gray-500" />
+                          )}
+                        </Button>
                         <Button
                           variant="secondary"
                           size="sm"
