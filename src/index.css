@@ -298,31 +298,3 @@ tr {
 .bell-icon:hover {
   animation: bellRing 1s ease-in-out;
 }
-
-/* Note indicator animations */
-@keyframes pulseRing {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(249, 115, 22, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
-}
-
-.note-indicator {
-  @apply relative transition-all duration-300;
-}
-
-.note-indicator-action {
-  animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.note-indicator::after {
-  @apply absolute -top-1 -right-1 h-2 w-2 rounded-full transform scale-0 transition-transform duration-300;
-  content: '';
-}
-
-.note-indicator-info::after {
-  @apply bg-blue-500 scale-100;
-}
-
-.note-indicator-action::after {
-  @apply bg-amber-500 scale-100;
-}
