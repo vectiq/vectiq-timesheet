@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { FormField } from '@/components/ui/FormField';
 import { Card } from '@/components/ui/Card';
 import { useClients } from '@/lib/hooks/useClients';
 import { cn } from '@/lib/utils/styles';
@@ -103,12 +106,12 @@ export function ProcessingFilters({ onFilterChange }: ProcessingFiltersProps) {
         <div className="relative flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="Search projects or clients..."
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 block w-full h-11 text-base rounded-lg border border-gray-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 hover:border-gray-300 transition-colors"
+              className="pl-10 h-11 text-base"
             />
           </div>
         </div>
@@ -116,10 +119,9 @@ export function ProcessingFilters({ onFilterChange }: ProcessingFiltersProps) {
         {/* Quick Filters */}
         <div className="flex flex-wrap gap-3">
           <div className="relative min-w-[180px]">
-            <select
+            <Select
               value={clientId}
               onChange={(e) => handleClientChange(e.target.value)}
-              className="appearance-none w-full h-11 pl-4 pr-10 text-base rounded-lg border border-gray-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 hover:border-gray-300 transition-colors"
             >
               <option value="">All Clients</option>
               {clients.map(client => (
@@ -127,21 +129,20 @@ export function ProcessingFilters({ onFilterChange }: ProcessingFiltersProps) {
                   {client.name}
                 </option>
               ))}
-            </select>
+            </Select>
             <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-500 pointer-events-none" />
           </div>
 
           <div className="relative min-w-[160px]">
-            <select
+            <Select
               value={status}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="appearance-none w-full h-11 pl-4 pr-10 text-base rounded-lg border border-gray-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 hover:border-gray-300 transition-colors"
             >
               <option value="">All Statuses</option>
               <option value="not started">Not Started</option>
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
-            </select>
+            </Select>
             <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-500 pointer-events-none" />
           </div>
 
@@ -175,39 +176,29 @@ export function ProcessingFilters({ onFilterChange }: ProcessingFiltersProps) {
         <Card className="p-6 border border-gray-200 shadow-sm bg-white/50 backdrop-blur-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Priority
-              </label>
-              <div className="relative">
-                <select
+              <FormField label="Priority">
+                <Select
                   value={priority}
                   onChange={(e) => handlePriorityChange(e.target.value)}
-                  className="appearance-none w-full h-11 pl-4 pr-10 text-base rounded-lg border border-gray-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 hover:border-gray-300 transition-colors"
                 >
                   <option value="">All Priorities</option>
                   <option value="high">High</option>
                   <option value="normal">Normal</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-500 pointer-events-none" />
-              </div>
+                </Select>
+              </FormField>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Project Type
-              </label>
-              <div className="relative">
-                <select
+              <FormField label="Project Type">
+                <Select
                   value={type}
                   onChange={(e) => handleTypeChange(e.target.value)}
-                  className="appearance-none w-full h-11 pl-4 pr-10 text-base rounded-lg border border-gray-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 hover:border-gray-300 transition-colors"
                 >
                   <option value="">All Types</option>
                   <option value="labor_hire">Labor Hire</option>
                   <option value="team">Team Project</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-500 pointer-events-none" />
-              </div>
+                </Select>
+              </FormField>
             </div>
           </div>
         </Card>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils/styles';
+import { Input } from '@/components/ui/Input';
 import { Lock } from 'lucide-react';
 
 interface EditableTimeCellProps {
@@ -67,7 +68,7 @@ export function EditableTimeCell({
   };
 
   return isEditing ? (
-    <input
+    <Input
       ref={inputRef}
       aria-label="Time entry hours"
       type="text"
@@ -75,7 +76,7 @@ export function EditableTimeCell({
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-16 text-center rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+      className="w-16 text-center"
     />
   ) : (
     <div className="relative">

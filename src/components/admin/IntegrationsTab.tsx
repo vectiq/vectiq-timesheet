@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Input } from '@/components/ui/Input';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
 import { ExternalLink } from 'lucide-react';
 import type { XeroConfig } from '@/types';
@@ -90,40 +92,37 @@ export function IntegrationsTab({
 
           <div className="space-y-4">
             <FormField label="Client ID">
-              <input
+              <Input
                 type="text"
                 value={xeroConfig?.clientId || ''}
                 onChange={(e) => onUpdateXeroConfig({
                   ...xeroConfig,
                   clientId: e.target.value
                 })}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 placeholder="e.g., B98EF7DAF2BA4374B360D2946577C80A"
               />
             </FormField>
 
             <FormField label="Redirect URI">
-              <input
+              <Input
                 type="url"
                 value={xeroConfig?.redirectUri || ''}
                 onChange={(e) => onUpdateXeroConfig({
                   ...xeroConfig,
                   redirectUri: e.target.value
                 })}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 placeholder="e.g., https://us-central1-your-project.cloudfunctions.net/exchangeXeroCode"
               />
             </FormField>
 
             <FormField label="Tenant ID">
-              <input
+              <Input
                 type="url"
                 value={xeroConfig?.tenantId || ''}
                 onChange={(e) => onUpdateXeroConfig({
                   ...xeroConfig,
                   tenantId: e.target.value
                 })}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 placeholder="e.g., 4ff1e5cc-9835-40d5-bb18-09fdb118db9c"
               />
               <p className="mt-1 text-xs text-gray-500">
@@ -163,8 +162,7 @@ export function IntegrationsTab({
                     <div className="space-y-2">
                       {scopes.map(scope => (
                         <label key={scope.value} className="flex items-start gap-2">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={(xeroConfig?.scopes || []).includes(scope.value)}
                             onChange={(e) => {
                               const currentScopes = xeroConfig?.scopes || [];
@@ -176,7 +174,6 @@ export function IntegrationsTab({
                                 scopes: newScopes
                               });
                             }}
-                            className="h-4 w-4 mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <div>
                             <div className="text-sm font-mono text-gray-700">{scope.value}</div>

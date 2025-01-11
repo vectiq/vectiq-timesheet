@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Select } from '@/components/ui/Select';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
@@ -44,7 +45,7 @@ export function ApprovalDialog({
     selectedProjectData?.status === 'rejected'
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -72,7 +73,7 @@ export function ApprovalDialog({
       setError('Failed to submit timesheet for approval');
       console.error(error);
     }
-  };
+  }, [selectedProject, effectiveUser, projects, clients, timeEntries, dateRange, submitApproval, onOpenChange]);
 
   return (
     <SlidePanel
@@ -85,10 +86,9 @@ export function ApprovalDialog({
       <div className="p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormField label="Project">
-            <select
+            <Select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             >
               <option value="">Select Project</option>
@@ -102,7 +102,7 @@ export function ApprovalDialog({
                   {project.status !== 'unsubmitted' && project.status !== 'withdrawn' ? ` [${project.status}]` : ''}
                 </option>
               ))}
-            </select>
+            </Select>
           </FormField>
 
           {error && (

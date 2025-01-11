@@ -1,14 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
 import { navigationItems } from '@/lib/constants/navigation';
 import { useUsers } from '@/lib/hooks/useUsers';
+import { useMemo } from 'react';
 
 export function Sidebar() {
   const location = useLocation();
   const { currentUser } = useUsers();
 
   // Filter navigation items based on user role
-  const allowedItems = navigationItems.filter(item =>
-    item.roles.includes(currentUser?.role || 'user')
+  const allowedItems = useMemo(() => 
+    navigationItems.filter(item =>
+      item.roles.includes(currentUser?.role || 'user')
+    ),
+    [currentUser?.role]
   );
 
   return (

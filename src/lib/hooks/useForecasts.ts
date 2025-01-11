@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { subMonths, format } from 'date-fns';
 import {
   getForecastEntries,
   saveForecastEntry,
   updateForecastEntry,
 } from '@/lib/services/forecasts';
+import { useProjects } from './useProjects';
 import type { ForecastEntry } from '@/types';
 
 const QUERY_KEY = 'forecasts';
@@ -13,6 +14,7 @@ const QUERY_KEY = 'forecasts';
 export function useForecasts(month: string, includePrevious = false) {
   const queryClient = useQueryClient();
   const previousMonth = format(subMonths(new Date(month + '-01'), 1), 'yyyy-MM');
+  const { projects } = useProjects();
 
   const currentMonthQuery = useQuery({
     queryKey: [QUERY_KEY, month],
@@ -25,6 +27,23 @@ export function useForecasts(month: string, includePrevious = false) {
     enabled: includePrevious
   });
 
+  // Get all user assignments across projects
+  const userAssignments = useMemo(() => {
+    if (!projects) return [];
+    
+    return projects.flatMap(project => 
+      project.tasks.flatMap(task => 
+        task.userAssignments?.map(assignment => ({
+          userId: assignment.userId,
+          userName: assignment.userName,
+          projectId: project.id,
+          taskId: task.id,
+          projectName: project.name,
+          taskName: task.name
+        })) || []
+      )
+    );
+  }, [projects]);
   const createMutation = useMutation({
     mutationFn: saveForecastEntry,
     onSuccess: () => {

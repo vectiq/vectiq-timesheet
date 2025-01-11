@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { ProjectsTable } from '@/components/projects/ProjectsTable';
 import { ProjectDialog } from '@/components/projects/ProjectDialog';
+import { ProjectTasks } from '@/components/projects/ProjectTasks';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
 import { Plus } from 'lucide-react';
@@ -16,12 +17,15 @@ export default function Projects() {
     createProject, 
     updateProject, 
     deleteProject,
+    assignUserToTask,
+    removeUserFromTask,
     isCreating,
     isUpdating,
     isDeleting 
   } = useProjects();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
   const { confirm, dialog, handleClose } = useConfirm();
 
   const handleOpenCreateDialog = useCallback(() => {
@@ -56,6 +60,15 @@ export default function Projects() {
     }
   }, [confirm, deleteProject]);
 
+  const handleManageAssignments = useCallback((project: Project) => {
+    setSelectedProject(project);
+    setIsTasksDialogOpen(true);
+  }, []);
+
+  const handleUpdateProjectTasks = useCallback((updatedProject: Project) => {
+    updateProject(updatedProject);
+  }, [updateProject]);
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -77,6 +90,7 @@ export default function Projects() {
           projects={projects} 
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onManageAssignments={handleManageAssignments}
         />
       </div>
 
@@ -87,6 +101,15 @@ export default function Projects() {
         onSubmit={handleSubmit}
       />
       
+      <ProjectTasks
+        open={isTasksDialogOpen}
+        onOpenChange={setIsTasksDialogOpen}
+        project={selectedProject}
+        onAssignUser={assignUserToTask}
+        onRemoveUser={(projectId, taskId, assignmentId) => removeUserFromTask(projectId, taskId, assignmentId)}
+        onUpdateProject={handleUpdateProjectTasks}
+      />
+
       {dialog && (
         <ConfirmDialog
           open={dialog.isOpen}

@@ -6,6 +6,14 @@ export interface ProjectTask {
   sellRate: number;
   billable: boolean;
   active: boolean;
+  userAssignments: UserAssignment[];
+}
+
+export interface UserAssignment {
+  id: string;
+  userId: string;
+  userName: string;
+  assignedAt: string;
 }
 
 export interface Client {
@@ -89,18 +97,6 @@ export interface User {
   xeroEmployeeId?: string;
   createdAt: Date;
   updatedAt: Date;
-  projectAssignments: ProjectAssignment[];
-}
-
-export interface ProjectAssignment {
-  id: string;
-  userId: string;
-  projectId: string;
-  taskId: string;
-  clientId: string;
-  clientName: string;
-  projectName: string; 
-  taskName: string;
 }
 
 export interface ReportData {

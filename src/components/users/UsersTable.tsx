@@ -2,32 +2,38 @@ import { Edit, Trash2, UserPlus } from 'lucide-react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { formatDate } from '@/lib/utils/date';
-import { formatCurrency } from '@/lib/utils/currency';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useTasks } from '@/lib/hooks/useTasks';
-import { useClients } from '@/lib/hooks/useClients';
-import type { User, ProjectAssignment } from '@/types';
+import type { User } from '@/types';
+import { useMemo } from 'react';
 
 interface UsersTableProps {
   users: User[];
   onEdit: (user: User) => void;
   onDelete: (id: string) => void;
-  onAssignProject: (user: User) => void;
-  onRemoveAssignment: (userId: string, assignmentId: string) => void;
 }
 
 export function UsersTable({ 
   users, 
   onEdit, 
   onDelete,
-  onAssignProject,
-  onRemoveAssignment,
 }: UsersTableProps) {
-  const { projects } = useProjects();
-  const { tasks } = useTasks();
-  const { clients } = useClients();
+  const { projects, isLoading: isLoadingProjects } = useProjects();
 
+  // Get all assignments for a user across all projects
+  const getUserAssignments = useMemo(() => (userId: string) => {
+    if (isLoadingProjects || !projects) return [];
+    
+    return projects.flatMap(project => 
+      project.tasks.flatMap(task => 
+        task.userAssignments
+          ?.filter(assignment => assignment.userId === userId)
+          .map(assignment => ({
+            projectName: project.name,
+            taskName: task.name
+          })) || []
+      )
+    );
+  }, [projects, isLoadingProjects]);
   return (
     <Table>
       <TableHeader>
@@ -43,7 +49,7 @@ export function UsersTable({
       </TableHeader>
       <TableBody>
         {users.map((user) => {
-          const userAssignments = user.projectAssignments || [];
+          const assignments = getUserAssignments(user.id);
 
           return (
             <tr key={user.id}>
@@ -64,34 +70,16 @@ export function UsersTable({
               </Td>
               <Td>
                 <div className="space-y-2">
-                  {userAssignments?.map(assignment => {
-                    const project = projects.find(p => p.id === assignment.projectId);
-                    const client = clients.find(c => c.id === assignment.clientId);
-                    const projectTask = project?.tasks?.find(r => r.id === assignment.taskId);
-                    
-                    if (!project || !projectTask || !client) return null;
-                    
+                  {assignments.map((assignment, index) => {
                     return (
-                      <div key={assignment.id} className="flex items-center justify-between text-sm py-1">
-                        <div className="flex-1 flex items-center gap-2">
-                          <span className="text-gray-500 truncate">{client.name}</span>
-                          <span className="text-gray-400 shrink-0">-</span>
-                          <span className="font-gray-500 truncate">{project.name}</span>
-                          <span className="text-gray-400 shrink-0">-</span>
-                          <span className="text-gray-500 truncate">{projectTask?.name}</span>
-                        </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => onRemoveAssignment(user.id, assignment.id)}
-                          className="ml-2 shrink-0"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                      <div key={index} className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-500">{assignment.projectName}</span>
+                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-500">{assignment.taskName}</span>
                       </div>
                     );
                   })}
-                  {userAssignments.length === 0 && (
+                  {assignments.length === 0 && (
                     <div className="text-sm text-gray-500">
                       No project assignments
                     </div>
@@ -100,13 +88,6 @@ export function UsersTable({
               </Td>
               <Td className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onAssignProject(user)}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
                   <Button variant="secondary" size="sm" onClick={() => onEdit(user)}>
                     <Edit className="h-4 w-4" />
                   </Button>

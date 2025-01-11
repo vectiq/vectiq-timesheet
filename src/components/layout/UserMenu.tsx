@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -9,14 +9,14 @@ export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { currentUser } = useUsers();
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await signOut(auth);
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  };
+  }, [navigate]);
 
   return (
     <div className="relative">

@@ -3,14 +3,25 @@ import { Menu } from 'lucide-react';
 import { navigationItems } from '@/lib/constants/navigation';
 import { Link, useLocation } from 'react-router-dom';
 import { useUsers } from '@/lib/hooks/useUsers';
+import { useMemo } from 'react';
 
 export function MobileNav() {
   const location = useLocation();
   const { currentUser } = useUsers();
 
+  const handleLinkClick = () => {
+    const sheetTrigger = document.querySelector('[data-state="open"]');
+    if (sheetTrigger) {
+      (sheetTrigger as HTMLButtonElement).click();
+    }
+  };
+
   // Filter navigation items based on user role
-  const allowedItems = navigationItems.filter(item =>
-    item.roles.includes(currentUser?.role || 'user')
+  const allowedItems = useMemo(() => 
+    navigationItems.filter(item =>
+      item.roles.includes(currentUser?.role || 'user')
+    ),
+    [currentUser?.role]
   );
 
   return (
@@ -24,18 +35,18 @@ export function MobileNav() {
           <Menu className="h-6 w-6" aria-hidden="true" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72">
-        <div className="flex h-16 shrink-0 items-center">
+      <SheetContent side="left" className="w-72" title="Navigation Menu">
+        <div className="flex h-12 shrink-0 items-center">
           <div className="flex items-center gap-3">
             <img
-              className="h-8 w-auto"
+              className="h-6 w-auto"
               src="/logo.svg"
               alt="Company Logo"
             />
           </div>
         </div>
         <nav className="flex flex-1 flex-col">
-          <ul role="list" className="flex flex-1 flex-col gap-y-7">
+          <ul role="list" className="flex flex-1 flex-col gap-y-1 py-2">
             {allowedItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -46,14 +57,16 @@ export function MobileNav() {
                     to={item.href}
                     className={`
                       group flex gap-x-3 rounded-md p-2 text-sm leading-6
+                      transition-colors duration-150
                       ${isActive
                         ? 'bg-gray-50 text-indigo-600'
                         : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
                       }
                     `}
+                    onClick={handleLinkClick}
                   >
                     <Icon
-                      className={`h-6 w-6 shrink-0 ${
+                      className={`h-5 w-5 shrink-0 ${
                         isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600'
                       }`}
                     />

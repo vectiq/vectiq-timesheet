@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState, useEffect } from 'react';
-import { updateProfile as updateFirebaseProfile, updateEmail, sendPasswordResetEmail, onAuthStateChanged } from 'firebase/auth';
-import { getUsers, getCurrentUser, createUser, updateUser, deleteUser, createProjectAssignment, deleteProjectAssignment } from '@/lib/services/users';
+import { updateProfile as updateFirebaseProfile, updateEmail, sendPasswordResetEmail } from 'firebase/auth';
+import { getUsers, getCurrentUser, createUser, updateUser, deleteUser } from '@/lib/services/users';
 import { auth } from '@/lib/firebase';
-import type { User, ProjectAssignment } from '@/types';
+import type { User } from '@/types';
 
 const USERS_KEY = 'users';
 const CURRENT_USER_KEY = 'currentUser';
@@ -12,7 +12,6 @@ export function useUsers() {
   const queryClient = useQueryClient();
   const [effectiveUser, setEffectiveUser] = useState<User | null>(null);
 
-  // Only set effective user initially if not already set
   const usersQuery = useQuery({
     queryKey: [USERS_KEY],
     queryFn: getUsers,
@@ -24,9 +23,9 @@ export function useUsers() {
     queryFn: getCurrentUser
   });
 
-  // Reset effective user when current user changes
   useEffect(() => {
-    if (!effectiveUser && currentUserQuery.data) {
+    // Always set effective user to current user initially
+    if (currentUserQuery.data && !effectiveUser) {
       setEffectiveUser(currentUserQuery.data);
     }
   }, [currentUserQuery.data]);
@@ -34,6 +33,8 @@ export function useUsers() {
   const handleSetEffectiveUser = useCallback((user: User) => {
     if (currentUserQuery.data?.role === 'admin') {
       setEffectiveUser(user);
+      // Invalidate time entries when switching users
+      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
     }
   }, [currentUserQuery.data?.role]);
 
@@ -59,21 +60,6 @@ export function useUsers() {
 
   const deleteUserMutation = useMutation({
     mutationFn: deleteUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [USERS_KEY] });
-    }
-  });
-
-  const createAssignmentMutation = useMutation({
-    mutationFn: (data: Omit<ProjectAssignment, 'id'>) => createProjectAssignment(data.userId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [USERS_KEY] });
-    }
-  });
-
-  const deleteAssignmentMutation = useMutation({
-    mutationFn: ({ userId, assignmentId }: { userId: string; assignmentId: string }) => 
-      deleteProjectAssignment(userId, assignmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [USERS_KEY] });
     }
@@ -116,13 +102,9 @@ export function useUsers() {
     createUser: handleCreateUser,
     updateUser: handleUpdateUser,
     deleteUser: handleDeleteUser,
-    assignToProject: createAssignmentMutation.mutateAsync,
-    removeFromProject: deleteAssignmentMutation.mutateAsync,
     isCreating: createUserMutation.isPending,
     isUpdating: updateUserMutation.isPending,
     isDeleting: deleteUserMutation.isPending,
-    isAssigning: createAssignmentMutation.isPending,
-    isRemoving: deleteAssignmentMutation.isPending,
     sendPasswordReset,
   };
 }

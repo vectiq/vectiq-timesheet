@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { 
   getApprovalsForDate,
   submitTimesheetApproval, 
@@ -7,6 +8,7 @@ import {
   getApprovals,
   getApprovalStatus
 } from '@/lib/services/approvals';
+import { useProjects } from './useProjects';
 import { useUsers } from './useUsers';
 import type { Project, Client, TimeEntry, Approval } from '@/types';
 
@@ -32,6 +34,17 @@ interface ApprovalRequest {
 export function useApprovals() {
   const queryClient = useQueryClient();
   const { effectiveUser } = useUsers();
+  const { projects } = useProjects();
+
+  // Check if user is assigned to project task
+  const isUserAssignedToProject = useCallback((userId: string, projectId: string) => {
+    const project = projects?.find(p => p.id === projectId);
+    if (!project) return false;
+    
+    return project.tasks.some(task => 
+      task.userAssignments?.some(a => a.userId === userId)
+    );
+  }, [projects]);
 
   const approvalsQuery = useQuery({
     queryKey: [QUERY_KEYS.approvals],
@@ -46,7 +59,7 @@ export function useApprovals() {
   ) => useQuery({
     queryKey: QUERY_KEYS.status(projectId, userId, startDate, endDate),
     queryFn: () => getApprovalStatus(projectId, userId || effectiveUser?.id || '', startDate, endDate),
-    enabled: !!projectId && (!!userId || !!effectiveUser)
+    enabled: !!projectId && (!!userId || !!effectiveUser) && isUserAssignedToProject(userId || effectiveUser?.id || '', projectId)
   });
 
   const useApprovalsForDate = (date: string, userId: string | undefined, projectId: string) => useQuery({

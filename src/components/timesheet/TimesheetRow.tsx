@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils/styles';
 import { X, Lock } from 'lucide-react';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
 import { useUsers } from '@/lib/hooks/useUsers';
+import { useProjects } from '@/lib/hooks/useProjects';
+import { useClients } from '@/lib/hooks/useClients';
 import type { TimeEntry } from '@/types';
 
 interface TimesheetRowProps {
@@ -41,34 +43,49 @@ export const TimesheetRow = memo(function TimesheetRow({
   onEndEdit,
 }: TimesheetRowProps) {
   const { effectiveUser } = useUsers();
+  const { projects } = useProjects();
+  const { clients } = useClients();
   const { useApprovalsForDate } = useApprovals();
 
-  // Get assignments for dropdowns
-  const assignments = effectiveUser?.projectAssignments || [];
-  const clientAssignments = Array.from(
-    new Map(
-      assignments.map(a => [
-        a.clientId,
-        { id: a.clientId, name: a.clientName }
-      ])
-    ).values()
-  );
+  // Get available clients and projects based on user assignments
+  const availableClients = useMemo(() => {
+    if (!effectiveUser || !projects) return [];
+    
+    // Get unique client IDs from projects where user is assigned to any task
+    const clientIds = new Set(
+      projects
+        .filter(project => 
+          project.tasks.some(task => 
+            task.userAssignments?.some(a => a.userId === effectiveUser.id)
+          )
+        )
+        .map(p => p.clientId)
+    );
+    
+    return clients.filter(client => clientIds.has(client.id));
+  }, [effectiveUser, projects, clients]);
   
-  const projectAssignments = assignments
-    .filter(a => a.clientId === row.clientId)
-    .map(a => ({
-      id: a.id,
-      projectId: a.projectId,
-      name: a.projectName
-    }));
+  const availableProjects = useMemo(() => {
+    if (!row.clientId || !effectiveUser) return [];
+    
+    return projects.filter(project => 
+      project.clientId === row.clientId &&
+      project.tasks.some(task => 
+        task.userAssignments?.some(a => a.userId === effectiveUser.id)
+      )
+    );
+  }, [row.clientId, effectiveUser, projects]);
 
-  const taskAssignments = assignments
-    .filter(a => a.clientId === row.clientId && a.projectId === row.projectId)
-    .map(a => ({
-      id: a.id,
-      taskId: a.taskId,
-      name: a.taskName
-    }));
+  const availableTasks = useMemo(() => {
+    if (!row.projectId || !effectiveUser) return [];
+    
+    const project = projects.find(p => p.id === row.projectId);
+    if (!project) return [];
+    
+    return project.tasks.filter(task =>
+      task.userAssignments?.some(a => a.userId === effectiveUser.id)
+    );
+  }, [row.projectId, effectiveUser, projects]);
 
   // Get row entries
   const rowEntries = !row.clientId || !row.projectId || !row.taskId 
@@ -113,7 +130,7 @@ export const TimesheetRow = memo(function TimesheetRow({
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Client</option>
-          {clientAssignments.map(client => (
+          {availableClients.map(client => (
             <option key={client.id} value={client.id}>
               {client.name}
             </option>
@@ -135,8 +152,8 @@ export const TimesheetRow = memo(function TimesheetRow({
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Project</option>
-          {projectAssignments.map(project => (
-            <option key={project.id} value={project.projectId}>
+          {availableProjects.map(project => (
+            <option key={project.id} value={project.id}>
               {project.name}
             </option>
           ))}
@@ -156,8 +173,8 @@ export const TimesheetRow = memo(function TimesheetRow({
           title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
           <option value="">Select Task</option>
-          {taskAssignments.map(task => (
-            <option key={task.id} value={task.taskId}>
+          {availableTasks.map(task => (
+            <option key={task.id} value={task.id}>
               {task.name}
             </option>
           ))}

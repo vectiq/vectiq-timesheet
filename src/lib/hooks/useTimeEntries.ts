@@ -7,6 +7,7 @@ import {
   updateTimeEntry,
   deleteTimeEntry,
 } from '@/lib/services/timeEntries';
+import { useProjects } from './useProjects';
 import { useUsers } from './useUsers';
 import type { TimeEntry } from '@/types';
 
@@ -31,21 +32,43 @@ interface UseTimeEntriesOptions {
 }
 
 export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}) {
-  const { effectiveUser } = useUsers();
-  const effectiveUserId = userId || effectiveUser?.id;
   const queryClient = useQueryClient();
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
+  const { projects } = useProjects();
+  const { effectiveUser } = useUsers();
+  const effectiveUserId = userId || effectiveUser?.id;
 
   // Reset manual rows when effective user changes
   useEffect(() => {
     setManualRows({});
+    // Also invalidate time entries query when user changes
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
   }, [effectiveUserId]);
 
   // Get current week key
   const weekKey = dateRange 
     ? format(dateRange.start, 'yyyy-MM-dd')
     : '';
+  // Get available projects and tasks for the user
+  const availableAssignments = useMemo(() => {
+    if (!effectiveUserId || !projects) return [];
+    
+    return projects.flatMap(project => 
+      project.tasks.flatMap(task => {
+        const assignment = task.userAssignments?.find(a => a.userId === effectiveUserId);
+        if (!assignment) return [];
+        
+        return [{
+          clientId: project.clientId,
+          projectId: project.id,
+          taskId: task.id,
+          projectName: project.name,
+          taskName: task.name
+        }];
+      })
+    );
+  }, [effectiveUserId, projects]);
 
   const createMutation = useMutation({
     mutationFn: createTimeEntry,
@@ -144,12 +167,11 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
 
   // Combine automatic and manual rows
   const rows = useMemo(() => {
-    // Get unique rows from existing time entries
     const uniqueRowKeys = new Set();
     const allRows: TimesheetRow[] = [];
     const currentWeekManualRows = manualRows[weekKey] || [];
     
-    // Add rows from time entries
+    // Only add rows from existing time entries
     timeEntries.forEach(entry => {
       const rowKey = `${entry.clientId}-${entry.projectId}-${entry.taskId}`;
       if (!uniqueRowKeys.has(rowKey)) {
@@ -162,20 +184,9 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
       }
     });
     
-    // Add manual rows that don't already exist
+    // Add manually added rows
     currentWeekManualRows.forEach(row => {
-      const rowKey = `${row.clientId}-${row.projectId}-${row.taskId}`;
-      if (!uniqueRowKeys.has(rowKey) && (row.clientId || row.projectId || row.taskId)) {
-        uniqueRowKeys.add(rowKey);
-        allRows.push(row);
-      }
-    });
-
-    // Add empty manual rows at the end
-    currentWeekManualRows.forEach(row => {
-      if (!row.clientId && !row.projectId && !row.taskId) {
-        allRows.push(row);
-      }
+      allRows.push(row);
     });
 
     return allRows;

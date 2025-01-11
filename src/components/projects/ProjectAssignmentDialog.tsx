@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Checkbox } from '@/components/ui/Checkbox';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useTasks } from '@/lib/hooks/useTasks';
 import { UserPlus, X, Edit2, Users, Plus } from 'lucide-react';
 import type { Project, ProjectTask } from '@/types';
 
-interface ProjectTasksProps {
+interface ProjectAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project: Project | null;
@@ -19,17 +16,16 @@ interface ProjectTasksProps {
   onUpdateProject: (project: Project) => void;
 }
 
-export function ProjectTasks({
+export function ProjectAssignmentDialog({
   open,
   onOpenChange,
   project,
   onAssignUser,
   onRemoveUser,
   onUpdateProject
-}: ProjectTasksProps) {
+}: ProjectAssignmentDialogProps) {
   const { users } = useUsers();
   const { tasks: allTasks } = useTasks();
-  const [localProject, setLocalProject] = useState<Project | null>(project);
   const [selectedTask, setSelectedTask] = useState('');
   const [selectedUser, setSelectedUser] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -40,55 +36,24 @@ export function ProjectTasks({
     billable: false
   });
 
-  // Update local state when project changes
-  useEffect(() => {
-    setLocalProject(project);
-  }, [project]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTask || !selectedUser || !localProject) return;
+    if (!selectedTask || !selectedUser || !project) return;
 
     const user = users.find(u => u.id === selectedUser);
     if (!user) return;
 
     await onAssignUser(selectedTask, user.id, user.name);
-    
-    // Update local state after assignment
-    setLocalProject(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        tasks: prev.tasks.map(task => {
-          if (task.id === selectedTask) {
-            return {
-              ...task,
-              userAssignments: [
-                ...(task.userAssignments || []),
-                {
-                  id: crypto.randomUUID(),
-                  userId: user.id,
-                  userName: user.name,
-                  assignedAt: new Date().toISOString()
-                }
-              ]
-            };
-          }
-          return task;
-        })
-      };
-    });
-
     setSelectedUser(''); // Reset user selection after assignment
   };
 
   const handleAddTask = () => {
-    if (!localProject) return;
+    if (!project) return;
 
     const newTask: ProjectTask = {
       id: crypto.randomUUID(),
       name: newTaskData.name,
-      projectId: localProject.id,
+      projectId: project.id,
       costRate: newTaskData.costRate,
       sellRate: newTaskData.sellRate,
       billable: newTaskData.billable,
@@ -96,11 +61,10 @@ export function ProjectTasks({
     };
 
     const updatedProject = {
-      ...localProject,
-      tasks: [...localProject.tasks, newTask]
+      ...project,
+      tasks: [...project.tasks, newTask]
     };
 
-    setLocalProject(updatedProject);
     onUpdateProject(updatedProject);
     setIsAddingTask(false);
     setNewTaskData({
@@ -112,46 +76,24 @@ export function ProjectTasks({
   };
 
   const handleRemoveTask = (taskId: string) => {
-    if (!localProject) return;
+    if (!project) return;
 
     const updatedProject = {
-      ...localProject,
-      tasks: localProject.tasks.filter(t => t.id !== taskId)
+      ...project,
+      tasks: project.tasks.filter(t => t.id !== taskId)
     };
 
-    setLocalProject(updatedProject);
     onUpdateProject(updatedProject);
   };
 
-  const handleRemoveUserFromTask = async (projectId: string, taskId: string, assignmentId: string) => {
-    await onRemoveUser(projectId, taskId, assignmentId);
-    
-    // Update local state after removal
-    setLocalProject(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        tasks: prev.tasks.map(task => {
-          if (task.id === taskId) {
-            return {
-              ...task,
-              userAssignments: task.userAssignments?.filter(a => a.id !== assignmentId) || []
-            };
-          }
-          return task;
-        })
-      };
-    });
-  };
-
-  if (!localProject) return null;
+  if (!project) return null;
 
   return (
     <SlidePanel
       open={open}
       onClose={() => onOpenChange(false)}
       title="Manage Project Tasks & Assignments"
-      subtitle={localProject.name}
+      subtitle={project.name}
       icon={<Users className="h-5 w-5 text-indigo-500" />}
     >
       <div className="divide-y divide-gray-200">
@@ -172,39 +114,46 @@ export function ProjectTasks({
           {isAddingTask && (
             <div className="bg-gray-50 p-4 rounded-lg space-y-4">
               <FormField label="Task Name">
-                <Input
+                <input
                   type="text"
                   value={newTaskData.name}
                   onChange={(e) => setNewTaskData(prev => ({ ...prev, name: e.target.value }))}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   placeholder="e.g., Senior Developer"
                 />
               </FormField>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Cost Rate">
-                  <Input
+                  <input
                     type="number"
                     step="0.01"
                     value={newTaskData.costRate}
                     onChange={(e) => setNewTaskData(prev => ({ ...prev, costRate: parseFloat(e.target.value) || 0 }))}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </FormField>
 
                 <FormField label="Sell Rate">
-                  <Input
+                  <input
                     type="number"
                     step="0.01"
                     value={newTaskData.sellRate}
                     onChange={(e) => setNewTaskData(prev => ({ ...prev, sellRate: parseFloat(e.target.value) || 0 }))}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </FormField>
               </div>
 
-              <Checkbox
-                checked={newTaskData.billable}
-                onChange={(e) => setNewTaskData(prev => ({ ...prev, billable: e.target.checked }))}
-                label="Billable"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={newTaskData.billable}
+                  onChange={(e) => setNewTaskData(prev => ({ ...prev, billable: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-600">Billable</span>
+              </div>
 
               <div className="flex justify-end gap-2">
                 <Button
@@ -227,7 +176,7 @@ export function ProjectTasks({
 
           {/* Task List */}
           <div className="space-y-4">
-            {localProject.tasks.map(task => (
+            {project.tasks.map(task => (
               <div 
                 key={task.id} 
                 className={`p-4 rounded-lg border ${
@@ -304,7 +253,7 @@ export function ProjectTasks({
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => handleRemoveUserFromTask(localProject.id, task.id, assignment.id)}
+                          onClick={() => onRemoveUser(project.id, task.id, assignment.id)}
                           className="p-1 hover:text-red-500"
                         >
                           <X className="h-4 w-4" />

@@ -1,13 +1,11 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/Dialog';
+import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { CalendarDays } from 'lucide-react';
 import type { Leave } from '@/types';
 
 interface LeaveDialogProps {
@@ -26,6 +24,7 @@ export function LeaveDialog({
   const {
     register,
     handleSubmit,
+    setValue,
     reset,
     formState: { errors },
   } = useForm({
@@ -40,13 +39,27 @@ export function LeaveDialog({
 
   useEffect(() => {
     if (open) {
-      reset(leave || {
+      const defaultValues = {
         title: '',
         startDate: '',
         endDate: '',
         leaveTypeId: '',
         description: '',
-      });
+      };
+
+      if (leave) {
+        // Format dates to YYYY-MM-DD for input[type="date"]
+        const formattedStartDate = leave.startDate.split('T')[0];
+        const formattedEndDate = leave.endDate.split('T')[0];
+        
+        reset({
+          ...leave,
+          startDate: formattedStartDate,
+          endDate: formattedEndDate
+        });
+      } else {
+        reset(defaultValues);
+      }
     }
   }, [open, leave, reset]);
 
@@ -56,20 +69,19 @@ export function LeaveDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {leave ? 'Edit Leave Request' : 'New Leave Request'}
-          </DialogTitle>
-        </DialogHeader>
-
+    <SlidePanel
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={leave ? 'Edit Leave Request' : 'New Leave Request'}
+      icon={<CalendarDays className="h-5 w-5 text-indigo-500" />}
+    >
+      <div className="p-6">
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <FormField label="Title">
-            <input
+            <Input
               {...register('title', { required: 'Title is required' })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="e.g., Annual Leave"
+              error={!!errors.title}
             />
             {errors.title && (
               <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
@@ -77,10 +89,10 @@ export function LeaveDialog({
           </FormField>
 
           <FormField label="Start Date">
-            <input
+            <Input
               type="date"
               {...register('startDate', { required: 'Start date is required' })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              error={!!errors.startDate}
             />
             {errors.startDate && (
               <p className="mt-1 text-sm text-red-600">{errors.startDate.message}</p>
@@ -88,10 +100,10 @@ export function LeaveDialog({
           </FormField>
 
           <FormField label="End Date">
-            <input
+            <Input
               type="date"
               {...register('endDate', { required: 'End date is required' })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              error={!!errors.endDate}
             />
             {errors.endDate && (
               <p className="mt-1 text-sm text-red-600">{errors.endDate.message}</p>
@@ -99,15 +111,15 @@ export function LeaveDialog({
           </FormField>
 
           <FormField label="Leave Type">
-            <select
+            <Select
               {...register('leaveTypeId', { required: 'Leave type is required' })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              error={!!errors.leaveTypeId}
             >
               <option value="">Select Leave Type</option>
               <option value="ANNUAL">Annual Leave</option>
               <option value="SICK">Sick Leave</option>
               <option value="PERSONAL">Personal Leave</option>
-            </select>
+            </Select>
             {errors.leaveTypeId && (
               <p className="mt-1 text-sm text-red-600">{errors.leaveTypeId.message}</p>
             )}
@@ -135,7 +147,7 @@ export function LeaveDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SlidePanel>
   );
 }

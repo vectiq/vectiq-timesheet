@@ -1,4 +1,4 @@
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, UserPlus } from 'lucide-react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -10,9 +10,15 @@ interface ProjectsTableProps {
   projects: Project[];
   onEdit: (project: Project) => void;
   onDelete: (id: string) => void;
+  onManageAssignments: (project: Project) => void;
 }
 
-export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps) {
+export function ProjectsTable({ 
+  projects, 
+  onEdit, 
+  onDelete,
+  onManageAssignments
+}: ProjectsTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -23,7 +29,6 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">End Date</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approver Email</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approval Required</th>
-          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Overtime</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tasks</th>
           <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
         </tr>
@@ -42,29 +47,38 @@ export function ProjectsTable({ projects, onEdit, onDelete }: ProjectsTableProps
               </Badge>
             </Td>
             <Td>
-              <Badge variant={project.overtimeInclusive ? 'success' : 'secondary'}>
-                {project.overtimeInclusive ? 'Included' : 'Excluded'}
-              </Badge>
-            </Td>
-            <Td>
               <div className="space-y-1">
-                {project.tasks?.map(task => {
-                  return (
-                    <div key={task.id} className="flex items-center gap-2 text-xs">
-                      <span className="font-medium w-32 truncate">{task.name}</span>
-                      <span className="text-gray-500">{formatCurrency(task.costRate)}/{formatCurrency(task.sellRate)}</span>
-                      {task.billable && <span className="text-green-600 text-[10px] uppercase font-medium">Billable</span>}
-                    </div>
-                  );
-                })}
+                {project.tasks?.map(task => (
+                  <div key={task.id} className="text-sm">
+                    {task.name}
+                  </div>
+                ))}
               </div>
             </Td>
             <Td className="text-right">
               <div className="flex justify-end gap-2">
-                <Button variant="secondary" size="sm" onClick={() => onEdit(project)}>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => onManageAssignments(project)}
+                  title="Manage tasks and assignments"
+                >
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => onEdit(project)}
+                  title="Edit project details"
+                >
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => onDelete(project.id)}>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => onDelete(project.id)}
+                  title="Delete project"
+                >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
               </div>

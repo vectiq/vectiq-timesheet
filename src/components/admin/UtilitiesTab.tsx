@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Input } from '@/components/ui/Input';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
 import { Loader2 } from 'lucide-react';
 import type { TestDataOptions } from '@/types';
@@ -54,26 +56,24 @@ export function UtilitiesTab({
           }} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Start Date">
-                <input
+                <Input
                   type="date"
                   name="startDate"
                   required
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </FormField>
 
               <FormField label="End Date">
-                <input
+                <Input
                   type="date"
                   name="endDate"
                   required
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </FormField>
             </div>
 
             <FormField label="Maximum Daily Hours">
-              <input
+              <Input
                 type="number"
                 name="maxDailyHours"
                 min="1"
@@ -81,63 +81,54 @@ export function UtilitiesTab({
                 step="0.5"
                 defaultValue={12}
                 required
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </FormField>
 
             <div className="space-y-4 pt-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="generateApprovals"
-                  value="true"
-                  defaultChecked
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-gray-700">Generate Approvals</span>
-              </label>
+              <Checkbox
+                name="generateApprovals"
+                value="true"
+                defaultChecked
+                label="Generate Approvals"
+              />
 
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-gray-700">Approval Status Weights</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField label="Pending">
-                    <input
+                    <Input
                       type="number"
                       name="pendingWeight"
                       min="0"
                       max="100"
                       defaultValue="10"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </FormField>
                   <FormField label="Approved">
-                    <input
+                    <Input
                       type="number"
                       name="approvedWeight"
                       min="0"
                       max="100"
                       defaultValue={80}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </FormField>
                   <FormField label="Rejected">
-                    <input
+                    <Input
                       type="number"
                       name="rejectedWeight"
                       min="0"
                       max="100"
                       defaultValue="5"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </FormField>
                   <FormField label="Withdrawn">
-                    <input
+                    <Input
                       type="number"
                       name="withdrawnWeight"
                       min="0"
                       max="100"
                       defaultValue="5"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </FormField>
                 </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { WeeklyView } from '@/components/timesheet/WeeklyView';
 import { MonthlyView } from '@/components/timesheet/MonthlyView';
 import { UserSelect } from '@/components/timesheet/UserSelect';
@@ -14,9 +14,18 @@ import { auth } from '@/lib/firebase';
 
 export default function TimeEntries() {
   const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
-  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState<boolean>(false);
   const [projectsWithStatus, setProjectsWithStatus] = useState<ProjectWithStatus[]>([]);
-  const { currentUser, effectiveUser, setEffectiveUser, isAdmin, users, isLoading: isLoadingUsers } = useUsers();
+  const { 
+    currentUser, 
+    effectiveUser, 
+    setEffectiveUser, 
+    resetEffectiveUser,
+    isAdmin, 
+    users, 
+    isLoading: isLoadingUsers 
+  } = useUsers();
+
   const dateNav = useDateNavigation({
     type: view === 'weekly' ? 'week' : 'month',
   });
@@ -34,7 +43,12 @@ export default function TimeEntries() {
   const handleUserChange = useCallback((userId: string) => {
     const user = users.find(u => u.id === userId);
     if (user) {
-      setEffectiveUser(user);
+      // Reset to current user if selecting self 
+      if (user.id === currentUser?.id) {
+        resetEffectiveUser();
+      } else {
+        setEffectiveUser(user);
+      }
     }
   }, [users, setEffectiveUser]);
 

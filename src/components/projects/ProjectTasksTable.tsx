@@ -1,9 +1,11 @@
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { useTasks } from '@/lib/hooks/useTasks';
+import { useUsers } from '@/lib/hooks/useUsers';
 import { formatCurrency } from '@/lib/utils/currency';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, UserPlus } from 'lucide-react';
 import type { ProjectTask } from '@/types';
+import { useMemo } from 'react';
 
 interface ProjectTasksTableProps {
   selectedTaskIds: string[];
@@ -11,6 +13,8 @@ interface ProjectTasksTableProps {
   onRateChange: (taskId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => void;
   onAddTask: (taskId: string) => void;
   onRemoveTask: (taskId: string) => void;
+  onAssignUser: (taskId: string, userId: string) => void;
+  onRemoveUser: (taskId: string, assignmentId: string) => void;
 }
 
 export function ProjectTasksTable({ 
@@ -19,23 +23,28 @@ export function ProjectTasksTable({
   onRateChange,
   onAddTask,
   onRemoveTask,
+  onAssignUser,
+  onRemoveUser
 }: ProjectTasksTableProps) {
   const { tasks } = useTasks();
-  const selectedTasks = tasks.filter(task => selectedTaskIds.includes(task.id));
-  const availableTasks = tasks.filter(task => 
-    task.isActive && !selectedTaskIds.includes(task.id)
+  const { users } = useUsers();
+  
+  const selectedTasks = useMemo(() => 
+    tasks.filter(task => selectedTaskIds.includes(task.id)),
+    [tasks, selectedTaskIds]
+  );
+  
+  const availableTasks = useMemo(() => 
+    tasks.filter(task => task.isActive && !selectedTaskIds.includes(task.id)),
+    [tasks, selectedTaskIds]
   );
 
-  const handleRateChange = (taskId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => {
-    const currentTasks = tasks.filter(r => r.taskId !== taskId);
-    setValue('tasks', [...currentTasks, { 
-      taskId,
-      projectId: project?.id || crypto.randomUUID(),
-      costRate: rates.costRate,
-      sellRate: rates.sellRate,
-      billable: rates.billable
-    }]);
-  };
+  const handleRateChange = useMemo(() => 
+    (taskId: string, rates: { costRate: number; sellRate: number; billable: boolean }) => {
+      onRateChange(taskId, rates);
+    },
+    [onRateChange]
+  );
 
   return (
     <div className="space-y-4">
@@ -79,6 +88,7 @@ export function ProjectTasksTable({
               <Th>Sell Rate ($/hr)</Th>
               <Th>Billable</Th>
               <Th>Margin</Th>
+              <Th>Assigned Users</Th>
               <Th className="w-16"></Th>
             </tr>
           </TableHeader>
@@ -133,6 +143,40 @@ export function ProjectTasksTable({
                     />
                   </Td>
                   <Td>{margin}%</Td>
+                  <Td>
+                    <div className="flex items-center gap-2">
+                      {rate.userAssignments?.map(assignment => (
+                        <div key={assignment.id} className="flex items-center gap-1">
+                          <span className="text-sm">{assignment.userName}</span>
+                          <button
+                            onClick={() => onRemoveUser(task.id, assignment.id)}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const user = users.find(u => u.id === e.target.value);
+                            if (user) {
+                              onAssignUser(task.id, user.id);
+                            }
+                            e.target.value = '';
+                          }
+                        }}
+                        className="text-sm border-none bg-transparent"
+                      >
+                        <option value="">Add user...</option>
+                        {users.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </Td>
                   <Td>
                     <Button
                       type="button"
