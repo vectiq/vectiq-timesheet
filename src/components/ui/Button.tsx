@@ -17,21 +17,21 @@ export function Button({
   const baseStyles = `
     inline-flex items-center justify-center rounded-md font-medium 
     transition-all duration-200 ease-in-out
-    focus:outline-none focus:ring-2 focus:ring-offset-2
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:scale-[1.02]
     disabled:opacity-50 disabled:cursor-not-allowed
-    active:scale-[0.98]
+    active:scale-[0.97] hover:shadow-md transform-gpu
   `;
   
   const variants = {
     primary: `
       bg-indigo-600 text-white 
-      hover:bg-indigo-700 hover:shadow-md
+      hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5
       focus:ring-indigo-500
       active:bg-indigo-800
     `,
     secondary: `
       bg-white text-gray-700 
-      hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm
+      hover:bg-gray-50 hover:text-gray-900 hover:shadow-md hover:-translate-y-0.5
       focus:ring-indigo-500 
       border border-gray-300
       active:bg-gray-100

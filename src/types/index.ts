@@ -219,6 +219,8 @@ export interface Note {
   text: string;
   status?: 'pending' | 'completed';
   createdAt: string;
+  isPinned?: boolean;
+  originalMonth: string;    // The month the note was originally created in
   updatedAt?: string;
 }
 

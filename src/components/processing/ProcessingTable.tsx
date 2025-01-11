@@ -2,13 +2,44 @@ import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useNotes } from '@/lib/hooks/useNotes';
+import { format } from 'date-fns';
 import type { ProcessingProject } from '@/types';
 
-// Temporary mock data - will be replaced with real data later
-const MOCK_NOTES: Record<string, { total: number; pending: number }> = {
-  'project1': { total: 3, pending: 2 },
-  'project2': { total: 1, pending: 0 },
+interface NoteIndicatorProps {
+  projectId: string;
+  currentMonth: Date;
+}
+
+const NoteIndicator = ({ projectId, currentMonth }: NoteIndicatorProps) => {
+  const { notes } = useNotes(projectId, currentMonth);
+  
+  const pendingActions = notes.filter(note => 
+    note.type === 'action' && note.status === 'pending'
+  ).length;
+  
+  const totalNotes = notes.length;
+  
+  if (pendingActions > 0) {
+    return (
+      <div className="relative">
+        <StickyNote className="h-4 w-4 text-amber-600 animate-pulse" />
+        <span className="absolute -top-1.5 -right-1.5 h-3 w-3 bg-amber-500 rounded-full border-2 border-white" />
+      </div>
+    );
+  }
+  
+  if (totalNotes > 0) {
+    return (
+      <div className="relative">
+        <StickyNote className="h-4 w-4 text-blue-600" />
+        <span className="absolute -top-1.5 -right-1.5 h-3 w-3 bg-blue-500 rounded-full border-2 border-white" />
+      </div>
+    );
+  }
+  
+  return <StickyNote className="h-4 w-4" />;
 };
 
 interface ProcessingTableProps {
@@ -25,6 +56,7 @@ export function ProcessingTable({
   onShowNotes
 }: ProcessingTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const currentMonth = new Date();
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects(prev => {
@@ -121,26 +153,12 @@ export function ProcessingTable({
                         variant="secondary"
                         size="sm"
                         onClick={() => onShowNotes(project.id)}
-                        className="mr-2 relative"
+                        className="mr-2 relative group hover:scale-105 transition-transform duration-200"
                       >
-                        {MOCK_NOTES[project.id]?.pending > 0 ? (
-                          <div className="relative">
-                            <StickyNote className="h-4 w-4 text-amber-600" />
-                            <div className="absolute -top-2 -right-2 h-3.5 w-3.5 rounded-full bg-amber-500 border-2 border-white" />
-                          </div>
-                        ) : MOCK_NOTES[project.id]?.total > 0 ? (
-                          <div className="relative">
-                            <StickyNote className="h-4 w-4 text-blue-600" />
-                            <div className="absolute -top-2 -right-2 h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-white" />
-                          </div>
-                        ) : (
-                          <StickyNote className="h-4 w-4" />
-                        )}
-                        {MOCK_NOTES[project.id]?.pending > 0 && (
-                          <span className="sr-only">
-                            {MOCK_NOTES[project.id].pending} pending actions
-                          </span>
-                        )}
+                        <NoteIndicator 
+                          projectId={project.id}
+                          currentMonth={currentMonth}
+                        />
                       </Button>
                       <Button 
                         variant="secondary" 

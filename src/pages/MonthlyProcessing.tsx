@@ -134,6 +134,7 @@ export default function MonthlyProcessing() {
 
         <ProcessingNotes 
           projectId={selectedProjectId}
+          date={selectedMonth}
           onClose={() => setSelectedProjectId(null)}
         />
     </div>
