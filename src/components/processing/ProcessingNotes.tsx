@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
@@ -12,8 +12,7 @@ import {
   Clock, 
   CheckCircle,
   Edit,
-  StickyNote,
-  Pin
+  StickyNote
 } from 'lucide-react';
 
 interface ProcessingNotesProps {
@@ -31,7 +30,6 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
   const [noteType, setNoteType] = useState<'action' | 'info'>('info');
   const [noteText, setNoteText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPersistent, setIsPersistent] = useState(false);
   
   const {
     notes,
@@ -71,8 +69,7 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
         month: format(new Date(), 'yyyy-MM'),
         type: noteType,
         text: noteText,
-        ...(noteType === 'action' && { status: 'pending' }),
-        ...(isPersistent && { isPersistent: true })
+        ...(noteType === 'action' && { status: 'pending' })
       });
     
       setNoteText('');
@@ -146,36 +143,17 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none py-2 pr-10 min-h-[80px]"
                   required
                 />
-                <div className="absolute right-2 top-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPersistent(!isPersistent);
-                      console.log('Toggled persistent:', !isPersistent);
-                    }}
-                    className={cn(
-                      "p-1.5 rounded-md hover:bg-gray-100",
-                      isPersistent && "text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
-                    )}
-                    title={isPersistent ? "Persistent note (shows in all months)" : "Month-specific note"}
-                  >
-                    <Pin className={cn(
-                      "h-4 w-4 transition-colors",
-                      isPersistent ? "text-indigo-600" : "text-gray-400"
-                    )} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNoteType(noteType === 'info' ? 'action' : 'info')}
-                    className="p-1.5 rounded-md hover:bg-gray-100"
-                  >
-                    {noteType === 'info' ? (
-                      <Info className="h-4 w-4 text-blue-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setNoteType(noteType === 'info' ? 'action' : 'info')}
+                  className="absolute right-2 top-2 p-1.5 rounded-md hover:bg-gray-100"
+                >
+                  {noteType === 'info' ? (
+                    <Info className="h-4 w-4 text-blue-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                  )}
+                </button>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -208,7 +186,6 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
                 key={note.id} 
                 className={cn(
                   "p-4 relative group transition-all duration-200",
-                  note.isPersistent && "bg-indigo-50/30 border border-indigo-100",
                   note.type === 'action' && note.status === 'completed' && "bg-green-50/50",
                   "hover:bg-gray-50 hover:shadow-sm rounded-lg my-2 mx-2"
                 )}
@@ -222,15 +199,15 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
                         : 'bg-yellow-100'
                       : 'bg-blue-100'
                   )}>
-                    {note.type === 'action' ? (
-                      <AlertCircle className={`h-4 w-4 ${
-                        note.status === 'completed' 
-                          ? 'text-green-600'
-                          : 'text-yellow-600'
-                      }`} />
-                    ) : (
-                      <Info className="h-4 w-4 text-blue-600" />
-                    )}
+                      {note.type === 'action' ? (
+                        <AlertCircle className={`h-4 w-4 ${
+                          note.status === 'completed' 
+                            ? 'text-green-600'
+                            : 'text-yellow-600'
+                        }`} />
+                      ) : (
+                        <Info className="h-4 w-4 text-blue-600" />
+                      )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
@@ -250,15 +227,7 @@ export function ProcessingNotes({ projectId, project, onClose }: ProcessingNotes
                           autoFocus
                         />
                       ) : (
-                        <div className="flex items-start gap-2">
-                          <p className="text-gray-900 whitespace-pre-wrap break-words">{note.text}</p>
-                          {note.isPersistent && (
-                            <Badge variant="secondary" className="shrink-0">
-                              <Pin className="h-3 w-3 mr-1" />
-                              Persistent
-                            </Badge>
-                          )}
-                        </div>
+                        <p className="text-gray-900 whitespace-pre-wrap break-words">{note.text}</p>
                       )}
                       {note.type === 'action' && (
                         <Badge 

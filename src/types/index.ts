@@ -206,8 +206,7 @@ export interface TestDataOptions {
 export interface Note {
   id: string;
   projectId: string;
-  month?: string;         // Format: YYYY-MM, optional for persistent notes
-  isPersistent: boolean;  // Whether note should appear across all months
+  month: string;          // Format: YYYY-MM
   type: 'action' | 'info';
   text: string;
   status?: 'pending' | 'completed';
