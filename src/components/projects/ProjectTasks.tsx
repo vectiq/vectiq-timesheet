@@ -3,7 +3,7 @@ import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useTasks } from '@/lib/hooks/useTasks';
@@ -31,12 +31,18 @@ export function ProjectTasks({
   const { tasks: allTasks } = useTasks();
   const [localProject, setLocalProject] = useState<Project | null>(project);
   const [selectedTask, setSelectedTask] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState('');
+  const [editingTaskData, setEditingTaskData] = useState<{
+    costRate: string;
+    sellRate: string;
+    billable: boolean;
+  } | null>(null);
   const [selectedUser, setSelectedUser] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskData, setNewTaskData] = useState({
     name: '',
-    costRate: 0,
-    sellRate: 0,
+    costRate: '',
+    sellRate: '',
     billable: false
   });
 
@@ -85,12 +91,13 @@ export function ProjectTasks({
   const handleAddTask = () => {
     if (!localProject) return;
 
+    // Parse number values when submitting
     const newTask: ProjectTask = {
       id: crypto.randomUUID(),
       name: newTaskData.name,
       projectId: localProject.id,
-      costRate: newTaskData.costRate,
-      sellRate: newTaskData.sellRate,
+      costRate: parseFloat(newTaskData.costRate) || 0,
+      sellRate: parseFloat(newTaskData.sellRate) || 0,
       billable: newTaskData.billable,
       userAssignments: []
     };
@@ -105,8 +112,8 @@ export function ProjectTasks({
     setIsAddingTask(false);
     setNewTaskData({
       name: '',
-      costRate: 0,
-      sellRate: 0,
+      costRate: '',
+      sellRate: '',
       billable: false
     });
   };
@@ -142,6 +149,44 @@ export function ProjectTasks({
         })
       };
     });
+  };
+
+  const handleUpdateTask = (taskId: string, updates: Partial<ProjectTask>) => {
+    if (!localProject) return;
+
+    // Parse number values
+    const parsedUpdates = {
+      ...updates,
+      costRate: typeof updates.costRate === 'string' ? parseFloat(updates.costRate) || 0 : updates.costRate,
+      sellRate: typeof updates.sellRate === 'string' ? parseFloat(updates.sellRate) || 0 : updates.sellRate,
+    };
+
+    const updatedProject = {
+      ...localProject,
+      tasks: localProject.tasks.map(task => 
+        task.id === taskId ? { ...task, ...parsedUpdates } : task
+      )
+    };
+
+    setLocalProject(updatedProject);
+    onUpdateProject(updatedProject);
+    setEditingTaskId('');
+    setEditingTaskData(null);
+  };
+
+  const handleStartEditing = (task: ProjectTask) => {
+    setEditingTaskId(task.id);
+    setEditingTaskData({
+      costRate: task.costRate.toString(),
+      sellRate: task.sellRate.toString(),
+      billable: task.billable
+    });
+    setSelectedTask('');
+  };
+
+  const handleCancelEditing = () => {
+    setEditingTaskId('');
+    setEditingTaskData(null);
   };
 
   if (!localProject) return null;
@@ -186,7 +231,7 @@ export function ProjectTasks({
                     type="number"
                     step="0.01"
                     value={newTaskData.costRate}
-                    onChange={(e) => setNewTaskData(prev => ({ ...prev, costRate: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) => setNewTaskData(prev => ({ ...prev, costRate: e.target.value }))}
                   />
                 </FormField>
 
@@ -195,7 +240,7 @@ export function ProjectTasks({
                     type="number"
                     step="0.01"
                     value={newTaskData.sellRate}
-                    onChange={(e) => setNewTaskData(prev => ({ ...prev, sellRate: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) => setNewTaskData(prev => ({ ...prev, sellRate: e.target.value }))}
                   />
                 </FormField>
               </div>
@@ -248,10 +293,29 @@ export function ProjectTasks({
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => setSelectedTask(task.id === selectedTask ? '' : task.id)}
-                      className="p-1.5"
+                      onClick={() => {
+                        handleStartEditing(task);
+                      }}
+                      className="p-1.5 text-blue-600"
+                      title="Edit task details"
                     >
                       <Edit2 className="h-4 w-4 text-gray-500" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedTask === task.id) {
+                          setSelectedTask('');
+                        } else {
+                          setSelectedTask(task.id);
+                          setEditingTaskId('');
+                        }
+                      }}
+                      className="p-1.5 text-indigo-600"
+                      title="Manage assignments"
+                    >
+                      <UserPlus className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="secondary"
@@ -264,23 +328,83 @@ export function ProjectTasks({
                   </div>
                 </div>
 
+                {/* Edit Task Form */}
+                {editingTaskId === task.id && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-4 mb-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField label="Cost Rate">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editingTaskData?.costRate}
+                          onChange={(e) => {
+                            setEditingTaskData(prev => ({
+                              ...prev!,
+                              costRate: e.target.value
+                            }));
+                          }}
+                        />
+                      </FormField>
+
+                      <FormField label="Sell Rate">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editingTaskData?.sellRate}
+                          onChange={(e) => {
+                            setEditingTaskData(prev => ({
+                              ...prev!,
+                              sellRate: e.target.value
+                            }));
+                          }}
+                        />
+                      </FormField>
+                    </div>
+
+                    <Checkbox
+                      checked={editingTaskData?.billable}
+                      onChange={(e) => setEditingTaskData(prev => ({
+                        ...prev!,
+                        billable: e.target.checked
+                      }))}
+                      label="Billable"
+                    />
+                    
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleCancelEditing}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleUpdateTask(task.id, editingTaskData!)}
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {selectedTask === task.id && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <select
-                      value={selectedUser}
-                      onChange={(e) => setSelectedUser(e.target.value)}
-                      className="text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    >
-                      <option value="">Add user...</option>
-                      {users
-                        .filter(user => !task.userAssignments?.some(a => a.userId === user.id))
-                        .map(user => (
-                          <option key={user.id} value={user.id}>
-                            {user.name}
-                          </option>
-                        ))
-                      }
-                    </select>
+                  <div className="flex items-center gap-2 mb-3 relative">
+                    <Select value={selectedUser} onValueChange={setSelectedUser}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select user..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users
+                          .filter(user => !task.userAssignments?.some(a => a.userId === user.id))
+                          .map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name}
+                            </SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
                     <Button 
                       size="sm"
                       disabled={!selectedUser}
@@ -295,22 +419,37 @@ export function ProjectTasks({
                 {/* User Assignments */}
                 {task.userAssignments && task.userAssignments.length > 0 ? (
                   <div className="space-y-2">
-                    {task.userAssignments.map(assignment => (
-                      <div 
-                        key={assignment.id}
-                        className="flex items-center justify-between bg-white p-2 rounded-md text-sm border border-gray-100"
-                      >
-                        <span>{assignment.userName}</span>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleRemoveUserFromTask(localProject.id, task.id, assignment.id)}
-                          className="p-1 hover:text-red-500"
+                    {selectedTask === task.id ? (
+                      // Editable mode with remove buttons
+                      task.userAssignments.map(assignment => (
+                        <div 
+                          key={assignment.id}
+                          className="flex items-center justify-between bg-white p-2 rounded-md text-sm border border-gray-100"
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
+                          <span>{assignment.userName}</span>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleRemoveUserFromTask(localProject.id, task.id, assignment.id)}
+                            className="p-1 hover:text-red-500"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      // Read-only mode - just list the assignments
+                      <div className="flex flex-wrap gap-2">
+                        {task.userAssignments.map(assignment => (
+                          <div 
+                            key={assignment.id}
+                            className="bg-gray-50 px-2 py-1 rounded text-sm text-gray-700"
+                          >
+                            {assignment.userName}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : (
                   <div className="text-sm text-gray-500 italic">

@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Td } from '@/components/ui/Table';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { EditableTimeCell } from './EditableTimeCell';
 import { cn } from '@/lib/utils/styles';
@@ -115,70 +116,82 @@ export const TimesheetRow = memo(function TimesheetRow({
   return (
     <tr>
       <Td>
-        <select
+        <Select
           value={row.clientId}
-          disabled={hasLockedEntries}
-          onChange={(e) => onUpdateRow(index, { 
-            clientId: e.target.value,
+          onValueChange={(value) => onUpdateRow(index, { 
+            clientId: value,
             projectId: '',
             taskId: ''
           })}
-          className={cn(
-            "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
-            hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
-          )}
-          title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
+          disabled={hasLockedEntries}
         >
-          <option value="">Select Client</option>
-          {availableClients.map(client => (
-            <option key={client.id} value={client.id}>
-              {client.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger 
+            className={cn(
+              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+            )}
+            title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
+          >
+            {row.clientId ? availableClients.find(c => c.id === row.clientId)?.name : "Select Client"}
+          </SelectTrigger>
+          <SelectContent>
+            {availableClients.map(client => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Td>
       <Td>
-        <select
+        <Select
           value={row.projectId}
-          onChange={(e) => onUpdateRow(index, {
-            projectId: e.target.value,
+          onValueChange={(value) => onUpdateRow(index, {
+            projectId: value,
             taskId: ''
           })}
           disabled={!row.clientId || hasLockedEntries}
-          className={cn(
-            "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
-            hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
-          )}
-          title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
-          <option value="">Select Project</option>
-          {availableProjects.map(project => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            className={cn(
+              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+            )}
+            title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
+          >
+            {row.projectId ? availableProjects.find(p => p.id === row.projectId)?.name : "Select Project"}
+          </SelectTrigger>
+          <SelectContent>
+            {availableProjects.map(project => (
+              <SelectItem key={project.id} value={project.id}>
+                {project.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Td>
       <Td>
-        <select
+        <Select
           value={row.taskId}
-          onChange={(e) => onUpdateRow(index, {
-            taskId: e.target.value
+          onValueChange={(value) => onUpdateRow(index, {
+            taskId: value
           })}
           disabled={!row.projectId || hasLockedEntries}
-          className={cn(
-            "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
-            hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
-          )}
-          title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
         >
-          <option value="">Select Task</option>
-          {availableTasks.map(task => (
-            <option key={task.id} value={task.id}>
-              {task.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            className={cn(
+              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+            )}
+            title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
+          >
+            {row.taskId ? availableTasks.find(t => t.id === row.taskId)?.name : "Select Task"}
+          </SelectTrigger>
+          <SelectContent>
+            {availableTasks.map(task => (
+              <SelectItem key={task.id} value={task.id}>
+                {task.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Td>
       {weekDays.map(date => {
         const dateStr = format(date, 'yyyy-MM-dd');

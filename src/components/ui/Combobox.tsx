@@ -1,15 +1,15 @@
 import * as React from 'react';
-import * as SelectPrimitive from '@radix-ui/react-select';
-import { Check, ChevronDown } from 'lucide-react';
+import * as ComboboxPrimitive from '@radix-ui/react-combobox';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils/styles';
 
-const Select = SelectPrimitive.Root;
+const Combobox = ComboboxPrimitive.Root;
 
-const SelectTrigger = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+const ComboboxTrigger = React.forwardRef<
+  React.ElementRef<typeof ComboboxPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof ComboboxPrimitive.Trigger>
 >(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
+  <ComboboxPrimitive.Trigger
     ref={ref}
     className={cn(
       'flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
@@ -18,19 +18,17 @@ const SelectTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
+    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+  </ComboboxPrimitive.Trigger>
 ));
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
+ComboboxTrigger.displayName = ComboboxPrimitive.Trigger.displayName;
 
-const SelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+const ComboboxContent = React.forwardRef<
+  React.ElementRef<typeof ComboboxPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof ComboboxPrimitive.Content>
 >(({ className, children, position = 'popper', ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
+  <ComboboxPrimitive.Portal>
+    <ComboboxPrimitive.Content
       ref={ref}
       className={cn(
         'relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-white text-gray-950 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
@@ -41,25 +39,25 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
-      <SelectPrimitive.Viewport
+      <ComboboxPrimitive.Viewport
         className={cn(
           'p-1',
           position === 'popper' &&
-            'h-[var(--radix-select-content-available-height)] w-full min-w-[var(--radix-select-trigger-width)]'
+            'h-[var(--radix-combobox-content-available-height)] w-full min-w-[var(--radix-combobox-trigger-width)]'
         )}
       >
         {children}
-      </SelectPrimitive.Viewport>
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
+      </ComboboxPrimitive.Viewport>
+    </ComboboxPrimitive.Content>
+  </ComboboxPrimitive.Portal>
 ));
-SelectContent.displayName = SelectPrimitive.Content.displayName;
+ComboboxContent.displayName = ComboboxPrimitive.Content.displayName;
 
-const SelectItem = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+const ComboboxItem = React.forwardRef<
+  React.ElementRef<typeof ComboboxPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof ComboboxPrimitive.Item>
 >(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Item
+  <ComboboxPrimitive.Item
     ref={ref}
     className={cn(
       'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-indigo-50 data-[highlighted]:text-indigo-900 data-[disabled]:opacity-50',
@@ -68,21 +66,31 @@ const SelectItem = React.forwardRef<
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
+      <ComboboxPrimitive.ItemIndicator>
         <Check className="h-4 w-4" />
-      </SelectPrimitive.ItemIndicator>
+      </ComboboxPrimitive.ItemIndicator>
     </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-  </SelectPrimitive.Item>
+    {children}
+  </ComboboxPrimitive.Item>
 ));
-SelectItem.displayName = SelectPrimitive.Item.displayName;
+ComboboxItem.displayName = ComboboxPrimitive.Item.displayName;
 
-const SelectValue = SelectPrimitive.Value;
+const ComboboxEmpty = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn('p-4 text-center text-sm text-gray-500', className)}
+    {...props}
+  />
+));
+ComboboxEmpty.displayName = 'ComboboxEmpty';
 
 export {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
+  Combobox,
+  ComboboxTrigger,
+  ComboboxContent,
+  ComboboxItem,
+  ComboboxEmpty,
 };
