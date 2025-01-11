@@ -9,6 +9,7 @@ import { useUsers } from '@/lib/hooks/useUsers';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useTasks } from '@/lib/hooks/useTasks';
+import { useCallback } from 'react';
 import type { Project } from '@/types';
 
 interface WeeklyViewProps {
@@ -38,10 +39,19 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     dateRange 
   });
 
-  const { clients } = useClients();
-  const { tasks: allTasks } = useTasks();
+  // Get projects and tasks where user is assigned
+  const getProjectsForClient = useCallback((clientId: string) => 
+    projects.filter(p => p.clientId === clientId),
+    [projects]
+  );
 
-  const weekKey = format(dateRange.start, 'yyyy-MM-dd');
+  const getTasksForProject = useCallback((projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return [];
+    return project.tasks.filter(task => 
+      task.userAssignments?.some(a => a.userId === userId)
+    );
+  }, [projects, userId]);
 
   const weekDays = useMemo(() => {
     const days: Date[] = [];
@@ -53,22 +63,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     return days;
   }, [dateRange]);
 
-  // Helper functions for getting related data
-  const getProjectsForClient = (clientId: string) => 
-    projects.filter(p => p.clientId === clientId);
-
-  const getTasksForProject = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return [];
-
-    return project.tasks.map(projectTask => ({
-      task: { 
-        id: projectTask.projectTaskId, 
-        name: allTasks.find(r => r.id === projectTask.projectTaskId)?.name || 'Unknown Task'
-      },
-      rates: projectTask
-    }));
-  };
+  const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
   // Calculate weekly total
   const weeklyTotal = useMemo(() => 
@@ -104,9 +99,6 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 weekKey={weekKey}
                 weekDays={weekDays}
                 timeEntries={timeEntries}
-                projects={projects}
-                clients={clients}
-                userAssignments={effectiveUser?.projectAssignments || []}
                 getProjectsForClient={getProjectsForClient}
                 getTasksForProject={getTasksForProject}
                 editingCell={editingCell}

@@ -22,6 +22,8 @@ interface TimesheetRowProps {
   weekKey: string;
   weekDays: Date[];
   timeEntries: TimeEntry[];
+  getProjectsForClient: (clientId: string) => Project[];
+  getTasksForProject: (projectId: string) => ProjectTask[];
   editingCell: string | null;
   onUpdateRow: (index: number, updates: any) => void;
   onRemoveRow: (index: number) => void;
@@ -36,6 +38,8 @@ export const TimesheetRow = memo(function TimesheetRow({
   weekKey,
   weekDays,
   timeEntries,
+  getProjectsForClient,
+  getTasksForProject,
   editingCell,
   onUpdateRow,
   onRemoveRow,
@@ -48,11 +52,28 @@ export const TimesheetRow = memo(function TimesheetRow({
   const { clients } = useClients();
   const { useApprovalsForDate } = useApprovals();
 
+  // Get available projects for selected client
+  const availableProjects = useMemo(() => {
+    if (!row.clientId) return [];
+    // Only return projects where user has task assignments
+    return getProjectsForClient(row.clientId).filter(project =>
+      project.tasks.some(task => 
+        task.userAssignments?.some(a => a.userId === effectiveUser?.id)
+      )
+    );
+  }, [row.clientId, getProjectsForClient, effectiveUser?.id]);
+
+  // Get available tasks for selected project
+  const availableTasks = useMemo(() => {
+    if (!row.projectId) return [];
+    return getTasksForProject(row.projectId);
+  }, [row.projectId, getTasksForProject]);
+
   // Get available clients and projects based on user assignments
   const availableClients = useMemo(() => {
     if (!effectiveUser || !projects) return [];
     
-    // Get unique client IDs from projects where user is assigned to any task
+    // Get unique client IDs from projects where user has task assignments
     const clientIds = new Set(
       projects
         .filter(project => 
@@ -65,28 +86,6 @@ export const TimesheetRow = memo(function TimesheetRow({
     
     return clients.filter(client => clientIds.has(client.id));
   }, [effectiveUser, projects, clients]);
-  
-  const availableProjects = useMemo(() => {
-    if (!row.clientId || !effectiveUser) return [];
-    
-    return projects.filter(project => 
-      project.clientId === row.clientId &&
-      project.tasks.some(task => 
-        task.userAssignments?.some(a => a.userId === effectiveUser.id)
-      )
-    );
-  }, [row.clientId, effectiveUser, projects]);
-
-  const availableTasks = useMemo(() => {
-    if (!row.projectId || !effectiveUser) return [];
-    
-    const project = projects.find(p => p.id === row.projectId);
-    if (!project) return [];
-    
-    return project.tasks.filter(task =>
-      task.userAssignments?.some(a => a.userId === effectiveUser.id)
-    );
-  }, [row.projectId, effectiveUser, projects]);
 
   // Get row entries
   const rowEntries = !row.clientId || !row.projectId || !row.taskId 

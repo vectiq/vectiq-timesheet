@@ -198,6 +198,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     value: number | null
   ) => {
     if (!effectiveUserId || !row.clientId || !row.projectId || !row.taskId) return;
+    const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
     const entry = timeEntries.find(e => 
       e.date === date && 
@@ -225,6 +226,16 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         hours: value,
         description: '',
       });
+      
+      // Remove the manual row after creating a time entry
+      setManualRows(current => ({
+        ...current,
+        [weekKey]: (current[weekKey] || []).filter(manualRow => 
+          !(manualRow.clientId === row.clientId && 
+            manualRow.projectId === row.projectId && 
+            manualRow.taskId === row.taskId)
+        )
+      }));
     }
   }, [effectiveUserId, timeEntries, handleCreateEntry, handleUpdateEntry, handleDeleteEntry]);
 
