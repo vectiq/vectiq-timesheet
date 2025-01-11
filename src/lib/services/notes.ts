@@ -18,19 +18,43 @@ import {
   export async function getNotes(projectId: string, month: string): Promise<Note[]> {
     console.log('Getting notes from Firestore:', { projectId, month });
   
-    const q = query(
+    // Create two queries - one for persistent notes and one for month-specific notes
+    const persistentQuery = query(
       collection(db, COLLECTION),
       where('projectId', '==', projectId),
+      where('isPersistent', '==', true),
+      orderBy('createdAt', 'desc')
+    );
+  
+    const monthlyQuery = query(
+      collection(db, COLLECTION),
+      where('projectId', '==', projectId),
+      where('isPersistent', '==', false),
       where('month', '==', month),
       orderBy('createdAt', 'desc')
     );
   
     try {
-      const snapshot = await getDocs(q);
-      const notes = snapshot.docs.map(doc => ({
+      // Get both persistent and monthly notes
+      const [persistentSnapshot, monthlySnapshot] = await Promise.all([
+        getDocs(persistentQuery),
+        getDocs(monthlyQuery)
+      ]);
+  
+      // Combine and sort the notes
+      const persistentNotes = persistentSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Note[];
+      }));
+  
+      const monthlyNotes = monthlySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+  
+      const notes = [...persistentNotes, ...monthlyNotes].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ) as Note[];
       
       console.log('Retrieved notes:', notes.length);
       return notes;
@@ -43,14 +67,25 @@ import {
   export async function createNote(data: Omit<Note, 'id' | 'createdAt'>): Promise<Note> {
     console.log('Creating note:', data);
   
+    // For persistent notes, don't include the month field
+    const noteData = data.isPersistent
+      ? {
+          ...data,
+          month: null,
+          createdAt: new Date().toISOString()
+        }
+      : {
+          ...data,
+          createdAt: new Date().toISOString()
+        };
+  
     const noteRef = await addDoc(collection(db, COLLECTION), {
-      ...data,
-      createdAt: new Date().toISOString()
+      ...noteData
     });
   
     const newNote = {
       id: noteRef.id,
-      ...data,
+      ...noteData,
       createdAt: new Date().toISOString()
     };
   
