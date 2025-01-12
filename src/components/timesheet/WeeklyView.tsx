@@ -1,10 +1,20 @@
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, Th } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Plus, Copy } from 'lucide-react';
 import { TimesheetRow } from './TimesheetRow';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/AlertDialog';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
@@ -23,6 +33,10 @@ interface WeeklyViewProps {
 
 export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange }: WeeklyViewProps) {
   const { effectiveUser } = useUsers();
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; index: number | null }>({
+    isOpen: false,
+    index: null
+  });
   const { 
     timeEntries,
     rows,
@@ -71,6 +85,17 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     [timeEntries]
   );
 
+  const handleDeleteRow = (index: number) => {
+    setDeleteConfirmation({ isOpen: true, index });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmation.index !== null) {
+      await removeRow(deleteConfirmation.index);
+    }
+    setDeleteConfirmation({ isOpen: false, index: null });
+  };
+
   return (
     <Card>
       <div className="overflow-x-auto">
@@ -103,7 +128,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 getTasksForProject={getTasksForProject}
                 editingCell={editingCell}
                 onUpdateRow={updateRow}
-                onRemoveRow={removeRow}
+                onRemoveRow={handleDeleteRow}
                 onCellChange={handleCellChange}
                 onStartEdit={setEditingCell}
                 onEndEdit={() => setEditingCell(null)}
@@ -141,6 +166,24 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
           Add Row
         </Button>
       </div>
+
+      <AlertDialog 
+        open={deleteConfirmation.isOpen} 
+        onOpenChange={(open) => setDeleteConfirmation(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Row</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete all time entries for this row. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 });

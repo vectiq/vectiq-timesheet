@@ -36,6 +36,7 @@ export function ProjectTasks({
     costRate: string;
     sellRate: string;
     billable: boolean;
+    xetaskaveTypeId?: string;
   } | null>(null);
   const [selectedUser, setSelectedUser] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -43,7 +44,8 @@ export function ProjectTasks({
     name: '',
     costRate: '',
     sellRate: '',
-    billable: false
+    billable: false,
+    xetaskaveTypeId: ''
   });
 
   // Update local state when project changes
@@ -99,6 +101,7 @@ export function ProjectTasks({
       costRate: parseFloat(newTaskData.costRate) || 0,
       sellRate: parseFloat(newTaskData.sellRate) || 0,
       billable: newTaskData.billable,
+      xetaskaveTypeId: localProject.name === 'Leave' ? newTaskData.xetaskaveTypeId : '',
       userAssignments: []
     };
 
@@ -114,7 +117,8 @@ export function ProjectTasks({
       name: '',
       costRate: '',
       sellRate: '',
-      billable: false
+      billable: false,
+      xetaskaveTypeId: ''
     });
   };
 
@@ -179,7 +183,8 @@ export function ProjectTasks({
     setEditingTaskData({
       costRate: task.costRate.toString(),
       sellRate: task.sellRate.toString(),
-      billable: task.billable
+      billable: task.billable,
+      xetaskaveTypeId: task.xetaskaveTypeId
     });
     setSelectedTask('');
   };
@@ -224,6 +229,20 @@ export function ProjectTasks({
                   placeholder="e.g., Senior Developer"
                 />
               </FormField>
+
+              {localProject.name === 'Leave' && (
+                <FormField label="Xero Leave Type ID">
+                  <Input
+                    type="text"
+                    value={newTaskData.xetaskaveTypeId}
+                    onChange={(e) => setNewTaskData(prev => ({ ...prev, xetaskaveTypeId: e.target.value }))}
+                    placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    The Xero Leave Type ID is used to sync leave requests with Xero
+                  </p>
+                </FormField>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Cost Rate">
@@ -360,6 +379,25 @@ export function ProjectTasks({
                         />
                       </FormField>
                     </div>
+
+                    {localProject.name === 'Leave' && (
+                      <FormField label="Xero Leave Type ID">
+                        <Input
+                          type="text"
+                          value={editingTaskData?.xetaskaveTypeId}
+                          onChange={(e) => {
+                            setEditingTaskData(prev => ({
+                              ...prev!,
+                              xetaskaveTypeId: e.target.value
+                            }));
+                          }}
+                          placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          The Xero Leave Type ID is used to sync leave requests with Xero
+                        </p>
+                      </FormField>
+                    )}
 
                     <Checkbox
                       checked={editingTaskData?.billable}

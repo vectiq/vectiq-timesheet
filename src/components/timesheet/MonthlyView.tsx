@@ -17,8 +17,6 @@ interface MonthlyViewProps {
     start: Date;
     end: Date;
   };
-  userId?: string;
-  onApprovalClick: (projects: ProjectWithStatus[]) => void;
 }
 
 interface GroupedData {
@@ -43,9 +41,9 @@ interface GroupedData {
   >;
 }
 
-export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewProps) {
+export function MonthlyView({ dateRange }: MonthlyViewProps) {
   const { effectiveUser } = useUsers();
-  const { timeEntries } = useTimeEntries({ userId, dateRange });
+  const { timeEntries } = useTimeEntries({ dateRange });
   const { clients } = useClients();
   const { projects } = useProjects();
   const { useApprovalStatus } = useApprovals(); 
@@ -62,7 +60,7 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
     .filter(p => p.requiresApproval)
     .map(project => ({
       projectId: project.id,
-      query: useApprovalStatus(project.id, userId, startDate, endDate)
+      query: useApprovalStatus(project.id, effectiveUser?.id, startDate, endDate)
     }));
 
   // Combine all status results into a map
@@ -133,22 +131,24 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
   const projectsNeedingApproval = (() => {
     if (!effectiveUser) return [];
 
-    const projectsWithEntries = new Set<string>(timeEntries.map(entry => entry.projectId));
-    const userProjectIds = new Set(effectiveUser.projectAssignments?.map(a => a.projectId) || []);
     const statuses: ProjectWithStatus[] = [];
 
     for (const project of userProjects) {
-      if (!projectsWithEntries.has(project.id) || !project.requiresApproval || !userProjectIds.has(project.id)) continue;
+      // Only include projects that:
+      // 1. Require approval
+      // 2. Have time entries
+      // 3. Don't already have a pending or approved status
+      const projectEntries = timeEntries.filter(entry => entry.projectId === project.id);
+      if (!project.requiresApproval || projectEntries.length === 0) continue;
 
       const client = clients.find(c => c.id === project.clientId);
       if (!client) continue;
 
-      const projectEntries = timeEntries.filter(entry => entry.projectId === project.id);
       const totalHours = projectEntries.reduce((sum, entry) => sum + entry.hours, 0);
-
-      if (totalHours === 0) continue;
-
       const approvalStatus = approvalStatusMap.get(project.id);
+
+      // Skip if already pending or approved
+      if (approvalStatus?.status === 'pending' || approvalStatus?.status === 'approved') continue;
 
       statuses.push({
         id: project.id,
@@ -161,11 +161,6 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
 
     return statuses;
   })();
-
-  const handleApprovalClick = () => {
-    if (!effectiveUser) return;
-    onApprovalClick(projectsNeedingApproval);
-  };
 
   return (
     <Card>
@@ -187,15 +182,6 @@ export function MonthlyView({ dateRange, userId, onApprovalClick }: MonthlyViewP
               {totalHours.toFixed(2)} hours
             </span>
           </div>
-          <Button 
-            onClick={handleApprovalClick}
-            disabled={projectsNeedingApproval.length === 0}
-            className={projectsNeedingApproval.length === 0 ? "opacity-50 cursor-not-allowed" : ""}
-            title={projectsNeedingApproval.length === 0 ? "No time entries require approval for this period" : undefined}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Submit for Approval
-          </Button>
         </div>
       </div>
     </Card>

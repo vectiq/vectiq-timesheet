@@ -1,19 +1,24 @@
+import * as React from 'react';
+import { cn } from '@/lib/utils/styles';
+
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   children: React.ReactNode;
+  asChild?: boolean;
 }
 
-export function Button({
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'primary',
   size = 'md',
   loading = false,
   children,
   className = '',
   disabled,
+  asChild = false,
   ...props
-}: ButtonProps) {
+}, ref) => {
   const baseStyles = `
     inline-flex items-center justify-center rounded-md font-medium 
     transition-all duration-200 ease-in-out
@@ -44,8 +49,11 @@ export function Button({
     lg: 'px-6 py-3 text-base',
   };
 
+  const Comp = asChild ? React.Fragment : 'button';
+
   return (
-    <button
+    <Comp
+      ref={ref}
       className={`
         ${baseStyles} 
         ${variants[variant]} 
@@ -62,6 +70,10 @@ export function Button({
           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
         </div>
       )}
-    </button>
+    </Comp>
   );
-}
+});
+
+Button.displayName = 'Button';
+
+export { Button };

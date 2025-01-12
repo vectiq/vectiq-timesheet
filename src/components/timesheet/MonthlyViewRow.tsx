@@ -1,10 +1,20 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2, AlertCircle } from 'lucide-react';
+import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2, AlertCircle, Send } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { useApprovals } from '@/lib/hooks/useApprovals';
+import { useApprovals, submitTimesheetApproval } from '@/lib/hooks/useApprovals';
 import { useUsers } from '@/lib/hooks/useUsers';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/AlertDialog';
 import type { BadgeVariant } from '@/components/ui/Badge';
 
 interface MonthlyViewRowProps {
@@ -13,6 +23,7 @@ interface MonthlyViewRowProps {
     totalHours: number;
     projects: Map<string, {
       project: { id: string; name: string };
+      requiresApproval?: boolean;
       totalHours: number;
       approvalStatus?: {
         status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
@@ -78,17 +89,60 @@ function ApprovalBadge({ status, requiresApproval }: {
 
 export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    isOpen: boolean;
+    type: 'submit' | 'withdraw';
+    projectGroup?: any;
+    approvalId?: string;
+  }>({ isOpen: false, type: 'submit' });
   const { effectiveUser } = useUsers();
-  const { withdrawApproval, isWithdrawing } = useApprovals();
+  const { withdrawApproval, isWithdrawing, submitApproval } = useApprovals();
+
+  const handleSubmitApproval = async (projectGroup) => {
+    if (!effectiveUser) return;
+    setConfirmationDialog({
+      isOpen: true,
+      type: 'submit',
+      projectGroup
+    });
+  };
+
+  const handleConfirmSubmit = async () => {
+    try {
+      await submitApproval({
+        project: confirmationDialog.projectGroup.project,
+        client: clientGroup.client,
+        dateRange: {
+          start: new Date(confirmationDialog.projectGroup.entries[0]?.date),
+          end: new Date(confirmationDialog.projectGroup.entries[confirmationDialog.projectGroup.entries.length - 1]?.date)
+        },
+        entries: confirmationDialog.projectGroup.entries,
+        userId: effectiveUser.id
+      });
+    } catch (error) {
+      console.error('Failed to submit approval:', error);
+      alert('Failed to submit timesheet for approval');
+    } finally {
+      setConfirmationDialog({ isOpen: false, type: 'submit' });
+    }
+  };
 
   const handleWithdraw = async (approvalId: string) => {
-    if (window.confirm('Are you sure you want to withdraw this timesheet submission?')) {
-      try {
-        await withdrawApproval(approvalId);
-      } catch (error) {
-        console.error('Failed to withdraw approval:', error);
-        alert('Failed to withdraw approval');
-      }
+    setConfirmationDialog({
+      isOpen: true,
+      type: 'withdraw',
+      approvalId
+    });
+  };
+
+  const handleConfirmWithdraw = async () => {
+    try {
+      await withdrawApproval(confirmationDialog.approvalId);
+    } catch (error) {
+      console.error('Failed to withdraw approval:', error);
+      alert('Failed to withdraw approval');
+    } finally {
+      setConfirmationDialog({ isOpen: false, type: 'withdraw' });
     }
   };
 
@@ -126,6 +180,7 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
               <span className="font-medium">{projectGroup.project.name}</span>
               {projectGroup.approvalStatus && (
                 <div className="flex items-center gap-2"> 
+                  {/* Status Badge */}
                   <ApprovalBadge 
                     status={projectGroup.approvalStatus.status}
                     requiresApproval={projectGroup.project.requiresApproval}
@@ -141,6 +196,36 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
                       <Undo2 className="h-4 w-4 mr-1" />
                       Withdraw
                     </Button>
+                  )}
+                  {/* Submit/Withdraw Buttons */}
+                  {projectGroup.project.requiresApproval && (
+                    <>
+                      {projectGroup.approvalStatus.status === 'pending' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleWithdraw(projectGroup.approvalStatus.approvalId)}
+                          disabled={isWithdrawing}
+                          className="ml-2"
+                        >
+                          <Undo2 className="h-4 w-4 mr-1" />
+                          Withdraw
+                        </Button>
+                      )}
+                      {(projectGroup.approvalStatus.status === 'unsubmitted' ||
+                        projectGroup.approvalStatus.status === 'rejected' ||
+                        projectGroup.approvalStatus.status === 'withdrawn') && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleSubmitApproval(projectGroup)}
+                            className="ml-2"
+                          >
+                            <Send className="h-4 w-4 mr-1" />
+                            Submit for Approval
+                          </Button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -169,6 +254,36 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
           </div>
         </div>
       ))}
+      
+      <AlertDialog 
+        open={confirmationDialog.isOpen} 
+        onOpenChange={(open) => setConfirmationDialog(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmationDialog.type === 'submit' 
+                ? 'Submit Timesheet for Approval'
+                : 'Withdraw Timesheet Submission'
+              }
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmationDialog.type === 'submit'
+                ? 'Are you sure you want to submit this timesheet for approval? This will notify the project approver.'
+                : 'Are you sure you want to withdraw this timesheet submission? You will need to resubmit for approval.'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmationDialog.type === 'submit' ? handleConfirmSubmit : handleConfirmWithdraw}
+            >
+              {confirmationDialog.type === 'submit' ? 'Submit' : 'Withdraw'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { FormField } from '@/components/ui/FormField';
 import { useClients } from '@/lib/hooks/useClients';
@@ -21,6 +21,8 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     reset,
   } = useForm({
     defaultValues: project || {
@@ -55,8 +57,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       approverEmail: data.approverEmail || '',
       requiresApproval: data.requiresApproval || false,
       overtimeInclusive: data.overtimeInclusive || false,
-      tasks: project?.tasks || [],
-      xetaskaveTypeId: data.xetaskaveTypeId || '',
+      tasks: project?.tasks || []
     };
     
     try {
@@ -79,16 +80,26 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           </FormField>
 
           <FormField label="Client">
-          <Select
-            {...register('clientId')}
-          >
-            <option value="">Select Client</option>
-            {clients.map(client => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </Select>
+            <Select
+              value={watch('clientId')}
+              onValueChange={(value) => {
+                setValue('clientId', value);
+                // Reset dependent fields
+                setValue('projectId', '');
+                setValue('taskId', '');
+              }}
+            >
+              <SelectTrigger>
+                {watch('clientId') ? clients.find(c => c.id === watch('clientId'))?.name : 'Select Client'}
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map(client => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
 
@@ -136,16 +147,6 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             />
           </div>
         </div>
-
-        <FormField label="Xero Leave Type ID">
-          <Input
-            {...register('xetaskaveTypeId')}
-            placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            The Xero Leave Type ID is used to sync leave requests with Xero
-          </p>
-        </FormField>
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">

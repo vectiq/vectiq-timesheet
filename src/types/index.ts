@@ -5,6 +5,7 @@ export interface ProjectTask {
   costRate: number;
   sellRate: number;
   billable: boolean;
+  xetaskaveTypeId?: string;
   active: boolean;
   userAssignments: UserAssignment[];
 }
@@ -41,7 +42,6 @@ export interface Project {
   requiresApproval: boolean;
   tasks: ProjectTask[];
   overtimeInclusive: boolean;
-  xetaskaveTypeId?: string;
 }
 
 export interface TimeEntry {
