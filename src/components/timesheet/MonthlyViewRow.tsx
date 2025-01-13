@@ -3,7 +3,7 @@ import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2, AlertCir
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { useApprovals, submitTimesheetApproval } from '@/lib/hooks/useApprovals';
+import { useApprovals } from '@/lib/hooks/useApprovals';
 import { useUsers } from '@/lib/hooks/useUsers';
 import {
   AlertDialog,
@@ -36,6 +36,10 @@ interface MonthlyViewRowProps {
         approvalKey?: string;
       }>;
     }>;
+  };
+  dateRange: {
+    start: Date;
+    end: Date;
   };
 }
 
@@ -87,7 +91,7 @@ function ApprovalBadge({ status, requiresApproval }: {
   );
 }
 
-export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
+export function MonthlyViewRow({ clientGroup, dateRange }: MonthlyViewRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [confirmationDialog, setConfirmationDialog] = useState<{
     isOpen: boolean;
@@ -112,10 +116,7 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
       await submitApproval({
         project: confirmationDialog.projectGroup.project,
         client: clientGroup.client,
-        dateRange: {
-          start: new Date(confirmationDialog.projectGroup.entries[0]?.date),
-          end: new Date(confirmationDialog.projectGroup.entries[confirmationDialog.projectGroup.entries.length - 1]?.date)
-        },
+        dateRange: dateRange,
         entries: confirmationDialog.projectGroup.entries,
         userId: effectiveUser.id
       });
@@ -185,18 +186,6 @@ export function MonthlyViewRow({ clientGroup }: MonthlyViewRowProps) {
                     status={projectGroup.approvalStatus.status}
                     requiresApproval={projectGroup.project.requiresApproval}
                   />
-                  {projectGroup.approvalStatus.status === 'pending' && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleWithdraw(projectGroup.approvalStatus.approvalId)}
-                      disabled={isWithdrawing}
-                      className="ml-2"
-                    >
-                      <Undo2 className="h-4 w-4 mr-1" />
-                      Withdraw
-                    </Button>
-                  )}
                   {/* Submit/Withdraw Buttons */}
                   {projectGroup.project.requiresApproval && (
                     <>

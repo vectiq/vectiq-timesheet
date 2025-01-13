@@ -229,10 +229,8 @@ export async function generateTestData(options: TestDataOptions): Promise<void> 
           userId: user.id,
           project,
           status,
-          period: {
             startDate: options.startDate,
-            endDate: options.endDate
-          },
+            endDate: options.endDate,
           submittedAt: new Date(),
           ...(status === 'approved' && { approvedAt: new Date() }),
           ...(status === 'rejected' && { rejectedAt: new Date() }),

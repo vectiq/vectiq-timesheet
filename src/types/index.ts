@@ -134,15 +134,29 @@ export interface ApprovalStatus {
 
 export interface Approval {
   id: string;
-  compositeKey: string;  // Composite key for querying: {projectId}_{startDate}_{endDate}_{userId}
   status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
   submittedAt: Date;
   approvedAt?: Date;
   rejectedAt?: Date;
-  name: string;
   withdrawnAt?: Date;
   userId: string;
   approverEmail: string;
+  project: Project;
+  client: Client;
+  startDate: string;
+  endDate: string;
+  totalHours: number;
+}
+
+export interface ApprovalRequest {
+  project: Project;
+  client: Client;
+  dateRange: {
+    start: Date;
+    end: Date;
+  };
+  entries: TimeEntry[];
+  userId: string;
 }
 
 export interface SystemConfig {

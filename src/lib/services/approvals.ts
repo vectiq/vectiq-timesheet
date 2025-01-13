@@ -19,49 +19,6 @@ import { formatTimesheetBreakdown } from '@/lib/utils/timesheet';
 import type { TimeEntry, Project, Client, Approval, ApprovalStatus } from '@/types';
 import CryptoJS from 'crypto-js';
 
-export async function getApprovalsForDate(
-  date: string,
-  userId: string,
-  projectId: string
-): Promise<Approval[]> {
-  // Get first day of week and month for the given date
-  const dateObj = new Date(date);
-  const firstDayOfWeek = new Date(dateObj);
-  firstDayOfWeek.setDate(dateObj.getDate() - dateObj.getDay() + 1);
-  const firstDayOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
-
-  const weekStart = format(firstDayOfWeek, 'yyyy-MM-dd');
-  const monthStart = format(firstDayOfMonth, 'yyyy-MM-dd');
-
-  const approvalsRef = collection(db, 'approvals');
-  const q = query(
-    approvalsRef,
-    where('userId', '==', userId),
-    where('project.id', '==', projectId),
-    where('period.startDate', 'in', [weekStart, monthStart]),
-    where('status', 'in', ['pending', 'approved'])
-  );
-
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
-    ...doc.data(),
-    id: doc.id,
-    submittedAt: doc.data().submittedAt?.toDate(),
-    approvedAt: doc.data().approvedAt?.toDate(),
-    rejectedAt: doc.data().rejectedAt?.toDate(),
-    withdrawnAt: doc.data().withdrawnAt?.toDate(),
-  })) as Approval[];
-}
-
-export async function withdrawApproval(approvalId: string) {
-  const approvalRef = doc(db, 'approvals', approvalId);
-  await updateDoc(approvalRef, {
-    status: 'withdrawn',
-    withdrawnAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-}
-
 interface ApprovalRequest {
   project: Project;
   client: Client;
@@ -73,27 +30,44 @@ interface ApprovalRequest {
   userId: string;
 }
 
+export async function getApprovals(
+  userId: string
+): Promise<Approval[]> {
+  if (!userId) return [];
+  const approvalsRef = collection(db, 'approvals');
+  const q = query(
+    approvalsRef,
+    where('userId', '==', userId),
+  );
+
+  const snapshot = await getDocs(q);
+  let approvals = snapshot.docs.map(doc => ({
+    ...doc.data(),
+    id: doc.id,
+    submittedAt: doc.data().submittedAt?.toDate(),
+    approvedAt: doc.data().approvedAt?.toDate(),
+    rejectedAt: doc.data().rejectedAt?.toDate(),
+    withdrawnAt: doc.data().withdrawnAt?.toDate(),
+  })) as Approval[];
+
+  console.log(approvals);
+  return approvals;
+}
+
+export async function withdrawApproval(approvalId: string) {
+  const approvalRef = doc(db, 'approvals', approvalId);
+  await updateDoc(approvalRef, {
+    status: 'withdrawn',
+    withdrawnAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function submitTimesheetApproval(request: ApprovalRequest) {
   const { project, client, dateRange, entries, userId } = request;
 
-  // Generate composite key for querying
-  const compositeKey = `${project.id}_${format(dateRange.start, 'yyyy-MM-dd')}_${format(dateRange.end, 'yyyy-MM-dd')}_${userId}`;
-
   // Generate unique approval ID
   const approvalId = crypto.randomUUID();
-
-  // Check for existing active approvals
-  const existingApprovalsSnapshot = await getDocs(
-    query(
-      collection(db, 'approvals'),
-      where('compositeKey', '==', compositeKey),
-      where('status', 'in', ['pending', 'approved'])
-    )
-  );
-
-  if (!existingApprovalsSnapshot.empty) {
-    throw new Error('Time entries for this period have already been submitted for approval');
-  }
 
   // Calculate total hours
   const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
@@ -101,15 +75,12 @@ export async function submitTimesheetApproval(request: ApprovalRequest) {
   // Create approval document
   const approvalDoc: Approval = {
     id: approvalId,
-    compositeKey,
     status: 'pending',
     submittedAt: new Date(),
     project,
     client,
-    period: {
-      startDate: format(dateRange.start, 'yyyy-MM-dd'),
-      endDate: format(dateRange.end, 'yyyy-MM-dd')
-    },
+    startDate: format(dateRange.start, 'yyyy-MM-dd'),
+    endDate: format(dateRange.end, 'yyyy-MM-dd'),
     totalHours,
     userId,
     approverEmail: project.approverEmail,
@@ -202,50 +173,6 @@ function generateToken(secret) {
   return `${hash}:${timestamp}`;
 }
 
-export async function getApprovals(): Promise<Approval[]> {
-  const snapshot = await getDocs(
-    collection(db, 'approvals')
-  );
-
-  const approvals = snapshot.docs.map(doc => ({
-    ...doc.data(),
-    id: doc.id,
-    submittedAt: doc.data().submittedAt?.toDate(),
-    approvedAt: doc.data().approvedAt?.toDate(),
-    rejectedAt: doc.data().rejectedAt?.toDate(),
-    withdrawnAt: doc.data().withdrawnAt?.toDate(),
-  })) as Approval[];
-
-  return approvals;
-}
-
-export async function getApprovalStatus(
-  projectId: string,
-  userId: string,
-  startDate: string,
-  endDate: string
-): Promise<ApprovalStatus | null> {
-  const approvalsRef = collection(db, 'approvals');
-  const q = query(
-    approvalsRef,
-    where('project.id', '==', projectId),
-    where('userId', '==', userId),
-    where('period.startDate', '==', startDate),
-    where('period.endDate', '==', endDate),
-    limit(1)
-  );
-
-  const snapshot = await getDocs(q);
-  if (snapshot.empty) return null;
-
-  const approval = snapshot.docs[0].data() as Approval;
-  console.log("Approval", approval)
-  return {
-    status: approval.status,
-    approvalId: approval.id
-  };
-}
-
 export async function rejectTimesheet(approval) {
   const approvalRef = doc(db, 'approvals', approval.id);
   await updateDoc(approvalRef, {
@@ -263,8 +190,8 @@ export async function rejectTimesheet(approval) {
   }
 
   const user = userDoc.data();
-  const startDate = format(new Date(approval.period.startDate), 'MMM d, yyyy');
-  const endDate = format(new Date(approval.period.endDate), 'MMM d, yyyy');
+  const startDate = format(new Date(approval.startDate), 'MMM d, yyyy');
+  const endDate = format(new Date(approval.endDate), 'MMM d, yyyy');
 
   // Prepare rejection email
   const emailHtml = `

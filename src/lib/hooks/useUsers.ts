@@ -30,13 +30,23 @@ export function useUsers() {
     }
   }, [currentUserQuery.data]);
 
-  const handleSetEffectiveUser = useCallback((user: User) => {
+  // const handleSetEffectiveUser = useCallback((user: User) => {
+  //   if (currentUserQuery.data?.role === 'admin') {
+  //     setEffectiveUser(user);
+  //     // Invalidate time entries when switching users
+  //     queryClient.invalidateQueries({ queryKey: ['timeEntries','approvals','projects'] });
+
+  //     console.log("Effective user changed:", user);
+  //   }
+  // }, [currentUserQuery.data?.role]);
+
+  function handleSetEffectiveUser(user: User) {
     if (currentUserQuery.data?.role === 'admin') {
       setEffectiveUser(user);
-      // Invalidate time entries when switching users
-      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+      queryClient.invalidateQueries({ queryKey: ['timeEntries', 'approvals', 'projects'] });
+      console.log("Effective user changed:", user);
     }
-  }, [currentUserQuery.data?.role]);
+  }
 
   const resetEffectiveUser = useCallback(() => {
     if (currentUserQuery.data) {

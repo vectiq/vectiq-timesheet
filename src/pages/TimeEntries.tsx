@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { WeeklyView } from '@/components/timesheet/WeeklyView';
 import { MonthlyView } from '@/components/timesheet/MonthlyView';
 import { UserSelect } from '@/components/timesheet/UserSelect';
-import { ApprovalDialog } from '@/components/timesheet/ApprovalDialog';
 import { Button } from '@/components/ui/Button';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -14,8 +13,6 @@ import { auth } from '@/lib/firebase';
 
 export default function TimeEntries() {
   const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
-  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState<boolean>(false);
-  const [projectsWithStatus, setProjectsWithStatus] = useState<ProjectWithStatus[]>([]);
   const { 
     currentUser, 
     effectiveUser, 
@@ -30,7 +27,7 @@ export default function TimeEntries() {
     type: view === 'weekly' ? 'week' : 'month',
   });
   const { isLoading: isLoadingEntries } = useTimeEntries({ 
-    userId: effectiveUser?.id,
+    // userId: effectiveUser?.id,
     dateRange: dateNav.dateRange
   });
   const { projects, isLoading: isLoadingProjects } = useProjects();
@@ -102,20 +99,9 @@ export default function TimeEntries() {
         <MonthlyView 
           dateRange={dateNav.dateRange}
           userId={effectiveUser?.id}
-          onApprovalClick={(projects) => {
-            setProjectsWithStatus(projects);
-            setIsApprovalDialogOpen(true);
-          }}
         />
       )}
-      
-      <ApprovalDialog
-        open={isApprovalDialogOpen}
-        onOpenChange={setIsApprovalDialogOpen}
-        userId={effectiveUser?.id}
-        dateRange={dateNav.dateRange}
-        projectsWithStatus={projectsWithStatus}
-      />
+
     </div>
   );
 }

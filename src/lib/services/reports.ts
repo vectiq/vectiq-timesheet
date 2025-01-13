@@ -157,8 +157,8 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
         a.project.id === project.id &&
         a.userId === user.id &&
         ['approved', 'pending'].includes(a.status) &&
-        parseISO(a.period.startDate) <= parseISO(entry.date) &&
-        parseISO(a.period.endDate) >= parseISO(entry.date)
+        parseISO(a.startDate) <= parseISO(entry.date) &&
+        parseISO(a.endDate) >= parseISO(entry.date)
       );
       if (!approval) return;
     }

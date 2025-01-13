@@ -7,7 +7,6 @@ import { EditableTimeCell } from './EditableTimeCell';
 import { cn } from '@/lib/utils/styles';
 import { X, Lock } from 'lucide-react';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
-import { useUsers } from '@/lib/hooks/useUsers';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import type { TimeEntry } from '@/types';
@@ -30,6 +29,7 @@ interface TimesheetRowProps {
   onCellChange: (date: string, row: any, value: number | null) => void;
   onStartEdit: (key: string) => void;
   onEndEdit: () => void;
+  userId: string;
 }
 
 export const TimesheetRow = memo(function TimesheetRow({
@@ -46,11 +46,11 @@ export const TimesheetRow = memo(function TimesheetRow({
   onCellChange,
   onStartEdit,
   onEndEdit,
+  userId
 }: TimesheetRowProps) {
-  const { effectiveUser } = useUsers();
   const { projects } = useProjects();
   const { clients } = useClients();
-  const { useApprovalsForDate } = useApprovals();
+  const { approvals } = useApprovals(); 
 
   // Get available projects for selected client
   const availableProjects = useMemo(() => {
@@ -58,10 +58,10 @@ export const TimesheetRow = memo(function TimesheetRow({
     // Only return projects where user has task assignments
     return getProjectsForClient(row.clientId).filter(project =>
       project.tasks.some(task => 
-        task.userAssignments?.some(a => a.userId === effectiveUser?.id)
+        task.userAssignments?.some(a => a.userId === userId)
       )
     );
-  }, [row.clientId, getProjectsForClient, effectiveUser?.id]);
+  }, [row.clientId, getProjectsForClient, userId]);
 
   // Get available tasks for selected project
   const availableTasks = useMemo(() => {
@@ -71,21 +71,21 @@ export const TimesheetRow = memo(function TimesheetRow({
 
   // Get available clients and projects based on user assignments
   const availableClients = useMemo(() => {
-    if (!effectiveUser || !projects) return [];
+    if (!userId || !projects) return [];
     
     // Get unique client IDs from projects where user has task assignments
     const clientIds = new Set(
       projects
         .filter(project => 
           project.tasks.some(task => 
-            task.userAssignments?.some(a => a.userId === effectiveUser.id)
+            task.userAssignments?.some(a => a.userId === userId)
           )
         )
         .map(p => p.clientId)
     );
     
     return clients.filter(client => clientIds.has(client.id));
-  }, [effectiveUser, projects, clients]);
+  }, [userId, projects, clients]);
 
   // Get row entries
   const rowEntries = !row.clientId || !row.projectId || !row.taskId 
@@ -100,17 +100,16 @@ export const TimesheetRow = memo(function TimesheetRow({
   const rowTotal = rowEntries.reduce((sum, entry) => sum + entry.hours, 0);
 
   // Query approvals for each date in the week
-  const approvalQueries = weekDays.map(date => {
+  const weekApprovals = weekDays.map(date => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const query = useApprovalsForDate(dateStr, effectiveUser?.id, row.projectId);
-    return query;
+    return approvals.find((approval) => 
+      approval.project.id === row.projectId &&
+      dateStr >= approval.startDate &&
+      dateStr <= approval.endDate);
   });
 
   // Check if the entire row is locked
-  const hasLockedEntries = approvalQueries.some(query => 
-    query.data && query.data.length > 0 && 
-    query.data.some(a => ['pending', 'approved'].includes(a.status))
-  );
+  const hasLockedEntries = weekApprovals?.some(approval => approval?.status === 'pending' || approval?.status === 'approved');
 
   return (
     <tr>
@@ -196,10 +195,8 @@ export const TimesheetRow = memo(function TimesheetRow({
         const dateStr = format(date, 'yyyy-MM-dd');
         const entry = rowEntries.find(e => e.date === dateStr);
         const cellKey = `${dateStr}-${row.projectId}-${row.taskId}`;
-        const approvalQuery = approvalQueries[weekDays.indexOf(date)];
-        const isLocked = approvalQuery.data && approvalQuery.data.length > 0;
-        const approvalStatus = isLocked ? approvalQuery.data[0].status : undefined;
         const isRowComplete = row.clientId && row.projectId && row.taskId;
+        const isLocked = weekApprovals[weekDays.indexOf(date)]?.status === 'pending' || weekApprovals[weekDays.indexOf(date)]?.status === 'approved';
         
         return (
           <Td key={dateStr} className="text-center p-0">
@@ -210,7 +207,7 @@ export const TimesheetRow = memo(function TimesheetRow({
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
               isDisabled={!isRowComplete}
-              approvalStatus={approvalStatus}
+              isLocked={isLocked}
             />
           </Td>
         );

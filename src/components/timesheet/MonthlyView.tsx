@@ -1,18 +1,17 @@
-import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Send } from 'lucide-react';
 import { MonthlyViewRow } from './MonthlyViewRow';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useTasks } from '@/lib/hooks/useTasks';
 import { useApprovals } from '@/lib/hooks/useApprovals'; 
 import { useUsers } from '@/lib/hooks/useUsers';
+import { useEffect, useState } from 'react';
 import type { Project, ProjectWithStatus, User } from '@/types';
+import { app } from '@/lib/firebase';
 
 interface MonthlyViewProps {
+  userId: string;
   dateRange: {
     start: Date;
     end: Date;
@@ -35,41 +34,18 @@ interface GroupedData {
       date: string;
       hours: number;
       task: { name: string };
-      compositeKey?: string;
     }>;
     }
   >;
 }
 
-export function MonthlyView({ dateRange }: MonthlyViewProps) {
-  const { effectiveUser } = useUsers();
-  const { timeEntries } = useTimeEntries({ dateRange });
+export function MonthlyView({ dateRange, userId }: MonthlyViewProps) {
+  const { timeEntries } = useTimeEntries({ userId, dateRange });
   const { clients } = useClients();
   const { projects } = useProjects();
-  const { useApprovalStatus } = useApprovals(); 
+  const { approvals } = useApprovals(); 
   const startDate = format(dateRange.start, 'yyyy-MM-dd');
   const endDate = format(dateRange.end, 'yyyy-MM-dd');
-
-  // Filter projects based on user assignments
-  const userProjects = projects.filter(project =>
-    effectiveUser?.projectAssignments?.some(a => a.projectId === project.id)
-  );
-
-  // Get approval statuses for all projects
-  const approvalStatusQueries = userProjects
-    .filter(p => p.requiresApproval)
-    .map(project => ({
-      projectId: project.id,
-      query: useApprovalStatus(project.id, effectiveUser?.id, startDate, endDate)
-    }));
-
-  // Combine all status results into a map
-  const approvalStatusMap = new Map();
-  approvalStatusQueries.forEach(({ projectId, query }) => {
-    if (query.data) {
-      approvalStatusMap.set(projectId, query.data);
-    }
-  });
 
   // Group entries by client and project
   const groups = new Map<string, GroupedData>();
@@ -95,13 +71,14 @@ export function MonthlyView({ dateRange }: MonthlyViewProps) {
     // Initialize project group if it doesn't exist
     const clientGroup = groups.get(clientKey);
     if (!clientGroup.projects.has(projectKey)) {
-      const approval = approvalStatusMap.get(project.id);
-
+      console.log("project", project)
+      const approval = approvals?.find(a => a.project?.id === project.id && a.startDate === startDate && a.endDate === endDate)
+      console.log(approval)
       clientGroup.projects.set(projectKey, {
         project,
         approvalStatus: {
           status: approval?.status || 'unsubmitted',
-          approvalId: approval?.approvalId || ''
+          approvalId: approval?.id || ''
         },
         totalHours: 0,
         entries: [],
@@ -113,7 +90,6 @@ export function MonthlyView({ dateRange }: MonthlyViewProps) {
     projectGroup.entries.push({
       ...entry,
       task: { name: projectTask.name },
-      compositeKey: entry.compositeKey
     });
 
     // Update totals
@@ -127,40 +103,6 @@ export function MonthlyView({ dateRange }: MonthlyViewProps) {
     totalHours += group.totalHours;
   });
 
-  // Get projects that need approval
-  const projectsNeedingApproval = (() => {
-    if (!effectiveUser) return [];
-
-    const statuses: ProjectWithStatus[] = [];
-
-    for (const project of userProjects) {
-      // Only include projects that:
-      // 1. Require approval
-      // 2. Have time entries
-      // 3. Don't already have a pending or approved status
-      const projectEntries = timeEntries.filter(entry => entry.projectId === project.id);
-      if (!project.requiresApproval || projectEntries.length === 0) continue;
-
-      const client = clients.find(c => c.id === project.clientId);
-      if (!client) continue;
-
-      const totalHours = projectEntries.reduce((sum, entry) => sum + entry.hours, 0);
-      const approvalStatus = approvalStatusMap.get(project.id);
-
-      // Skip if already pending or approved
-      if (approvalStatus?.status === 'pending' || approvalStatus?.status === 'approved') continue;
-
-      statuses.push({
-        id: project.id,
-        name: project.name,
-        clientName: client.name,
-        totalHours,
-        status: approvalStatus?.status || 'unsubmitted'
-      });
-    }
-
-    return statuses;
-  })();
 
   return (
     <Card>
@@ -169,6 +111,7 @@ export function MonthlyView({ dateRange }: MonthlyViewProps) {
           <MonthlyViewRow
             key={clientGroup.client.id}
             clientGroup={clientGroup}
+            dateRange={dateRange}
           />
         ))}
       </div>

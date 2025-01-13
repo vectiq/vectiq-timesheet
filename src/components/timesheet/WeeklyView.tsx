@@ -132,6 +132,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 onCellChange={handleCellChange}
                 onStartEdit={setEditingCell}
                 onEndEdit={() => setEditingCell(null)}
+                userId={effectiveUser?.id}
               />
             ))}
           </TableBody>
