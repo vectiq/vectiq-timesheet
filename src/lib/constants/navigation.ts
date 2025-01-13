@@ -4,7 +4,6 @@ export const navigationItems = [
   { name: 'Timesheet', href: '/', icon: Clock, roles: ['user', 'admin'] },
   { name: 'Monthly Processing', href: '/processing', icon: FileCheck, roles: ['admin'] },
   { name: 'Forecast Entry', href: '/forecast', icon: TrendingUp, roles: ['admin'] },
-  { name: 'Forecast Report', href: '/forecast/report', icon: LineChart, roles: ['admin'] },
   { name: 'Reports', href: '/reports', icon: BarChart2, roles: ['admin'] },
   { name: 'Projects', href: '/projects', icon: FolderKanban, roles: ['admin'] },
   { name: 'Clients', href: '/clients', icon: Users, roles: ['admin'] },
