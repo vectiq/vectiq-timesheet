@@ -4,8 +4,13 @@ import { useReports } from '@/lib/hooks/useReports';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import type { OvertimeReportEntry } from '@/types';
+import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
+import { Button } from '@/components/ui/Button';
+import { Badge, BadgeVariant } from '@/components/ui/Badge';
+import { useClients } from '@/lib/hooks/useClients';
+import { cn } from '@/lib/utils/styles';
 
 export function OvertimeReport() {
   const dateNav = useDateNavigation({ type: 'month' });
@@ -51,6 +56,7 @@ export function OvertimeReport() {
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Overtime Hours
                       </th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Projects
                       </th>
@@ -71,14 +77,30 @@ export function OvertimeReport() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                           <span className={`font-medium ${entry.overtimeHours > 0 ? 'text-yellow-600' : 'text-gray-500'}`}>
-                            {entry.overtimeHours.toFixed(2)}
+                            <span className="ml-2 font-medium">
+                              {entry.overtimeHours.toFixed(2)}
+                            </span>
                           </span>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm">
+                          <div className="space-y-1">
+                            {entry.projects.some(p => p.requiresApproval && !p.isApproved) ? (
+                              <Badge variant="warning">Pending Approval</Badge>
+                            ) : (
+                              <Badge variant="success">Approved</Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-4 text-sm text-gray-500">
                           <div className="space-y-1">
                             {entry.projects.map(project => (
                               <div key={project.projectId} className="flex justify-between">
-                                <span>{project.projectName}</span>
+                                <div className="flex items-center gap-2">
+                                  <span>{project.projectName}</span>
+                                  {project.requiresApproval && !project.isApproved && (
+                                    <Badge variant="warning" className="text-xs">Pending</Badge>
+                                  )}
+                                </div>
                                 <span className="font-medium">
                                   <span className="ml-1">{project.hours.toFixed(2)}</span>
                                 </span>
@@ -97,6 +119,7 @@ export function OvertimeReport() {
                       <td className="px-3 py-3 text-sm font-medium text-yellow-600">
                         {data?.summary.totalOvertimeHours.toFixed(2)}
                       </td>
+                      <td />
                       <td />
                     </tr>
                   </tfoot>

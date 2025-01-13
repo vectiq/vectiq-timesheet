@@ -59,17 +59,18 @@ export interface ReportFilters {
   type?: 'time' | 'overtime';
   startDate: string;
   endDate: string;
-  clientIds: string[];
-  projectIds: string[];
-  taskIds: string[];
+  userId?: string;
+  projectId?: string;
 }
 
 export interface ReportEntry {
   id: string;
   date: string;
+  userName: string;
   clientName: string;
   projectName: string;
   taskName: string;
+  approvalStatus: string;
   hours: number;
   cost: number;
   revenue: number;
@@ -115,7 +116,9 @@ export interface OvertimeReportEntry {
     projectId: string;
     projectName: string;
     hours: number;
-    overtimeHours: number;
+    overtimeHours: number; 
+    requiresApproval: boolean;
+    isApproved: boolean;
   }[];
 }
 
