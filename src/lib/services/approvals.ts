@@ -39,7 +39,7 @@ export async function getApprovals(
     approvalsRef,
     where('userId', '==', userId),
   );
-
+  
   const snapshot = await getDocs(q);
   let approvals = snapshot.docs.map(doc => ({
     ...doc.data(),
@@ -50,7 +50,6 @@ export async function getApprovals(
     withdrawnAt: doc.data().withdrawnAt?.toDate(),
   })) as Approval[];
 
-  console.log(approvals);
   return approvals;
 }
 

@@ -6,8 +6,9 @@ import {
   rejectTimesheet,
   getApprovals,
 } from '@/lib/services/approvals';
-import { useUsers } from './useUsers';
-import type { Project, Client, TimeEntry, Approval, ApprovalRequest } from '@/types';
+import type { Approval, ApprovalRequest } from '@/types';
+import { useEffectiveTimesheetUser } from '@/lib/contexts/EffectiveTimesheetUserContext';
+
 
 const QUERY_KEYS = {
   approvals: 'approvals'
@@ -15,11 +16,11 @@ const QUERY_KEYS = {
 
 export function useApprovals() {
   const queryClient = useQueryClient();
-  const { effectiveUser } = useUsers();
+  const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
 
   const approvalsQuery = useQuery({
     queryKey: [QUERY_KEYS.approvals],
-    queryFn: ()=>getApprovals(effectiveUser?.id)
+    queryFn: ()=>getApprovals(effectiveTimesheetUser?.id)
   });
 
   const submitMutation = useMutation({

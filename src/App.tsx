@@ -19,6 +19,7 @@ import Users from '@/pages/Users';
 import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
+import { EffectiveTimesheetUserProvider } from './lib/contexts/EffectiveTimesheetUserContext';
 
 const queryClient = new QueryClient()
 
@@ -68,7 +69,11 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<TimeEntries />} />
+            <Route index element={
+              <EffectiveTimesheetUserProvider>
+                <TimeEntries />
+              </EffectiveTimesheetUserProvider>
+              } />
             <Route path="profile" element={<Profile />} />
             <Route path="leave" element={<Leave />} />
             <Route

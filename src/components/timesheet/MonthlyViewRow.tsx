@@ -4,7 +4,6 @@ import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useApprovals } from '@/lib/hooks/useApprovals';
-import { useUsers } from '@/lib/hooks/useUsers';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,7 +21,7 @@ interface MonthlyViewRowProps {
     client: { id: string; name: string };
     totalHours: number;
     projects: Map<string, {
-      project: { id: string; name: string };
+      project: { id: string; name: string; requiresApproval: boolean };
       requiresApproval?: boolean;
       totalHours: number;
       approvalStatus?: {
@@ -41,6 +40,7 @@ interface MonthlyViewRowProps {
     start: Date;
     end: Date;
   };
+  userId: string;
 }
 
 function ApprovalBadge({ status, requiresApproval }: { 
@@ -91,7 +91,7 @@ function ApprovalBadge({ status, requiresApproval }: {
   );
 }
 
-export function MonthlyViewRow({ clientGroup, dateRange }: MonthlyViewRowProps) {
+export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [confirmationDialog, setConfirmationDialog] = useState<{
     isOpen: boolean;
@@ -99,11 +99,9 @@ export function MonthlyViewRow({ clientGroup, dateRange }: MonthlyViewRowProps) 
     projectGroup?: any;
     approvalId?: string;
   }>({ isOpen: false, type: 'submit' });
-  const { effectiveUser } = useUsers();
   const { withdrawApproval, isWithdrawing, submitApproval } = useApprovals();
 
   const handleSubmitApproval = async (projectGroup) => {
-    if (!effectiveUser) return;
     setConfirmationDialog({
       isOpen: true,
       type: 'submit',
@@ -118,7 +116,7 @@ export function MonthlyViewRow({ clientGroup, dateRange }: MonthlyViewRowProps) 
         client: clientGroup.client,
         dateRange: dateRange,
         entries: confirmationDialog.projectGroup.entries,
-        userId: effectiveUser.id
+        userId: userId
       });
     } catch (error) {
       console.error('Failed to submit approval:', error);

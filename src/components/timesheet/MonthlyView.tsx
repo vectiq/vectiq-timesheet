@@ -71,9 +71,7 @@ export function MonthlyView({ dateRange, userId }: MonthlyViewProps) {
     // Initialize project group if it doesn't exist
     const clientGroup = groups.get(clientKey);
     if (!clientGroup.projects.has(projectKey)) {
-      console.log("project", project)
       const approval = approvals?.find(a => a.project?.id === project.id && a.startDate === startDate && a.endDate === endDate)
-      console.log(approval)
       clientGroup.projects.set(projectKey, {
         project,
         approvalStatus: {
@@ -112,6 +110,7 @@ export function MonthlyView({ dateRange, userId }: MonthlyViewProps) {
             key={clientGroup.client.id}
             clientGroup={clientGroup}
             dateRange={dateRange}
+            userId={userId}
           />
         ))}
       </div>

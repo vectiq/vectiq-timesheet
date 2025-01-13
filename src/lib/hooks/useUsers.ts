@@ -10,7 +10,6 @@ const CURRENT_USER_KEY = 'currentUser';
 
 export function useUsers() {
   const queryClient = useQueryClient();
-  const [effectiveUser, setEffectiveUser] = useState<User | null>(null);
 
   const usersQuery = useQuery({
     queryKey: [USERS_KEY],
@@ -22,37 +21,6 @@ export function useUsers() {
     queryKey: [CURRENT_USER_KEY],
     queryFn: getCurrentUser
   });
-
-  useEffect(() => {
-    // Always set effective user to current user initially
-    if (currentUserQuery.data && !effectiveUser) {
-      setEffectiveUser(currentUserQuery.data);
-    }
-  }, [currentUserQuery.data]);
-
-  // const handleSetEffectiveUser = useCallback((user: User) => {
-  //   if (currentUserQuery.data?.role === 'admin') {
-  //     setEffectiveUser(user);
-  //     // Invalidate time entries when switching users
-  //     queryClient.invalidateQueries({ queryKey: ['timeEntries','approvals','projects'] });
-
-  //     console.log("Effective user changed:", user);
-  //   }
-  // }, [currentUserQuery.data?.role]);
-
-  function handleSetEffectiveUser(user: User) {
-    if (currentUserQuery.data?.role === 'admin') {
-      setEffectiveUser(user);
-      queryClient.invalidateQueries({ queryKey: ['timeEntries', 'approvals', 'projects'] });
-      console.log("Effective user changed:", user);
-    }
-  }
-
-  const resetEffectiveUser = useCallback(() => {
-    if (currentUserQuery.data) {
-      setEffectiveUser(currentUserQuery.data);
-    }
-  }, [currentUserQuery.data]);
 
   const createUserMutation = useMutation({
     mutationFn: createUser,
@@ -103,9 +71,6 @@ export function useUsers() {
   return {
     users: usersQuery.data ?? [],
     currentUser: currentUserQuery.data ?? null,
-    effectiveUser: effectiveUser ?? currentUserQuery.data ?? null,
-    setEffectiveUser: handleSetEffectiveUser,
-    resetEffectiveUser,
     isAdmin: currentUserQuery.data?.role === 'admin',
     isLoading: usersQuery.isLoading,
     error: usersQuery.error,

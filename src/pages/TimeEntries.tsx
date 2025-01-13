@@ -4,35 +4,26 @@ import { MonthlyView } from '@/components/timesheet/MonthlyView';
 import { UserSelect } from '@/components/timesheet/UserSelect';
 import { Button } from '@/components/ui/Button';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
-import { auth } from '@/lib/firebase';
+import { useEffectiveTimesheetUser } from '@/lib/contexts/EffectiveTimesheetUserContext';
 
 export default function TimeEntries() {
   const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
   const { 
     currentUser, 
-    effectiveUser, 
-    setEffectiveUser, 
-    resetEffectiveUser,
     isAdmin, 
     users, 
     isLoading: isLoadingUsers 
   } = useUsers();
 
+  const { effectiveTimesheetUser, handleSetEffectiveUser, resetEffectiveTimesheetUser } = useEffectiveTimesheetUser();
   const dateNav = useDateNavigation({
     type: view === 'weekly' ? 'week' : 'month',
   });
-  const { isLoading: isLoadingEntries } = useTimeEntries({ 
-    // userId: effectiveUser?.id,
-    dateRange: dateNav.dateRange
-  });
   const { projects, isLoading: isLoadingProjects } = useProjects();
   
-
   const handleViewChange = useCallback((newView: 'weekly' | 'monthly') => {
     setView(newView);
   }, []);
@@ -42,12 +33,12 @@ export default function TimeEntries() {
     if (user) {
       // Reset to current user if selecting self 
       if (user.id === currentUser?.id) {
-        resetEffectiveUser();
+        resetEffectiveTimesheetUser();
       } else {
-        setEffectiveUser(user);
+        handleSetEffectiveUser(user);
       }
     }
-  }, [users, setEffectiveUser]);
+  }, [users, handleSetEffectiveUser]);
 
   return (
     <div className="space-y-6">
@@ -57,7 +48,7 @@ export default function TimeEntries() {
           {isAdmin && !isLoadingUsers && (
             <UserSelect
               users={users}
-              selectedUserId={effectiveUser?.id}
+              selectedUserId={effectiveTimesheetUser?.id}
               onChange={handleUserChange}
             />
           )}
@@ -93,12 +84,12 @@ export default function TimeEntries() {
         <WeeklyView
           projects={projects}
           dateRange={dateNav.dateRange}
-          userId={effectiveUser?.id}
+          userId={effectiveTimesheetUser?.id}
         />
       ) : (
         <MonthlyView 
           dateRange={dateNav.dateRange}
-          userId={effectiveUser?.id}
+          userId={effectiveTimesheetUser?.id}
         />
       )}
 

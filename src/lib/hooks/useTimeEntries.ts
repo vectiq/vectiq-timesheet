@@ -8,7 +8,7 @@ import {
   deleteTimeEntry,
 } from '@/lib/services/timeEntries';
 import { useProjects } from './useProjects';
-import { useUsers } from './useUsers';
+import { useEffectiveTimesheetUser } from '@/lib/contexts/EffectiveTimesheetUserContext';
 import type { TimeEntry } from '@/types';
 
 const QUERY_KEY = 'timeEntries';
@@ -36,8 +36,8 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
   const { projects } = useProjects();
-  const { effectiveUser } = useUsers();
-  const effectiveUserId = userId || effectiveUser?.id;
+  const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
+  const effectiveUserId = effectiveTimesheetUser?.id;
 
   // Reset manual rows when effective user changes
   useEffect(() => {

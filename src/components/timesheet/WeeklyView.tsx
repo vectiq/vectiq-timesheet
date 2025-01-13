@@ -15,7 +15,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/AlertDialog';
-import { useUsers } from '@/lib/hooks/useUsers';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
 import { useTasks } from '@/lib/hooks/useTasks';
@@ -32,7 +31,6 @@ interface WeeklyViewProps {
 }
 
 export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange }: WeeklyViewProps) {
-  const { effectiveUser } = useUsers();
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; index: number | null }>({
     isOpen: false,
     index: null
@@ -132,7 +130,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 onCellChange={handleCellChange}
                 onStartEdit={setEditingCell}
                 onEndEdit={() => setEditingCell(null)}
-                userId={effectiveUser?.id}
+                userId={userId}
               />
             ))}
           </TableBody>
