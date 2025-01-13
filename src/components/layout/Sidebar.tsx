@@ -53,7 +53,7 @@ export function Sidebar() {
                               : 'text-indigo-200 group-hover:text-white'
                           )}
                         />
-                        <span className="font-medium tracking-wide">{item.name}</span>
+                        <span className="font-medium tracking-wider">{item.name}</span>
                         {isActive && (
                           <>
                             <span className="absolute left-0 inset-y-2 w-1 bg-white rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.5)] animate-slide-in" />
@@ -74,7 +74,7 @@ export function Sidebar() {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate tracking-wide">
+                    <p className="text-sm font-medium text-white truncate tracking-wider">
                       {currentUser?.name || 'User'}
                     </p>
                     <p className="text-xs text-indigo-200/80 truncate">
