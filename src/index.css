@@ -192,7 +192,7 @@ tr {
   to { opacity: 1; }
 }
 
-.animate-fade-in {
+.fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
@@ -325,4 +325,20 @@ tr {
 
 .note-indicator-action::after {
   @apply bg-amber-500 scale-100;
+}
+
+@keyframes slideIn {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+  transform-origin: top;
 }
