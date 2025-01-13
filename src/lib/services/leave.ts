@@ -84,7 +84,12 @@ export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; 
   });
   
   const xeroResponse = response.data as XeroLeaveResponse;
-  const transformedLeave = xeroResponse.LeaveApplications ? xeroResponse.LeaveApplications.map(transformXeroLeave) : [];
+  const today = new Date().toISOString();
+  const transformedLeave = xeroResponse.LeaveApplications 
+    ? xeroResponse.LeaveApplications
+        .filter(leave => parseXeroDate(leave.EndDate) >= today)
+        .map(transformXeroLeave)
+    : [];
   
   const now = new Date();
   

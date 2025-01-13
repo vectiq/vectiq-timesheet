@@ -17,7 +17,7 @@ export const EffectiveTimesheetUserProvider: React.FC = ({ children }) => {
     const [effectiveTimesheetUser, setEffectiveTimesheetUser] = useState<User | null>(null);
 
     const resetEffectiveTimesheetUser = useCallback(() => {
-        console.log(currentUser);
+        console.log("resetting user to: ", currentUser);
         setEffectiveTimesheetUser(currentUser);
     }, []);
 

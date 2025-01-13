@@ -75,7 +75,7 @@ export function EditableTimeCell({
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-16 text-center"
+      className="text-center"
     />
   ) : (
     <div className="relative">
