@@ -4,11 +4,10 @@ import { Button } from '@/components/ui/Button';
 import { Plus } from 'lucide-react';
 import { UsersTable } from '@/components/users/UsersTable';
 import { UserDialog } from '@/components/users/UserDialog';
-import { ProjectAssignmentDialog } from '@/components/users/ProjectAssignmentDialog';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { useConfirm } from '@/lib/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import type { User, ProjectAssignment } from '@/types';
+import type { User } from '@/types';
 
 export default function Users() {
   const { 
@@ -17,13 +16,10 @@ export default function Users() {
     createUser, 
     updateUser, 
     deleteUser,
-    assignToProject,
-    removeFromProject,
   } = useUsers();
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
-  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
   const { confirm, dialog, handleClose } = useConfirm();
 
   const handleOpenCreateDialog = () => {
@@ -58,16 +54,6 @@ export default function Users() {
     }
   };
 
-  const handleAssignProject = (user: User) => {
-    setSelectedUser(user);
-    setIsAssignmentDialogOpen(true);
-  };
-
-  const handleProjectAssignment = async (data: Omit<ProjectAssignment, 'id'>) => {
-    await assignToProject(data);
-    setIsAssignmentDialogOpen(false);
-  };
-
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -87,8 +73,6 @@ export default function Users() {
           users={users}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onAssignProject={handleAssignProject}
-          onRemoveAssignment={(userId, assignmentId) => removeFromProject({ userId, assignmentId })}
         />
       </div>
 
@@ -98,15 +82,6 @@ export default function Users() {
         user={selectedUser}
         onSubmit={handleSubmit}
       />
-
-      {selectedUser && (
-        <ProjectAssignmentDialog
-          open={isAssignmentDialogOpen}
-          onOpenChange={setIsAssignmentDialogOpen}
-          user={selectedUser}
-          onSubmit={handleProjectAssignment}
-        />
-      )}
 
       {dialog && (
         <ConfirmDialog

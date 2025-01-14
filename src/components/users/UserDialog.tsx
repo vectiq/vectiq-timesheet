@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { cn } from '@/lib/utils/styles';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { FormField } from '@/components/ui/FormField';
 import { DollarSign, UserIcon, Mail, Shield, Briefcase, Calculator, Link } from 'lucide-react';
 import type { User } from '@/types';
@@ -88,20 +91,18 @@ export function UserDialog({
             
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Name">
-                <input
+                <Input
                   {...register('name')}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   placeholder="Enter full name"
                 />
               </FormField>
 
               <FormField label="Email">
-                <input
+                <Input
                   {...register('email')}
                   readOnly={!!user}
                   disabled={!!user}
                   className={cn(
-                    "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
                     user && "bg-gray-50"
                   )}
                   placeholder="email@example.com"
@@ -115,13 +116,18 @@ export function UserDialog({
             </div>
 
             <FormField label="Role">
-              <select
-                {...register('role')}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              <Select 
+                value={watch('role')} 
+                onValueChange={(value) => setValue('role', value)}
               >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
+                <SelectTrigger>
+                  {watch('role') === 'admin' ? 'Admin' : 'User'}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </FormField>
           </div>
 
@@ -133,19 +139,24 @@ export function UserDialog({
             
             <div className="space-y-4">
               <FormField label="Employee Type">
-                <select
-                  {...register('employeeType')}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                <Select 
+                  value={watch('employeeType')} 
+                  onValueChange={(value) => setValue('employeeType', value)}
                 >
-                  <option value="employee">Employee</option>
-                  <option value="contractor">Contractor</option>
-                  <option value="company">Company</option>
-                </select>
+                  <SelectTrigger>
+                    {watch('employeeType')?.charAt(0).toUpperCase() + watch('employeeType')?.slice(1) || 'Select Type'}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="contractor">Contractor</SelectItem>
+                    <SelectItem value="company">Company</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormField>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Hours Per Week">
-                  <input
+                  <Input
                     type="number"
                     min="0"
                     max="168"
@@ -154,19 +165,25 @@ export function UserDialog({
                       min: 0,
                       max: 168
                     })}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </FormField>
 
                 <FormField label="Overtime">
-                  <select
-                    {...register('overtime')}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  <Select 
+                    value={watch('overtime')} 
+                    onValueChange={(value) => setValue('overtime', value)}
                   >
-                    <option value="no">No Overtime</option>
-                    <option value="eligible">Eligible Projects Only</option>
-                    <option value="all">All Projects</option>
-                  </select>
+                    <SelectTrigger>
+                      {watch('overtime') === 'no' ? 'No Overtime' :
+                       watch('overtime') === 'eligible' ? 'Eligible Projects Only' :
+                       watch('overtime') === 'all' ? 'All Projects' : 'Select Overtime Type'}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no">No Overtime</SelectItem>
+                      <SelectItem value="eligible">Eligible Projects Only</SelectItem>
+                      <SelectItem value="all">All Projects</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </FormField>
               </div>
             </div>
@@ -181,12 +198,12 @@ export function UserDialog({
               <FormField label="Annual Salary Package (inc. Super)">
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <input
+                  <Input
                     type="number"
                     min="0"
                     step="1000"
                     {...register('salary', { valueAsNumber: true })}
-                    className="block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="pl-9"
                     placeholder="0.00"
                   />
                 </div>
@@ -239,9 +256,8 @@ export function UserDialog({
               Integration Settings
             </div>
             <FormField label="Xero Employee ID">
-              <input
+              <Input
                 {...register('xeroEmployeeId')}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 placeholder="e.g., EMP001"
               />
             </FormField>

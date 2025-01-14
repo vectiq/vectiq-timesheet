@@ -14,9 +14,7 @@ export function Card({
   gradient = false
 }: CardProps) {
   return (
-    <div className={`
-      rounded-lg shadow-sm ring-1 ring-gray-900/5 p-6 transition-all duration-300
-      hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]
+    <div className={`rounded-lg shadow-sm ring-1 ring-gray-900/5 p-6 transition-all duration-300
       ${hover ? 'hover-card' : ''}
       ${glass ? 'glass' : 'bg-white'}
       ${gradient ? 'gradient-bg' : ''}

@@ -1,55 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { 
-  getApprovalsForDate,
   submitTimesheetApproval, 
   withdrawApproval,
   rejectTimesheet,
   getApprovals,
-  getApprovalStatus
 } from '@/lib/services/approvals';
-import type { Project, Client, TimeEntry, Approval } from '@/types';
+import type { Approval, ApprovalRequest } from '@/types';
+import { useEffectiveTimesheetUser } from '@/lib/contexts/EffectiveTimesheetUserContext';
+
 
 const QUERY_KEYS = {
-  approvals: 'approvals',
-  status: (projectId: string, userId: string, startDate: string, endDate: string) =>
-    ['approval-status', projectId, userId, startDate, endDate] as const,
-  dateApprovals: (date: string, userId: string, projectId: string) =>
-    ['approvals-for-date', date, userId, projectId] as const
+  approvals: 'approvals'
 } as const;
-
-interface ApprovalRequest {
-  project: Project;
-  client: Client;
-  dateRange: {
-    start: Date;
-    end: Date;
-  };
-  entries: TimeEntry[];
-  userId: string;
-}
 
 export function useApprovals() {
   const queryClient = useQueryClient();
+  const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
 
-  const query = useQuery({
+  const approvalsQuery = useQuery({
     queryKey: [QUERY_KEYS.approvals],
-    queryFn: getApprovals
-  });
-
-  const getApprovalStatusQuery = (
-    projectId: string,
-    userId: string,
-    startDate: string,
-    endDate: string
-  ) => useQuery({
-    queryKey: QUERY_KEYS.status(projectId, userId, startDate, endDate),
-    queryFn: () => getApprovalStatus(projectId, userId, startDate, endDate)
-  });
-
-  const useApprovalsForDate = (date: string, userId: string, projectId: string) => useQuery({
-    queryKey: QUERY_KEYS.dateApprovals(date, userId, projectId),
-    queryFn: () => getApprovalsForDate(date, userId, projectId),
-    enabled: !!userId && !!projectId
+    queryFn: ()=>getApprovals(effectiveTimesheetUser?.id)
   });
 
   const submitMutation = useMutation({
@@ -87,15 +58,13 @@ export function useApprovals() {
   });
 
   return {
-    approvals: query.data || [],
+    approvals: approvalsQuery.data || [],
     submitApproval: submitMutation.mutateAsync,
-    useApprovalStatus: getApprovalStatusQuery,
-    useApprovalsForDate,
     withdrawApproval: withdrawMutation.mutateAsync,
     rejectTimesheet: rejectMutation.mutateAsync,
     isSubmitting: submitMutation.isPending,
     isWithdrawing: withdrawMutation.isPending,
     isRejecting: rejectMutation.isPending,
-    error: submitMutation.error,
+    error: submitMutation.error
   };
 }

@@ -76,7 +76,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
     const project = { 
       id: doc.id, 
       ...projectData,
-      roles: projectData.roles || []
+      tasks: projectData.tasks || []
     };
     const client = clients.get(project.clientId);
 
@@ -94,8 +94,8 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
       const projectAssignment = projectAssignments.find(a => a.projectId === project.id);
       
       if (projectAssignment) {
-        const role = project.roles.find(r => r.id === projectAssignment.roleId);
-        if (!role) continue;
+        const task = project.tasks.find(r => r.id === projectAssignment.taskId);
+        if (!task) continue;
 
         const userEntries = timeEntries.filter(entry => entry.userId === userId);
         const hours = userEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
@@ -103,8 +103,8 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
         assignments.push({
           userId,
           userName: userData.name || 'Unknown User',
-          roleId: role.id,
-          roleName: role.name,
+          taskId: task.id,
+          taskName: task.name,
           hours
         });
       }

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { FormField } from '@/components/ui/FormField';
 import { Building2 } from 'lucide-react';
 import type { Client } from '@/types';
@@ -54,17 +55,15 @@ export function ClientDialog({
       <div className="p-6">
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <FormField label="Name">
-            <input
+            <Input
               {...register('name')}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
           </FormField>
 
           <FormField label="Email">
-            <input
+            <Input
               type="email"
               {...register('email')}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
           </FormField>
 

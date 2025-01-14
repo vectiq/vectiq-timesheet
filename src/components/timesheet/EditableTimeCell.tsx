@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils/styles';
+import { Input } from '@/components/ui/Input';
 import { Lock } from 'lucide-react';
 
 interface EditableTimeCellProps {
@@ -9,7 +10,7 @@ interface EditableTimeCellProps {
   onStartEdit: () => void;
   onEndEdit: () => void;
   isDisabled?: boolean;
-  approvalStatus?: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  isLocked?: boolean;
 }
 
 export function EditableTimeCell({ 
@@ -19,11 +20,10 @@ export function EditableTimeCell({
   onStartEdit,
   onEndEdit,
   isDisabled = false,
-  approvalStatus,
+  isLocked
 }: EditableTimeCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState('');
-  const isLocked = approvalStatus === 'pending' || approvalStatus === 'approved';
 
   useEffect(() => {
     if (isEditing) {
@@ -67,7 +67,7 @@ export function EditableTimeCell({
   };
 
   return isEditing ? (
-    <input
+    <Input
       ref={inputRef}
       aria-label="Time entry hours"
       type="text"
@@ -75,7 +75,7 @@ export function EditableTimeCell({
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-16 text-center rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+      className="text-center"
     />
   ) : (
     <div className="relative">
@@ -85,12 +85,12 @@ export function EditableTimeCell({
         tabIndex={0}
         aria-label={`${value?.toFixed(2) || '-'} hours`}
         className={cn(
-          "w-16 py-2 text-center cursor-pointer rounded hover:bg-gray-50",
+          "py-2 text-center cursor-pointer rounded hover:bg-gray-50",
           value === null && "text-gray-400",
           (isDisabled || isLocked) && "cursor-not-allowed opacity-50 hover:bg-transparent",
           isLocked && "bg-gray-50"
         )}
-        title={isLocked ? `Time entries are locked - status: ${approvalStatus}` : undefined}
+        title={isLocked ? `Time entries are locked` : undefined}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();

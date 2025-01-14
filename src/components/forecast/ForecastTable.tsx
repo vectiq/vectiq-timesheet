@@ -60,7 +60,7 @@ export function ForecastTable({
   const forecastMap = useMemo(() => {
     const map = new Map<string, ForecastEntry>();
     forecasts.forEach(forecast => {
-      const key = `${forecast.userId}-${forecast.projectId}-${forecast.roleId}`;
+      const key = `${forecast.userId}-${forecast.projectId}-${forecast.taskId}`;
       map.set(key, forecast);
     });
     return map;
@@ -69,10 +69,10 @@ export function ForecastTable({
   const handleHoursChange = async (
     userId: string,
     projectId: string,
-    roleId: string,
+    taskId: string,
     hours: number
   ) => {
-    const key = `${userId}-${projectId}-${roleId}`;
+    const key = `${userId}-${projectId}-${taskId}`;
     const existingForecast = forecastMap.get(key);
 
     if (existingForecast) {
@@ -82,7 +82,7 @@ export function ForecastTable({
         month,
         userId,
         projectId,
-        roleId,
+        taskId,
         hours,
         isDefault: false
       });
@@ -108,7 +108,7 @@ export function ForecastTable({
           <tr>
             <Th className="w-8"></Th>
             <Th>Project</Th>
-            <Th>Role</Th>
+            <Th>Task</Th>
             <Th>User</Th>
             <Th className="text-right">Hours</Th>
           </tr>
@@ -122,14 +122,14 @@ export function ForecastTable({
                 </td>
               </tr>
               {group.projects.map(project => {
-                // Get all users assigned to this project's roles
+                // Get all users assigned to this project's tasks
                 const projectAssignments = users.flatMap(user => 
                   (user.projectAssignments || [])
                     .filter(assignment => assignment.projectId === project.id)
                     .map(assignment => ({
                       user,
-                      roleId: assignment.roleId,
-                      role: project.roles.find(r => r.id === assignment.roleId)
+                      taskId: assignment.taskId,
+                      task: project.tasks.find(r => r.id === assignment.taskId)
                     }))
                 );
 
@@ -156,7 +156,7 @@ export function ForecastTable({
                       </td>
                     </tr>
                     {!isCollapsed && projectAssignments.map((assignment, index) => {
-                      const key = `${assignment.user.id}-${project.id}-${assignment.roleId}`;
+                      const key = `${assignment.user.id}-${project.id}-${assignment.taskId}`;
                       const existingForecast = forecastMap.get(key);
                       const defaultHours = calculateDefaultHours(
                         workingDays,
@@ -167,7 +167,7 @@ export function ForecastTable({
                         <tr key={key}>
                           <td></td>
                           <td></td>
-                          <Td>{assignment.role?.name}</Td>
+                          <Td>{assignment.task?.name}</Td>
                           <Td>{assignment.user.name}</Td>
                           <Td className="text-right">
                             <ForecastInput
@@ -176,7 +176,7 @@ export function ForecastTable({
                               onChange={(hours) => handleHoursChange(
                                 assignment.user.id,
                                 project.id,
-                                assignment.roleId,
+                                assignment.taskId,
                                 hours
                               )}
                             />

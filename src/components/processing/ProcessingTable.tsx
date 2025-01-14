@@ -197,7 +197,7 @@ export function ProcessingTable({
                             <TableHeader>
                               <tr className="border-t border-gray-200">
                                 <Th>User</Th>
-                                <Th>Role</Th>
+                                <Th>Task</Th>
                                 <Th className="text-right">Total Hours</Th>
                                 <Th className="text-right">Actions</Th>
                               </tr>
@@ -206,7 +206,7 @@ export function ProcessingTable({
                               {project.assignments.map(assignment => (
                                 <tr key={`${project.id}-${assignment.userId}`}>
                                   <Td className="font-medium">{assignment.userName}</Td>
-                                  <Td>{assignment.roleName}</Td>
+                                  <Td>{assignment.taskName}</Td>
                                   <Td className="text-right">{assignment.hours.toFixed(1)}</Td>
                                   <Td></Td>
                                 </tr>

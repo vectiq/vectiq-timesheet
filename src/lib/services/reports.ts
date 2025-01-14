@@ -26,57 +26,70 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
   );
 
   // Get all required data
-  const [timeEntriesSnapshot, projectsSnapshot, rolesSnapshot, clientsSnapshot] = await Promise.all([
+  const [timeEntriesSnapshot, projectsSnapshot, usersSnapshot, clientsSnapshot, approvalsSnapshot] = await Promise.all([
     getDocs(timeEntriesQuery),
-    getDocs(collection(db, 'projects')),
-    getDocs(collection(db, 'roles')),
-    getDocs(collection(db, 'clients'))
+    getDocs(collection(db, 'projects')), 
+    getDocs(collection(db, 'users')), 
+    getDocs(collection(db, 'clients')),
+    getDocs(collection(db, 'approvals'))
   ]);
 
   // Create lookup maps
   const projects = new Map(projectsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
-  const roles = new Map(rolesSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
+  const users = new Map(usersSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const clients = new Map(clientsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
-
-  // Get project roles for rate calculations
-  const projectRolesSnapshot = await getDocs(collection(db, 'projectRoles'));
-  const projectRoles = new Map();
-  projectRolesSnapshot.docs.forEach(doc => {
-    const data = doc.data();
-    const key = `${data.projectId}_${data.roleId}`;
-    projectRoles.set(key, data);
-  });
+  const approvals = approvalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
   // Filter and transform time entries
   const entries: ReportEntry[] = timeEntriesSnapshot.docs
     .map(doc => {
       const entry = doc.data();
       
-      // Apply filters
-      if (filters.clientIds.length && !filters.clientIds.includes(entry.clientId)) return null;
-      if (filters.projectIds.length && !filters.projectIds.includes(entry.projectId)) return null;
-      if (filters.roleIds.length && !filters.roleIds.includes(entry.roleId)) return null;
+      // Apply user filter
+      if (filters.userId && entry.userId !== filters.userId) return null;
+
+      // Apply project filter 
+      if (filters.projectId && entry.projectId !== filters.projectId) return null;
 
       const project = projects.get(entry.projectId);
-      const projectRole = project?.roles?.find(r => r.id === entry.roleId);
+      const projectTask = project?.tasks?.find(r => r.id === entry.taskId);
       const client = clients.get(entry.clientId);
+      const user = users.get(entry.userId);
       
-      if (!project || !projectRole || !client) return null;
+      if (!project || !projectTask || !client || !user) return null;
 
-      // Get rates from project roles
-      const costRate = projectRole?.costRate || 0;
-      const sellRate = projectRole?.sellRate || 0;
+      // Get rates from project tasks
+      const costRate = projectTask?.costRate || 0;
+      const sellRate = projectTask?.sellRate || 0;
 
       const hours = entry.hours || 0;
       const cost = hours * costRate;
       const revenue = hours * sellRate;
 
+      // Get approval status
+      let approvalStatus = project.requiresApproval 
+        ? 'No Approval'
+        : 'Approval Not Required';
+
+      if (project.requiresApproval) {
+        const approval = approvals.find(a => 
+          a.project?.id === project.id &&
+          parseISO(a.startDate) <= parseISO(entry.date) &&
+          parseISO(a.endDate) >= parseISO(entry.date)
+        );
+        if (approval) {
+          approvalStatus = approval.status;
+        }
+      }
+
       return {
         id: doc.id,
         date: entry.date,
+        userName: user.name,
         clientName: client.name,
         projectName: project.name,
-        roleName: projectRole.name,
+        taskName: projectTask.name,
+        approvalStatus,
         hours,
         cost,
         revenue,
@@ -98,6 +111,15 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
     profitMargin: 0
   });
 
+  // Add approvals to response for debugging
+  const filteredApprovals = approvals.filter(approval => {
+    const approvalStart = parseISO(approval.startDate);
+    const approvalEnd = parseISO(approval.endDate);
+    const filterStart = parseISO(filters.startDate);
+    const filterEnd = parseISO(filters.endDate);
+    return approvalStart <= filterEnd && approvalEnd >= filterStart;
+  });
+
   // Calculate profit margin
   summary.profitMargin = summary.totalRevenue > 0
     ? Math.round(((summary.totalRevenue - summary.totalCost) / summary.totalRevenue) * 100)
@@ -105,7 +127,8 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
 
   return {
     entries: entries.sort((a, b) => a.date.localeCompare(b.date)),
-    summary
+    summary,
+    approvals: filteredApprovals
   };
 }
 
@@ -119,14 +142,24 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
       where('date', '<=', filters.endDate)
     )),
     getDocs(collection(db, 'projects')),
-    getDocs(collection(db, 'approvals'))
+    getDocs(
+      collection(db, 'approvals'),
+      where('startDate', '=', filters.startDate),
+      where('endDate', '=', filters.endDate))
   ]);
 
   // Create lookup maps
   const users = new Map(usersSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const projects = new Map(projectsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const timeEntries = timeEntriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TimeEntry[];
-  const approvals = approvalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Approval[];
+  const approvals = approvalsSnapshot.docs.map(doc => ({ 
+    id: doc.id, 
+    ...doc.data(),
+    startDate: doc.data().startDate,
+    endDate: doc.data().endDate,
+    project: doc.data().project,
+    userId: doc.data().userId
+  })) as Approval[];
 
   // Calculate working days in the period
   const periodStart = parseISO(filters.startDate);
@@ -142,6 +175,7 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
   timeEntries.forEach(entry => {
     const user = users.get(entry.userId) as User;
     const project = projects.get(entry.projectId) as Project;
+    const entryDate = parseISO(entry.date);
     
     if (!user || !project) return;
 
@@ -156,9 +190,8 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
       const approval = approvals.find(a => 
         a.project.id === project.id &&
         a.userId === user.id &&
-        ['approved', 'pending'].includes(a.status) &&
-        parseISO(a.period.startDate) <= parseISO(entry.date) &&
-        parseISO(a.period.endDate) >= parseISO(entry.date)
+        parseISO(a.startDate) <= entryDate &&
+        parseISO(a.endDate) >= entryDate
       );
       if (!approval) return;
     }
@@ -195,11 +228,21 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
         .map(([projectId, hours]) => {
           const project = projects.get(projectId);
           const projectOvertimeHours = (hours / projectHoursTotal) * userOvertimeHours;
+          
+          // Check approval status for this project
+          const approval = approvals.find(a => 
+            a.project.id === projectId &&
+            a.userId === user.id &&
+            a.status === 'approved'
+          );
+          
           return {
             projectId,
             projectName: project?.name || 'Unknown Project',
             hours,
-            overtimeHours: projectOvertimeHours
+            overtimeHours: projectOvertimeHours,
+            requiresApproval: project?.requiresApproval || false,
+            isApproved: !!approval || !project?.requiresApproval
           };
         })
         .sort((a, b) => b.hours - a.hours);

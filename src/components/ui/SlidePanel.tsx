@@ -1,4 +1,4 @@
-import { Sheet, SheetContent } from '@/components/ui/Sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { X } from 'lucide-react';
 
@@ -29,7 +29,10 @@ export function SlidePanel({
 }: SlidePanelProps) {
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-[600px] sm:max-w-[600px] p-0 overflow-hidden bg-gray-50/80 backdrop-blur-sm">
+      <SheetContent 
+        className="w-[600px] sm:max-w-[600px] p-0 overflow-hidden bg-gray-50/80 backdrop-blur-sm"
+        title={title}
+      >
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-6 bg-white border-b">
@@ -40,9 +43,9 @@ export function SlidePanel({
                 </div>
               )}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+                <SheetTitle className="text-xl font-semibold text-gray-900 tracking-tight">
                   {title}
-                </h2>
+                </SheetTitle>
                 {subtitle && (
                   <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
                 )}

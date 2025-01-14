@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import {
+  getXeroConfig,
+  updateXeroConfig,
   getSystemConfig,
   updateSystemConfig,
   getAdminStats,
@@ -14,11 +16,17 @@ import type { SystemConfig, TestDataOptions } from '@/types';
 
 const QUERY_KEYS = {
   config: 'system-config',
+  xeroConfig: 'xero-config',
   stats: 'admin-stats'
 } as const;
 
 export function useAdmin() {
   const queryClient = useQueryClient();
+
+  const xeroConfigQuery = useQuery({
+    queryKey: [QUERY_KEYS.xeroConfig],
+    queryFn: getXeroConfig
+  });
 
   const configQuery = useQuery({
     queryKey: [QUERY_KEYS.config],
@@ -34,6 +42,13 @@ export function useAdmin() {
     mutationFn: updateSystemConfig,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.config] });
+    }
+  });
+
+  const updateXeroConfigMutation = useMutation({
+    mutationFn: updateXeroConfig,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.xeroConfig] });
     }
   });
 
@@ -64,17 +79,24 @@ export function useAdmin() {
     await updateConfigMutation.mutateAsync(config);
   }, [updateConfigMutation]);
 
+  const handleUpdateXeroConfig = useCallback(async (config: XeroConfig) => {
+    await updateXeroConfigMutation.mutateAsync(config);
+  }, [updateXeroConfigMutation]);
+
   return {
     config: configQuery.data,
     stats: statsQuery.data,
+    xeroConfig: xeroConfigQuery.data,
     isLoading: configQuery.isLoading || statsQuery.isLoading,
     updateConfig: handleUpdateConfig,
+    updateXeroConfig: handleUpdateXeroConfig,
     generateTestData: generateDataMutation.mutateAsync,
     clearTestData: clearDataMutation.mutateAsync,
     recalculateProjectTotals: recalculateMutation.mutateAsync,
     cleanupOrphanedData: cleanupMutation.mutateAsync,
     validateTimeEntries: validateMutation.mutateAsync,
     isUpdating: updateConfigMutation.isPending,
+    isUpdatingXero: updateXeroConfigMutation.isPending,
     isGenerating: generateDataMutation.isPending,
     isClearing: clearDataMutation.isPending,
     isRecalculating: recalculateMutation.isPending,

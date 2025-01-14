@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Input } from '@/components/ui/Input';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
 import { Loader2 } from 'lucide-react';
 import type { TestDataOptions } from '@/types';
@@ -25,6 +29,13 @@ export function UtilitiesTab({
   isCleaning,
   isValidating,
 }: UtilitiesTabProps) {
+  const [weights, setWeights] = useState({
+    pendingWeight: '10',
+    approvedWeight: '80',
+    rejectedWeight: '5',
+    withdrawnWeight: '5'
+  });
+
   return (
     <Card className="divide-y divide-gray-200">
       <div className="p-6">
@@ -54,26 +65,24 @@ export function UtilitiesTab({
           }} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Start Date">
-                <input
+                <Input
                   type="date"
                   name="startDate"
                   required
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </FormField>
 
               <FormField label="End Date">
-                <input
+                <Input
                   type="date"
                   name="endDate"
                   required
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
               </FormField>
             </div>
 
             <FormField label="Maximum Daily Hours">
-              <input
+              <Input
                 type="number"
                 name="maxDailyHours"
                 min="1"
@@ -81,65 +90,54 @@ export function UtilitiesTab({
                 step="0.5"
                 defaultValue={12}
                 required
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </FormField>
 
             <div className="space-y-4 pt-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="generateApprovals"
-                  value="true"
-                  defaultChecked
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-gray-700">Generate Approvals</span>
-              </label>
+              <Checkbox
+                name="generateApprovals"
+                value="true"
+                onCheckedChange={(checked: boolean) => {
+                  const form = document.querySelector('form');
+                  const input = form.querySelector('input[name="generateApprovals"]');
+                  if (input) {
+                    (input as HTMLInputElement).checked = checked;
+                  }
+                }}
+                defaultChecked
+                label="Generate Approvals"
+              />
 
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-gray-700">Approval Status Weights</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Pending">
-                    <input
-                      type="number"
-                      name="pendingWeight"
-                      min="0"
-                      max="100"
-                      defaultValue="10"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </FormField>
-                  <FormField label="Approved">
-                    <input
-                      type="number"
-                      name="approvedWeight"
-                      min="0"
-                      max="100"
-                      defaultValue={80}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </FormField>
-                  <FormField label="Rejected">
-                    <input
-                      type="number"
-                      name="rejectedWeight"
-                      min="0"
-                      max="100"
-                      defaultValue="5"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </FormField>
-                  <FormField label="Withdrawn">
-                    <input
-                      type="number"
-                      name="withdrawnWeight"
-                      min="0"
-                      max="100"
-                      defaultValue="5"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </FormField>
+                  {[
+                    { label: 'Pending', name: 'pendingWeight', defaultValue: '10' },
+                    { label: 'Approved', name: 'approvedWeight', defaultValue: '80' },
+                    { label: 'Rejected', name: 'rejectedWeight', defaultValue: '5' },
+                    { label: 'Withdrawn', name: 'withdrawnWeight', defaultValue: '5' }
+                  ].map(({ label, name, defaultValue }) => (
+                    <FormField key={name} label={label}>
+                      <Select
+                        value={weights[name] || defaultValue}
+                        onValueChange={(value) => {
+                          setWeights(prev => ({
+                            ...prev,
+                            [name]: value
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>{weights[name] || defaultValue}%</SelectTrigger>
+                        <SelectContent>
+                          {[0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(value => (
+                            <SelectItem key={value} value={value.toString()}>
+                              {value}%
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                  ))}
                 </div>
               </div>
             </div>

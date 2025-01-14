@@ -7,7 +7,8 @@ import {
   updateTimeEntry,
   deleteTimeEntry,
 } from '@/lib/services/timeEntries';
-import { useUsers } from './useUsers';
+import { useProjects } from './useProjects';
+import { useEffectiveTimesheetUser } from '@/lib/contexts/EffectiveTimesheetUserContext';
 import type { TimeEntry } from '@/types';
 
 const QUERY_KEY = 'timeEntries';
@@ -15,7 +16,7 @@ const QUERY_KEY = 'timeEntries';
 interface TimesheetRow {
   clientId: string;
   projectId: string;
-  roleId: string;
+  taskId: string;
 }
 
 interface WeeklyRows {
@@ -23,24 +24,51 @@ interface WeeklyRows {
 }
 
 interface UseTimeEntriesOptions {
-  userId?: string;
+  userId?: string | null;
   dateRange?: {
     start: Date;
     end: Date;
   };
 }
 
-export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
-  const { currentUser } = useUsers();
-  const effectiveUserId = options.userId || currentUser?.id;
+export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}) {
   const queryClient = useQueryClient();
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
+  const { projects } = useProjects();
+  const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
+  const effectiveUserId = effectiveTimesheetUser?.id;
+
+  // Reset manual rows when effective user changes
+  useEffect(() => {
+    setManualRows({});
+    // Also invalidate time entries query when user changes
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+  }, [effectiveUserId]);
 
   // Get current week key
-  const weekKey = options.dateRange 
-    ? format(options.dateRange.start, 'yyyy-MM-dd')
+  const weekKey = dateRange 
+    ? format(dateRange.start, 'yyyy-MM-dd')
     : '';
+  // Get available projects and tasks for the user
+  const availableAssignments = useMemo(() => {
+    if (!effectiveUserId || !projects) return [];
+    
+    return projects.flatMap(project => 
+      project.tasks.flatMap(task => {
+        const assignment = task.userAssignments?.find(a => a.userId === effectiveUserId);
+        if (!assignment) return [];
+        
+        return [{
+          clientId: project.clientId,
+          projectId: project.id,
+          taskId: task.id,
+          projectName: project.name,
+          taskName: task.name
+        }];
+      })
+    );
+  }, [effectiveUserId, projects]);
 
   const createMutation = useMutation({
     mutationFn: createTimeEntry,
@@ -88,27 +116,27 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
   }, [deleteMutation]);
 
   const query = useQuery({
-    queryKey: [QUERY_KEY, effectiveUserId, options.dateRange?.start, options.dateRange?.end],
-    queryFn: () => getTimeEntries(effectiveUserId, options.dateRange),
-    enabled: !!effectiveUserId && !!options.dateRange,
+    queryKey: [QUERY_KEY, effectiveUserId, dateRange?.start, dateRange?.end],
+    queryFn: () => getTimeEntries(effectiveUserId, dateRange),
+    enabled: !!effectiveUserId && !!dateRange,
   });
 
   const timeEntries = useMemo(() => query.data || [], [query.data]);
 
   const hasEntriesForCurrentWeek = useMemo(() => {
-    if (!options.dateRange) return false;
+    if (!dateRange) return false;
     return timeEntries.some(entry => {
       const entryDate = new Date(entry.date);
-      return entryDate >= options.dateRange.start && entryDate <= options.dateRange.end;
+      return entryDate >= dateRange.start && entryDate <= dateRange.end;
     });
-  }, [timeEntries, options.dateRange]);
+  }, [timeEntries, dateRange]);
 
   const copyFromPreviousWeek = useCallback(async () => {
-    if (!effectiveUserId || !options.dateRange) return;
+    if (!effectiveUserId || !dateRange) return;
 
-    const previousWeekStart = new Date(options.dateRange.start);
+    const previousWeekStart = new Date(dateRange.start);
     previousWeekStart.setDate(previousWeekStart.getDate() - 7);
-    const previousWeekEnd = new Date(options.dateRange.end);
+    const previousWeekEnd = new Date(dateRange.end);
     previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
 
     // Get previous week's entries
@@ -128,50 +156,37 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
         date: newDate.toISOString().split('T')[0],
         clientId: entry.clientId,
         projectId: entry.projectId,
-        roleId: entry.roleId,
+        taskId: entry.taskId,
         hours: entry.hours,
         description: entry.description || '',
       });
     });
 
     await Promise.all(promises);
-  }, [effectiveUserId, options.dateRange, handleCreateEntry]);
-
+  }, [effectiveUserId, dateRange, handleCreateEntry]);
 
   // Combine automatic and manual rows
   const rows = useMemo(() => {
-    // Get unique rows from existing time entries
     const uniqueRowKeys = new Set();
     const allRows: TimesheetRow[] = [];
     const currentWeekManualRows = manualRows[weekKey] || [];
     
-    // Add rows from time entries
+    // Only add rows from existing time entries
     timeEntries.forEach(entry => {
-      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.roleId}`;
+      const rowKey = `${entry.clientId}-${entry.projectId}-${entry.taskId}`;
       if (!uniqueRowKeys.has(rowKey)) {
         uniqueRowKeys.add(rowKey);
         allRows.push({
           clientId: entry.clientId,
           projectId: entry.projectId,
-          roleId: entry.roleId,
+          taskId: entry.taskId,
         });
       }
     });
     
-    // Add manual rows that don't already exist
+    // Add manually added rows
     currentWeekManualRows.forEach(row => {
-      const rowKey = `${row.clientId}-${row.projectId}-${row.roleId}`;
-      if (!uniqueRowKeys.has(rowKey) && (row.clientId || row.projectId || row.roleId)) {
-        uniqueRowKeys.add(rowKey);
-        allRows.push(row);
-      }
-    });
-
-    // Add empty manual rows at the end
-    currentWeekManualRows.forEach(row => {
-      if (!row.clientId && !row.projectId && !row.roleId) {
-        allRows.push(row);
-      }
+      allRows.push(row);
     });
 
     return allRows;
@@ -182,13 +197,14 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     row: TimesheetRow,
     value: number | null
   ) => {
-    if (!effectiveUserId || !row.clientId || !row.projectId || !row.roleId) return;
+    if (!effectiveUserId || !row.clientId || !row.projectId || !row.taskId) return;
+    const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
     const entry = timeEntries.find(e => 
       e.date === date && 
       e.clientId === row.clientId &&
       e.projectId === row.projectId &&
-      e.roleId === row.roleId
+      e.taskId === row.taskId
     );
 
     if (entry) {
@@ -206,17 +222,27 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
         date,
         clientId: row.clientId,
         projectId: row.projectId,
-        roleId: row.roleId,
+        taskId: row.taskId,
         hours: value,
         description: '',
       });
+      
+      // Remove the manual row after creating a time entry
+      setManualRows(current => ({
+        ...current,
+        [weekKey]: (current[weekKey] || []).filter(manualRow => 
+          !(manualRow.clientId === row.clientId && 
+            manualRow.projectId === row.projectId && 
+            manualRow.taskId === row.taskId)
+        )
+      }));
     }
   }, [effectiveUserId, timeEntries, handleCreateEntry, handleUpdateEntry, handleDeleteEntry]);
 
   const addRow = useCallback(() => {
     setManualRows(current => ({
       ...current,
-      [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', roleId: '' }]
+      [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', taskId: '' }]
     }));
   }, [weekKey]);
   
@@ -225,7 +251,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
     const rowEntries = timeEntries.filter(entry =>
       entry.clientId === row.clientId &&
       entry.projectId === row.projectId &&
-      entry.roleId === row.roleId
+      entry.taskId === row.taskId
     );
 
     if (rowEntries.length > 0) {
@@ -266,13 +292,13 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}) {
         newRows[manualIndex] = { 
           clientId: updates.clientId || '',
           projectId: '',
-          roleId: ''
+          taskId: ''
         };
       } else if ('projectId' in updates) {
         newRows[manualIndex] = { 
           ...newRows[manualIndex],
           projectId: updates.projectId || '',
-          roleId: ''
+          taskId: ''
         };
       } else {
         newRows[manualIndex] = { ...newRows[manualIndex], ...updates };

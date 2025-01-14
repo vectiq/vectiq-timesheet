@@ -33,7 +33,7 @@ export function ProcessingNotes({ projectId, project, date, onClose }: Processin
   const [noteType, setNoteType] = useState<'action' | 'info'>('info');
   const [noteText, setNoteText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const month = format(date, 'yyyy-MM');
+  const month = date ? format(date, 'yyyy-MM') : '';
   
   const {
     notes,
@@ -46,17 +46,6 @@ export function ProcessingNotes({ projectId, project, date, onClose }: Processin
     isDeleting
   } = useNotes(projectId, date);
 
-  // Log query state
-  useEffect(() => {
-    if (projectId) {
-      console.log('Notes state:', { 
-        projectId,
-        isLoading,
-        error,
-        notesCount: notes?.length 
-      });
-    }
-  }, [projectId, isLoading, error, notes]);
   
   const actionNotes = notes.filter(note => note.type === 'action');
   const infoNotes = notes.filter(note => note.type === 'info');
@@ -64,7 +53,7 @@ export function ProcessingNotes({ projectId, project, date, onClose }: Processin
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!noteText.trim()) return;
+    if (!noteText.trim() || !projectId || !month) return;
     setIsSubmitting(true);
 
     try {
@@ -81,14 +70,13 @@ export function ProcessingNotes({ projectId, project, date, onClose }: Processin
       setNoteText('');
       setIsAddingNote(false);
     } catch (error) {
-      console.error('Failed to create note:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleEditNote = async (noteId: string, newText: string) => {
-    if (!newText.trim()) return;
+    if (!newText.trim() || !projectId) return;
     
     try {
       await updateNote(noteId, { text: newText });
@@ -99,7 +87,7 @@ export function ProcessingNotes({ projectId, project, date, onClose }: Processin
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    if (window.confirm('Are you sure you want to delete this note?')) {
+    if (projectId && window.confirm('Are you sure you want to delete this note?')) {
       await deleteNote(noteId);
     }
   };
@@ -123,7 +111,6 @@ export function ProcessingNotes({ projectId, project, date, onClose }: Processin
         await updateNote(note.id, { isPinned: true });
       }
     } catch (error) {
-      console.error('Failed to toggle pin:', error);
     }
   };
 
@@ -134,7 +121,7 @@ export function ProcessingNotes({ projectId, project, date, onClose }: Processin
   }, [projectId]);
 
   return (
-    <SlidePanel
+    <SlidePanel 
       open={!!projectId}
       onClose={onClose}
       title={project?.name || 'Project Notes'}

@@ -3,12 +3,14 @@ import { useAdmin } from '@/lib/hooks/useAdmin';
 import { ConfigurationTab } from '@/components/admin/ConfigurationTab';
 import { UtilitiesTab } from '@/components/admin/UtilitiesTab';
 import { CalculationsTab } from '@/components/admin/CalculationsTab';
+import { IntegrationsTab } from '@/components/admin/IntegrationsTab';
 import { Card } from '@/components/ui/Card';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { Settings, Wrench, Calculator } from 'lucide-react';
+import { Settings, Wrench, Calculator, Link2 } from 'lucide-react';
 
 const tabs = [
   { id: 'configuration', name: 'Configuration', icon: Settings },
+  { id: 'integrations', name: 'Integrations', icon: Link2 },
   { id: 'utilities', name: 'Utilities', icon: Wrench },
   { id: 'calculations', name: 'Calculations', icon: Calculator }
 ] as const;
@@ -18,14 +20,17 @@ export default function Admin() {
   const {
     config,
     stats,
+    xeroConfig,
     isLoading,
     generateTestData,
     clearTestData,
     updateConfig,
+    updateXeroConfig,
     recalculateProjectTotals,
     cleanupOrphanedData,
     validateTimeEntries,
     isUpdating,
+    isUpdatingXero,
     isGenerating,
     isClearing,
     isRecalculating,
@@ -101,6 +106,14 @@ export default function Admin() {
             config={config}
             isUpdating={isUpdating}
             onUpdateConfig={updateConfig}
+          />
+        )}
+
+        {activeTab === 'integrations' && (
+          <IntegrationsTab
+            xeroConfig={xeroConfig}
+            isUpdatingXero={isUpdatingXero}
+            onUpdateXeroConfig={updateXeroConfig}
           />
         )}
 

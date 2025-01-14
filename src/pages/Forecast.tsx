@@ -38,12 +38,12 @@ export default function Forecast() {
     let previousRevenue = 0;
     let previousCosts = 0;
     
-    // Helper to get hours for a user/project/role combination
-    const getHours = (userId: string, projectId: string, roleId: string, entries: any[]) => {
+    // Helper to get hours for a user/project/task combination
+    const getHours = (userId: string, projectId: string, taskId: string, entries: any[]) => {
       const forecast = entries.find(f => 
         f.userId === userId && 
         f.projectId === projectId && 
-        f.roleId === roleId
+        f.taskId === taskId
       );
       
       if (forecast) {
@@ -54,7 +54,7 @@ export default function Forecast() {
       const user = users.find(u => u.id === userId);
       if (user?.projectAssignments?.some(a => 
         a.projectId === projectId && 
-        a.roleId === roleId
+        a.taskId === taskId
       )) {
         return calculateDefaultHours(workingDays, user.hoursPerWeek || 40);
       }
@@ -66,14 +66,14 @@ export default function Forecast() {
     users.forEach(user => {
       user.projectAssignments?.forEach(assignment => {
         const project = projects.find(p => p.id === assignment.projectId);
-        const projectRole = project?.roles.find(r => r.id === assignment.roleId);
+        const projectTask = project?.tasks.find(r => r.id === assignment.taskId);
         
-        if (project && projectRole) {
-          const hours = getHours(user.id, project.id, projectRole.id, forecasts);
-          const prevHours = getHours(user.id, project.id, projectRole.id, previousForecasts);
+        if (project && projectTask) {
+          const hours = getHours(user.id, project.id, projectTask.id, forecasts);
+          const prevHours = getHours(user.id, project.id, projectTask.id, previousForecasts);
           
-          const sellRate = projectRole.sellRate || user.sellRate || 0;
-          const costRate = projectRole.costRate || user.costRate || 0;
+          const sellRate = projectTask.sellRate || user.sellRate || 0;
+          const costRate = projectTask.costRate || user.costRate || 0;
           
           revenue += hours * sellRate;
           costs += hours * costRate;

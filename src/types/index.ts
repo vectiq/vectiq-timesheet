@@ -1,10 +1,20 @@
-export interface ProjectRole {
+export interface ProjectTask {
   id: string;
   name: string;
   projectId: string;
   costRate: number;
   sellRate: number;
   billable: boolean;
+  xetaskaveTypeId?: string;
+  active: boolean;
+  userAssignments: UserAssignment[];
+}
+
+export interface UserAssignment {
+  id: string;
+  userId: string;
+  userName: string;
+  assignedAt: string;
 }
 
 export interface Client {
@@ -30,7 +40,7 @@ export interface Project {
   endDate: string;
   approverEmail: string;
   requiresApproval: boolean;
-  roles: ProjectRole[];
+  tasks: ProjectTask[];
   overtimeInclusive: boolean;
 }
 
@@ -39,7 +49,7 @@ export interface TimeEntry {
   userId: string;
   clientId: string;
   projectId: string;
-  roleId: string;
+  taskId: string;
   date: string;
   hours: number;
   description?: string;
@@ -49,17 +59,18 @@ export interface ReportFilters {
   type?: 'time' | 'overtime';
   startDate: string;
   endDate: string;
-  clientIds: string[];
-  projectIds: string[];
-  roleIds: string[];
+  userId?: string;
+  projectId?: string;
 }
 
 export interface ReportEntry {
   id: string;
   date: string;
+  userName: string;
   clientName: string;
   projectName: string;
-  roleName: string;
+  taskName: string;
+  approvalStatus: string;
   hours: number;
   cost: number;
   revenue: number;
@@ -87,15 +98,6 @@ export interface User {
   xeroEmployeeId?: string;
   createdAt: Date;
   updatedAt: Date;
-  projectAssignments: ProjectAssignment[];
-}
-
-export interface ProjectAssignment {
-  id: string;
-  userId: string;
-  projectId: string;
-  roleId: string;
-  clientId: string;
 }
 
 export interface ReportData {
@@ -114,7 +116,9 @@ export interface OvertimeReportEntry {
     projectId: string;
     projectName: string;
     hours: number;
-    overtimeHours: number;
+    overtimeHours: number; 
+    requiresApproval: boolean;
+    isApproved: boolean;
   }[];
 }
 
@@ -133,15 +137,29 @@ export interface ApprovalStatus {
 
 export interface Approval {
   id: string;
-  compositeKey: string;  // Composite key for querying: {projectId}_{startDate}_{endDate}_{userId}
   status: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
   submittedAt: Date;
   approvedAt?: Date;
   rejectedAt?: Date;
-  name: string;
   withdrawnAt?: Date;
   userId: string;
   approverEmail: string;
+  project: Project;
+  client: Client;
+  startDate: string;
+  endDate: string;
+  totalHours: number;
+}
+
+export interface ApprovalRequest {
+  project: Project;
+  client: Client;
+  dateRange: {
+    start: Date;
+    end: Date;
+  };
+  entries: TimeEntry[];
+  userId: string;
 }
 
 export interface SystemConfig {
@@ -150,6 +168,13 @@ export interface SystemConfig {
   requireApprovalsByDefault: boolean;
   allowOvertimeByDefault: boolean;
   defaultBillableStatus: boolean;
+}
+
+export interface XeroConfig {
+  clientId: string;
+  redirectUri: string;
+  tenantId: string;
+  scopes: string[];
 }
 
 export interface AdminStats {
@@ -174,8 +199,8 @@ export interface ProcessingProject {
   assignments: Array<{
     userId: string;
     userName: string;
-    roleId: string;
-    roleName: string;
+    taskId: string;
+    taskName: string;
     hours: number
   }>;
 }
@@ -221,9 +246,57 @@ export interface ForecastEntry {
   month: string;          // Format: YYYY-MM
   userId: string;
   projectId: string;
-  roleId: string;
+  taskId: string;
   hours: number;
   isDefault: boolean;     // Indicates if this is an auto-calculated default value
   createdAt: any;         // Firestore Timestamp
   updatedAt: any;         // Firestore Timestamp
+}
+
+export interface Leave {
+  id: string;
+  employeeId: string;
+  leaveTypeId: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  status: 'REQUESTED' | 'SCHEDULED' | 'REJECTED';
+  numberOfUnits: number;
+  updatedAt: string;
+}
+
+export interface LeaveCache {
+  leave: Leave[];
+  lastRefreshed: any; // Firestore Timestamp
+}
+
+export interface XeroLeaveResponse {
+  Id: string;
+  Status: string;
+  ProviderName: string;
+  DateTimeUTC: string;
+  LeaveBalances: Array<{
+    leaveName: string,
+    leaveTypeId: string,
+    numberOfUnits: number,
+    typeOfUnits: string
+  }>;
+  LeaveApplications: Array<{
+    LeaveApplicationID: string;
+    EmployeeID: string;
+    LeaveTypeID: string;
+    LeavePeriods: Array<{
+      PayPeriodStartDate: string;
+      PayPeriodEndDate: string;
+      LeavePeriodStatus: string;
+      NumberOfUnits: number;
+    }>;
+    Title: string;
+    Description?: string;
+    StartDate: string;
+    EndDate: string;
+    UpdatedDateUTC?: string;
+    PayOutType: string;
+  }>;
 }

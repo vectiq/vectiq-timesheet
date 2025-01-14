@@ -1,10 +1,10 @@
-import { useClients } from '@/lib/hooks/useClients';
 import { useProjects } from '@/lib/hooks/useProjects';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useUsers } from '@/lib/hooks/useUsers';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import { Search, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 import type { ReportFilters } from '@/types';
 
 interface ReportFiltersProps {
@@ -13,9 +13,8 @@ interface ReportFiltersProps {
 }
 
 export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
-  const { clients } = useClients();
   const { projects } = useProjects();
-  const { roles } = useRoles();
+  const { users } = useUsers();
 
   const handleChange = (key: keyof ReportFilters, value: any) => {
     onChange({ ...filters, [key]: value });
@@ -28,7 +27,7 @@ export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
   return (
     <Card className="p-6">
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <FormField label="Start Date">
             <input
               type="date"
@@ -46,50 +45,29 @@ export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
           </FormField>
-        </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <FormField label="Clients">
+          <FormField label="User">
             <select
-              multiple
-              value={filters.clientIds}
-              onChange={(e) => handleChange('clientIds', Array.from(e.target.selectedOptions, option => option.value))}
+              value={filters.userId || ''}
+              onChange={(e) => handleChange('userId', e.target.value)}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
+              <option value="">All Users</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>{user.name}</option>
               ))}
             </select>
           </FormField>
 
-          <FormField label="Projects">
+          <FormField label="Project">
             <select
-              multiple
-              value={filters.projectIds}
-              onChange={(e) => handleChange('projectIds', Array.from(e.target.selectedOptions, option => option.value))}
+              value={filters.projectId || ''}
+              onChange={(e) => handleChange('projectId', e.target.value)}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
+              <option value="">All Projects</option>
               {projects.map(project => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField label="Roles">
-            <select
-              multiple
-              value={filters.roleIds}
-              onChange={(e) => handleChange('roleIds', Array.from(e.target.selectedOptions, option => option.value))}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-              {roles.map(role => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
+                <option key={project.id} value={project.id}>{project.name}</option>
               ))}
             </select>
           </FormField>
@@ -99,10 +77,6 @@ export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
           <Button variant="secondary" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
-          </Button>
-          <Button>
-            <Search className="h-4 w-4 mr-2" />
-            Generate Report
           </Button>
         </div>
       </div>

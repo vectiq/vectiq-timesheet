@@ -4,14 +4,25 @@ import { navigationItems } from '@/lib/constants/navigation';
 import { Link, useLocation } from 'react-router-dom';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
 
 export function MobileNav() {
   const location = useLocation();
   const { currentUser } = useUsers();
 
+  const handleLinkClick = () => {
+    const sheetTrigger = document.querySelector('[data-state="open"]');
+    if (sheetTrigger) {
+      (sheetTrigger as HTMLButtonElement).click();
+    }
+  };
+
   // Filter navigation items based on user role
-  const allowedItems = navigationItems.filter(item =>
-    item.roles.includes(currentUser?.role || 'user')
+  const allowedItems = useMemo(() => 
+    navigationItems.filter(item =>
+      item.roles.includes(currentUser?.role || 'user')
+    ),
+    [currentUser?.role]
   );
 
   return (
@@ -29,7 +40,7 @@ export function MobileNav() {
         <div className="flex h-16 shrink-0 items-center bg-gradient-to-r from-indigo-700 to-indigo-600 -m-6 px-6 mb-0">
           <div className="flex items-center gap-3">
             <img
-              className="h-8 w-auto"
+              className="h-6 w-auto"
               src="/logo.svg"
               alt="Company Logo"
             />

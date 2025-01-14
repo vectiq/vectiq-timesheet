@@ -22,7 +22,7 @@ export default function Reports() {
     endDate: defaultDateRange.endDate,
     clientIds: [],
     projectIds: [],
-    roleIds: [],
+    taskIds: [],
   });
 
   const handleTabChange = useCallback((tab: string) => {

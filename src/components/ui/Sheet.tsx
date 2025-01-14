@@ -1,5 +1,5 @@
 import * as React from 'react';
-import * as SheetPrimitive from '@radix-ui/react-dialog';
+import * as SheetPrimitive from '@radix-ui/react-dialog'; 
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils/styles';
 
@@ -7,6 +7,8 @@ const Sheet = SheetPrimitive.Root;
 const SheetTrigger = SheetPrimitive.Trigger;
 const SheetClose = SheetPrimitive.Close;
 const SheetPortal = SheetPrimitive.Portal;
+const SheetTitle = SheetPrimitive.Title;
+const SheetDescription = SheetPrimitive.Description;
 
 const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Overlay>,
@@ -26,9 +28,10 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> & {
-    side?: 'top' | 'right' | 'bottom' | 'left';
+    side?: 'top' | 'right' | 'bottom' | 'left',
+    title?: string;
   }
->(({ side = 'right', className, children, ...props }, ref) => (
+>(({ side = 'right', className, children, title, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
@@ -49,6 +52,11 @@ const SheetContent = React.forwardRef<
       )}
       {...props}
     >
+      {title && (
+        <SheetTitle className="sr-only">
+          {title}
+        </SheetTitle>
+      )}
       {children}
       <SheetPrimitive.Close className="absolute right-6 top-6 rounded-full p-2 text-gray-400 opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-gray-100">
         <X className="h-4 w-4" />
@@ -59,4 +67,11 @@ const SheetContent = React.forwardRef<
 ));
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
-export { Sheet, SheetTrigger, SheetContent, SheetClose };
+export { 
+  Sheet, 
+  SheetTrigger, 
+  SheetContent, 
+  SheetClose,
+  SheetTitle,
+  SheetDescription
+};

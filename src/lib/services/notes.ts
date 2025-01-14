@@ -16,11 +16,13 @@ import type { Note } from '@/types';
 const COLLECTION = 'notes';
 
 export async function getNotes(projectId: string, month: string): Promise<Note[]> {
-  console.log('Getting notes from Firestore:', { projectId, month });
+  if (!projectId) {
+    return [];
+  }
 
   // Query for both current month notes and pinned notes from previous months
   const q = query(
-    collection(db, COLLECTION),
+    collection(db, COLLECTION), 
     where('projectId', '==', projectId), 
     where('isPinned', '==', true),
     orderBy('createdAt', 'desc')
@@ -37,7 +39,7 @@ export async function getNotes(projectId: string, month: string): Promise<Note[]
   try {
     const [pinnedSnapshot, currentMonthSnapshot] = await Promise.all([
       getDocs(q),
-      getDocs(currentMonthQuery)
+      getDocs(currentMonthQuery),
     ]);
 
     const pinnedNotes = pinnedSnapshot.docs.map(doc => ({
@@ -50,14 +52,8 @@ export async function getNotes(projectId: string, month: string): Promise<Note[]
       ...doc.data()
     })) as Note[];
     
-    console.log('Retrieved notes:', {
-      pinned: pinnedNotes.length,
-      current: currentMonthNotes.length
-    });
-
     return [...pinnedNotes, ...currentMonthNotes];
   } catch (error) {
-    console.error('Error getting notes:', error);
     throw error;
   }
 }

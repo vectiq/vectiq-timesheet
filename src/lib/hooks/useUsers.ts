@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { updateProfile as updateFirebaseProfile, updateEmail, sendPasswordResetEmail } from 'firebase/auth';
-import { getUsers, getCurrentUser, createUser, updateUser, deleteUser, createProjectAssignment, deleteProjectAssignment } from '@/lib/services/users';
+import { getUsers, getCurrentUser, createUser, updateUser, deleteUser } from '@/lib/services/users';
 import { auth } from '@/lib/firebase';
-import type { User, ProjectAssignment } from '@/types';
+import type { User } from '@/types';
 
 const USERS_KEY = 'users';
 const CURRENT_USER_KEY = 'currentUser';
@@ -43,21 +43,6 @@ export function useUsers() {
     }
   });
 
-  const createAssignmentMutation = useMutation({
-    mutationFn: (data: Omit<ProjectAssignment, 'id'>) => createProjectAssignment(data.userId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [USERS_KEY] });
-    }
-  });
-
-  const deleteAssignmentMutation = useMutation({
-    mutationFn: ({ userId, assignmentId }: { userId: string; assignmentId: string }) => 
-      deleteProjectAssignment(userId, assignmentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [USERS_KEY] });
-    }
-  });
-
   const handleCreateUser = useCallback(async (data: Omit<User, 'id'>) => {
     return createUserMutation.mutateAsync(data);
   }, [createUserMutation]);
@@ -86,18 +71,15 @@ export function useUsers() {
   return {
     users: usersQuery.data ?? [],
     currentUser: currentUserQuery.data ?? null,
+    isAdmin: currentUserQuery.data?.role === 'admin',
     isLoading: usersQuery.isLoading,
     error: usersQuery.error,
     createUser: handleCreateUser,
     updateUser: handleUpdateUser,
     deleteUser: handleDeleteUser,
-    assignToProject: createAssignmentMutation.mutateAsync,
-    removeFromProject: deleteAssignmentMutation.mutateAsync,
     isCreating: createUserMutation.isPending,
     isUpdating: updateUserMutation.isPending,
     isDeleting: deleteUserMutation.isPending,
-    isAssigning: createAssignmentMutation.isPending,
-    isRemoving: deleteAssignmentMutation.isPending,
     sendPasswordReset,
   };
 }

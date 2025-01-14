@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
+import { Input } from '@/components/ui/Input';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
-import { Loader2, ExternalLink } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { SystemConfig } from '@/types';
 
 interface ConfigurationTabProps {
@@ -10,87 +14,88 @@ interface ConfigurationTabProps {
   onUpdateConfig: (config: SystemConfig) => Promise<void>;
 }
 
-export function ConfigurationTab({ config, isUpdating, onUpdateConfig }: ConfigurationTabProps) {
+export function ConfigurationTab({ 
+  config, 
+  isUpdating, 
+  onUpdateConfig
+}: ConfigurationTabProps) {
+  const [formState, setFormState] = useState({
+    defaultOvertimeType: config.defaultOvertimeType,
+    requireApprovalsByDefault: config.requireApprovalsByDefault,
+    allowOvertimeByDefault: config.allowOvertimeByDefault,
+    defaultBillableStatus: config.defaultBillableStatus
+  });
+
   return (
     <Card className="p-6">
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          const formData = new FormData(e.currentTarget);
           await onUpdateConfig({
-            defaultHoursPerWeek: Number(formData.get('defaultHoursPerWeek')),
-            defaultOvertimeType: formData.get('defaultOvertimeType') as any,
-            requireApprovalsByDefault: formData.get('requireApprovalsByDefault') === 'true',
-            allowOvertimeByDefault: formData.get('allowOvertimeByDefault') === 'true',
-            defaultBillableStatus: formData.get('defaultBillableStatus') === 'true',
+            defaultHoursPerWeek: Number(e.currentTarget.defaultHoursPerWeek.value),
+            defaultOvertimeType: formState.defaultOvertimeType,
+            requireApprovalsByDefault: formState.requireApprovalsByDefault,
+            allowOvertimeByDefault: formState.allowOvertimeByDefault,
+            defaultBillableStatus: formState.defaultBillableStatus,
           });
         }}
         className="space-y-4"
       >
         <FormField label="Default Hours Per Week">
-          <input
+          <Input
             type="number"
             name="defaultHoursPerWeek"
             defaultValue={config.defaultHoursPerWeek}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
         </FormField>
 
         <FormField label="Default Overtime Type">
-          <select
-            name="defaultOvertimeType"
-            defaultValue={config.defaultOvertimeType}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          <Select
+            value={formState.defaultOvertimeType}
+            onValueChange={(value) => {
+              setFormState(prev => ({ ...prev, defaultOvertimeType: value }));
+            }}
           >
-            <option value="no">No Overtime</option>
-            <option value="eligible">Eligible Projects Only</option>
-            <option value="all">All Projects</option>
-          </select>
+            <SelectTrigger>
+              {formState.defaultOvertimeType === 'no' ? 'No Overtime' :
+               formState.defaultOvertimeType === 'eligible' ? 'Eligible Projects Only' :
+               'All Projects'}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no">No Overtime</SelectItem>
+              <SelectItem value="eligible">Eligible Projects Only</SelectItem>
+              <SelectItem value="all">All Projects</SelectItem>
+            </SelectContent>
+          </Select>
         </FormField>
 
         <div className="space-y-4 pt-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="requireApprovalsByDefault"
-              value="true"
-              defaultChecked={config.requireApprovalsByDefault}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <span className="text-sm text-gray-700">Require approvals by default for new projects</span>
-          </label>
+          <Checkbox
+            name="requireApprovalsByDefault"
+            checked={formState.requireApprovalsByDefault}
+            onCheckedChange={(checked: boolean) => {
+              setFormState(prev => ({ ...prev, requireApprovalsByDefault: checked }));
+            }}
+            label="Require approvals by default for new projects"
+          />
 
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="allowOvertimeByDefault"
-              value="true"
-              defaultChecked={config.allowOvertimeByDefault}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <span className="text-sm text-gray-700">Allow overtime by default for new projects</span>
-          </label>
+          <Checkbox
+            name="allowOvertimeByDefault"
+            checked={formState.allowOvertimeByDefault}
+            onCheckedChange={(checked: boolean) => {
+              setFormState(prev => ({ ...prev, allowOvertimeByDefault: checked }));
+            }}
+            label="Allow overtime by default for new projects"
+          />
 
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="defaultBillableStatus"
-              value="true"
-              defaultChecked={config.defaultBillableStatus}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <span className="text-sm text-gray-700">Set roles as billable by default</span>
-          </label>
-        </div>
-
-        <div className="pt-4 border-t">
-          <Button
-            type="button"
-            onClick={() => window.open(import.meta.env.VITE_XERO_AUTHORISATION_URL, '_blank')}
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Authorise Xero Integration
-          </Button>
+          <Checkbox
+            name="defaultBillableStatus"
+            checked={formState.defaultBillableStatus}
+            onCheckedChange={(checked: boolean) => {
+              setFormState(prev => ({ ...prev, defaultBillableStatus: checked }));
+            }}
+            label="Set tasks as billable by default"
+          />
         </div>
 
         <div className="pt-4 border-t">

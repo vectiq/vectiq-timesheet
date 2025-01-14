@@ -1,10 +1,11 @@
-import { ChevronDown } from 'lucide-react';
+import { User as UserIcon } from 'lucide-react';
 import { auth } from '@/lib/firebase';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { User } from '@/types';
 
 interface UserSelectProps {
   users: User[];
-  selectedUserId: string | null;
+  selectedUserId: string;
   onChange: (userId: string) => void;
 }
 
@@ -13,33 +14,34 @@ export function UserSelect({ users, selectedUserId, onChange }: UserSelectProps)
   const currentUserId = auth.currentUser?.uid;
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        className="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        onClick={() => {
-          const select = document.getElementById('user-select') as HTMLSelectElement;
-          select?.click();
-        }}
-      >
-        {selectedUser?.name}
-        {selectedUser?.id === currentUserId && (
-          <span className="ml-2 text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-medium">Me</span>
-        )}
-        <ChevronDown className="-mr-1 h-4 w-4 text-gray-400" aria-hidden="true" />
-      </button>
-      <select
-        id="user-select"
-        value={selectedUserId || ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="absolute left-0 top-0 h-full w-full opacity-0 cursor-pointer"
-      >
-        {users.map((user) => (
-          <option key={user.id} value={user.id}>
-            {user.name}{user.id === currentUserId ? ' (Me)' : ''}
-          </option>
+    <Select value={selectedUserId} onValueChange={onChange}>
+      <SelectTrigger className="min-w-[200px] bg-white">
+        <div className="flex items-center gap-2">
+          <UserIcon className="h-4 w-4 text-gray-500" />
+          <span>{selectedUser?.name}</span>
+          {selectedUser?.id === currentUserId && (
+            <span className="ml-auto text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-medium">
+              Me
+            </span>
+          )}
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {users.map(user => (
+          <SelectItem 
+            key={user.id} 
+            value={user.id}
+            className="flex items-center justify-between"
+          >
+            <span>{user.name}</span>
+            {user.id === currentUserId && (
+              <span className="ml-2 text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-medium">
+                Me
+              </span>
+            )}
+          </SelectItem>
         ))}
-      </select>
-    </div>
+      </SelectContent>
+    </Select>
   );
 }

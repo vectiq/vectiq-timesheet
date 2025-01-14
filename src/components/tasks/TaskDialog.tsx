@@ -4,27 +4,27 @@ import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { UserCircle } from 'lucide-react';
-import type { Role } from '@/types';
+import type { ProjectTask } from '@/types';
 
-interface RoleDialogProps {
+interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  role?: Role | null;
-  onSubmit: (data: Role) => void;
+  task?: ProjectTask | null;
+  onSubmit: (data: ProjectTask) => void;
 }
 
-export function RoleDialog({
+export function TaskDialog({
   open,
   onOpenChange,
-  role,
+  task,
   onSubmit,
-}: RoleDialogProps) {
+}: TaskDialogProps) {
   const {
     register,
     handleSubmit,
     reset,
   } = useForm({
-    defaultValues: role || {
+    defaultValues: task || {
       name: '',
       isActive: true,
     },
@@ -32,15 +32,15 @@ export function RoleDialog({
 
   useEffect(() => {
     if (open) {
-      reset(role || {
+      reset(task || {
         name: '',
         isActive: true,
       });
     }
-  }, [open, role, reset]);
+  }, [open, task, reset]);
 
   const handleFormSubmit = async (data: any) => {
-    await onSubmit({ ...data, id: role?.id });
+    await onSubmit({ ...data, id: task?.id });
     onOpenChange(false);
   };
 
@@ -48,7 +48,7 @@ export function RoleDialog({
     <SlidePanel
       open={open}
       onClose={() => onOpenChange(false)}
-      title={role ? 'Edit Role' : 'New Role'}
+      title={task ? 'Edit ProjectTask' : 'New ProjectTask'}
       icon={<UserCircle className="h-5 w-5 text-indigo-500" />}
     >
       <div className="p-6">
@@ -81,7 +81,7 @@ export function RoleDialog({
               Cancel
             </Button>
             <Button type="submit">
-              {role ? 'Update' : 'Create'} Role
+              {task ? 'Update' : 'Create'} ProjectTask
             </Button>
           </div>
         </form>

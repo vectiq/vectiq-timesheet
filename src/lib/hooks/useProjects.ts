@@ -5,6 +5,8 @@ import {
   createProject,
   updateProject,
   deleteProject,
+  assignUserToTask,
+  removeUserFromTask
 } from '@/lib/services/projects';
 import type { Project } from '@/types';
 
@@ -47,7 +49,7 @@ export function useProjects() {
     if (!data.id) throw new Error('Project ID is required for update');
     return updateMutation.mutateAsync({
       ...data,
-      roles: data.roles || []
+      tasks: data.tasks || []
     });
   }, [updateMutation]);
 
@@ -55,6 +57,32 @@ export function useProjects() {
     return deleteMutation.mutateAsync(id);
   }, [deleteMutation]);
 
+  const handleAssignUser = useCallback(async (
+    taskId: string,
+    userId: string,
+    userName: string,
+    projectId?: string
+  ) => {
+    const projectsData = query.data || [];
+    // Get project ID from task ID if not provided
+    const project = projectsData.find(p => p.tasks.some(t => t.id === taskId));
+    if (!project) throw new Error('Project not found');
+    projectId = project.id;
+
+    await assignUserToTask(projectId, taskId, userId, userName);
+    // Invalidate projects query to refresh the data
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+  }, [query.data, queryClient]);
+
+  const handleRemoveUser = useCallback(async (
+    projectId: string,
+    taskId: string,
+    assignmentId: string
+  ) => {
+    await removeUserFromTask(projectId, taskId, assignmentId);
+    // Invalidate projects query to refresh the data
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+  }, [queryClient]);
   return {
     projects: query.data ?? [],
     isLoading: query.isLoading,
@@ -62,8 +90,11 @@ export function useProjects() {
     createProject: handleCreateProject,
     updateProject: handleUpdateProject,
     deleteProject: handleDeleteProject,
+    assignUserToTask: handleAssignUser,
+    removeUserFromTask: handleRemoveUser,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
   };
 }
+                                       

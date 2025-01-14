@@ -8,6 +8,7 @@ import { RoleProtectedRoute } from '@/components/auth/RoleProtectedRoute';
 import { Layout } from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
+import Leave from '@/pages/Leave';
 import MonthlyProcessing from '@/pages/MonthlyProcessing';
 import Reports from '@/pages/Reports';
 import Forecast from '@/pages/Forecast';
@@ -18,6 +19,7 @@ import Users from '@/pages/Users';
 import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
+import { EffectiveTimesheetUserProvider } from './lib/contexts/EffectiveTimesheetUserContext';
 
 const queryClient = new QueryClient()
 
@@ -67,8 +69,13 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<TimeEntries />} />
+            <Route index element={
+              <EffectiveTimesheetUserProvider>
+                <TimeEntries />
+              </EffectiveTimesheetUserProvider>
+              } />
             <Route path="profile" element={<Profile />} />
+            <Route path="leave" element={<Leave />} />
             <Route
               path="processing"
               element={

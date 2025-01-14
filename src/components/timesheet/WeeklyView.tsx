@@ -1,19 +1,29 @@
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState } from 'react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, Th } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Plus, Copy } from 'lucide-react';
 import { TimesheetRow } from './TimesheetRow';
-import { useUsers } from '@/lib/hooks/useUsers';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/AlertDialog';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useClients } from '@/lib/hooks/useClients';
-import { useRoles } from '@/lib/hooks/useRoles';
+import { useTasks } from '@/lib/hooks/useTasks';
+import { useCallback } from 'react';
 import type { Project } from '@/types';
 
 interface WeeklyViewProps {
   projects: Project[];
-  userId?: string | null;
+  userId?: string;
   dateRange: {
     start: Date;
     end: Date;
@@ -21,7 +31,10 @@ interface WeeklyViewProps {
 }
 
 export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange }: WeeklyViewProps) {
-  const { currentUser } = useUsers();
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; index: number | null }>({
+    isOpen: false,
+    index: null
+  });
   const { 
     timeEntries,
     rows,
@@ -34,15 +47,23 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     handleCellChange,
     setEditingCell
   } = useTimeEntries({ 
-    userId: userId || currentUser?.id,
+    userId,
     dateRange 
   });
 
-  const { clients } = useClients();
-  const { roles: allRoles } = useRoles();
+  // Get projects and tasks where user is assigned
+  const getProjectsForClient = useCallback((clientId: string) => 
+    projects.filter(p => p.clientId === clientId),
+    [projects]
+  );
 
-  const userAssignments = currentUser?.projectAssignments || [];
-  const weekKey = format(dateRange.start, 'yyyy-MM-dd');
+  const getTasksForProject = useCallback((projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return [];
+    return project.tasks.filter(task => 
+      task.userAssignments?.some(a => a.userId === userId)
+    );
+  }, [projects, userId]);
 
   const weekDays = useMemo(() => {
     const days: Date[] = [];
@@ -54,28 +75,24 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     return days;
   }, [dateRange]);
 
-  // Helper functions for getting related data
-  const getProjectsForClient = (clientId: string) => 
-    projects.filter(p => p.clientId === clientId);
-
-  const getRolesForProject = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return [];
-
-    return project.roles.map(projectRole => ({
-      role: { 
-        id: projectRole.projectRoleId, 
-        name: allRoles.find(r => r.id === projectRole.projectRoleId)?.name || 'Unknown Role'
-      },
-      rates: projectRole
-    }));
-  };
+  const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
   // Calculate weekly total
   const weeklyTotal = useMemo(() => 
     timeEntries.reduce((total, entry) => total + entry.hours, 0),
     [timeEntries]
   );
+
+  const handleDeleteRow = (index: number) => {
+    setDeleteConfirmation({ isOpen: true, index });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmation.index !== null) {
+      await removeRow(deleteConfirmation.index);
+    }
+    setDeleteConfirmation({ isOpen: false, index: null });
+  };
 
   return (
     <Card>
@@ -85,7 +102,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
             <tr className="border-b border-gray-200">
               <Th className="w-[200px]">Client</Th>
               <Th className="w-[200px]">Project</Th>
-              <Th className="w-[200px]">Role</Th>
+              <Th className="w-[200px]">Task</Th>
               {weekDays.map(day => (
                 <Th key={day.toISOString()} className="w-[100px] text-center">
                   <div>{format(day, 'EEE')}</div>
@@ -105,17 +122,15 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 weekKey={weekKey}
                 weekDays={weekDays}
                 timeEntries={timeEntries}
-                projects={projects}
-                clients={clients}
-                userAssignments={userAssignments}
                 getProjectsForClient={getProjectsForClient}
-                getRolesForProject={getRolesForProject}
+                getTasksForProject={getTasksForProject}
                 editingCell={editingCell}
                 onUpdateRow={updateRow}
-                onRemoveRow={removeRow}
+                onRemoveRow={handleDeleteRow}
                 onCellChange={handleCellChange}
                 onStartEdit={setEditingCell}
                 onEndEdit={() => setEditingCell(null)}
+                userId={userId}
               />
             ))}
           </TableBody>
@@ -150,6 +165,24 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
           Add Row
         </Button>
       </div>
+
+      <AlertDialog 
+        open={deleteConfirmation.isOpen} 
+        onOpenChange={(open) => setDeleteConfirmation(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Row</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete all time entries for this row. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 });
