@@ -93,14 +93,6 @@ export default function App() {
               }
             />
             <Route
-              path="forecast/report"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <ForecastReport />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
               path="reports"
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>

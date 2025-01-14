@@ -5,7 +5,6 @@ export const navigationItems = [
   { name: 'Leave', href: '/leave', icon: CalendarDays, roles: ['user', 'admin'] },
   { name: 'Monthly Processing', href: '/processing', icon: FileCheck, roles: ['admin'] },
   { name: 'Forecast Entry', href: '/forecast', icon: TrendingUp, roles: ['admin'] },
-  { name: 'Forecast Report', href: '/forecast/report', icon: LineChart, roles: ['admin'] },
   { name: 'Reports', href: '/reports', icon: BarChart2, roles: ['admin'] },
   { name: 'Projects', href: '/projects', icon: FolderKanban, roles: ['admin'] },
   { name: 'Clients', href: '/clients', icon: Users, roles: ['admin'] },
