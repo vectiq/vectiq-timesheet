@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
 import { Loader2 } from 'lucide-react';
@@ -27,6 +29,13 @@ export function UtilitiesTab({
   isCleaning,
   isValidating,
 }: UtilitiesTabProps) {
+  const [weights, setWeights] = useState({
+    pendingWeight: '10',
+    approvedWeight: '80',
+    rejectedWeight: '5',
+    withdrawnWeight: '5'
+  });
+
   return (
     <Card className="divide-y divide-gray-200">
       <div className="p-6">
@@ -88,6 +97,13 @@ export function UtilitiesTab({
               <Checkbox
                 name="generateApprovals"
                 value="true"
+                onCheckedChange={(checked: boolean) => {
+                  const form = document.querySelector('form');
+                  const input = form.querySelector('input[name="generateApprovals"]');
+                  if (input) {
+                    (input as HTMLInputElement).checked = checked;
+                  }
+                }}
                 defaultChecked
                 label="Generate Approvals"
               />
@@ -95,42 +111,33 @@ export function UtilitiesTab({
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-gray-700">Approval Status Weights</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Pending">
-                    <Input
-                      type="number"
-                      name="pendingWeight"
-                      min="0"
-                      max="100"
-                      defaultValue="10"
-                    />
-                  </FormField>
-                  <FormField label="Approved">
-                    <Input
-                      type="number"
-                      name="approvedWeight"
-                      min="0"
-                      max="100"
-                      defaultValue={80}
-                    />
-                  </FormField>
-                  <FormField label="Rejected">
-                    <Input
-                      type="number"
-                      name="rejectedWeight"
-                      min="0"
-                      max="100"
-                      defaultValue="5"
-                    />
-                  </FormField>
-                  <FormField label="Withdrawn">
-                    <Input
-                      type="number"
-                      name="withdrawnWeight"
-                      min="0"
-                      max="100"
-                      defaultValue="5"
-                    />
-                  </FormField>
+                  {[
+                    { label: 'Pending', name: 'pendingWeight', defaultValue: '10' },
+                    { label: 'Approved', name: 'approvedWeight', defaultValue: '80' },
+                    { label: 'Rejected', name: 'rejectedWeight', defaultValue: '5' },
+                    { label: 'Withdrawn', name: 'withdrawnWeight', defaultValue: '5' }
+                  ].map(({ label, name, defaultValue }) => (
+                    <FormField key={name} label={label}>
+                      <Select
+                        value={weights[name] || defaultValue}
+                        onValueChange={(value) => {
+                          setWeights(prev => ({
+                            ...prev,
+                            [name]: value
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>{weights[name] || defaultValue}%</SelectTrigger>
+                        <SelectContent>
+                          {[0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(value => (
+                            <SelectItem key={value} value={value.toString()}>
+                              {value}%
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                  ))}
                 </div>
               </div>
             </div>

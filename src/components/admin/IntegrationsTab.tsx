@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
 import { ExternalLink } from 'lucide-react';
@@ -133,12 +134,13 @@ export function IntegrationsTab({
             <FormField label="Scopes">
               <div className="border rounded-md divide-y divide-gray-200">
                 {Object.entries(scopesByCategory).map(([category, scopes]) => (
-                  <div key={category} className="p-4">
+                  <fieldset key={category} className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-medium text-gray-900">{category}</h4>
+                      <legend className="text-sm font-medium text-gray-900">{category}</legend>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
                           const categoryScopes = scopes.map(s => s.value);
                           const currentScopes = xeroConfig?.scopes || [];
                           const allSelected = categoryScopes.every(s => currentScopes.includes(s));
@@ -161,12 +163,15 @@ export function IntegrationsTab({
                     </div>
                     <div className="space-y-2">
                       {scopes.map(scope => (
-                        <label key={scope.value} className="flex items-start gap-2">
+                        <label
+                          key={scope.value}
+                          className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-md"
+                        >
                           <Checkbox
                             checked={(xeroConfig?.scopes || []).includes(scope.value)}
-                            onChange={(e) => {
+                            onCheckedChange={(checked) => {
                               const currentScopes = xeroConfig?.scopes || [];
-                              const newScopes = e.target.checked
+                              const newScopes = checked
                                 ? [...currentScopes, scope.value]
                                 : currentScopes.filter(s => s !== scope.value);
                               onUpdateXeroConfig({
@@ -175,14 +180,14 @@ export function IntegrationsTab({
                               });
                             }}
                           />
-                          <div>
-                            <div className="text-sm font-mono text-gray-700">{scope.value}</div>
+                          <div className="flex-1">
+                            <div className="font-mono text-sm">{scope.value}</div>
                             <div className="text-xs text-gray-500">{scope.description}</div>
                           </div>
                         </label>
                       ))}
                     </div>
-                  </div>
+                  </fieldset>
                 ))}
               </div>
             </FormField>

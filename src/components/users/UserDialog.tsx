@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { cn } from '@/lib/utils/styles';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { FormField } from '@/components/ui/FormField';
 import { DollarSign, UserIcon, Mail, Shield, Briefcase, Calculator, Link } from 'lucide-react';
@@ -116,11 +116,17 @@ export function UserDialog({
             </div>
 
             <FormField label="Role">
-              <Select
-                {...register('role')}
+              <Select 
+                value={watch('role')} 
+                onValueChange={(value) => setValue('role', value)}
               >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
+                <SelectTrigger>
+                  {watch('role') === 'admin' ? 'Admin' : 'User'}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
               </Select>
             </FormField>
           </div>
@@ -133,12 +139,18 @@ export function UserDialog({
             
             <div className="space-y-4">
               <FormField label="Employee Type">
-                <Select
-                  {...register('employeeType')}
+                <Select 
+                  value={watch('employeeType')} 
+                  onValueChange={(value) => setValue('employeeType', value)}
                 >
-                  <option value="employee">Employee</option>
-                  <option value="contractor">Contractor</option>
-                  <option value="company">Company</option>
+                  <SelectTrigger>
+                    {watch('employeeType')?.charAt(0).toUpperCase() + watch('employeeType')?.slice(1) || 'Select Type'}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="contractor">Contractor</SelectItem>
+                    <SelectItem value="company">Company</SelectItem>
+                  </SelectContent>
                 </Select>
               </FormField>
 
@@ -157,12 +169,20 @@ export function UserDialog({
                 </FormField>
 
                 <FormField label="Overtime">
-                  <Select
-                    {...register('overtime')}
+                  <Select 
+                    value={watch('overtime')} 
+                    onValueChange={(value) => setValue('overtime', value)}
                   >
-                    <option value="no">No Overtime</option>
-                    <option value="eligible">Eligible Projects Only</option>
-                    <option value="all">All Projects</option>
+                    <SelectTrigger>
+                      {watch('overtime') === 'no' ? 'No Overtime' :
+                       watch('overtime') === 'eligible' ? 'Eligible Projects Only' :
+                       watch('overtime') === 'all' ? 'All Projects' : 'Select Overtime Type'}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no">No Overtime</SelectItem>
+                      <SelectItem value="eligible">Eligible Projects Only</SelectItem>
+                      <SelectItem value="all">All Projects</SelectItem>
+                    </SelectContent>
                   </Select>
                 </FormField>
               </div>

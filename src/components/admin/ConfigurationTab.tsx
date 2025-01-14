@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
 import { Loader2 } from 'lucide-react';
@@ -18,18 +19,24 @@ export function ConfigurationTab({
   isUpdating, 
   onUpdateConfig
 }: ConfigurationTabProps) {
+  const [formState, setFormState] = useState({
+    defaultOvertimeType: config.defaultOvertimeType,
+    requireApprovalsByDefault: config.requireApprovalsByDefault,
+    allowOvertimeByDefault: config.allowOvertimeByDefault,
+    defaultBillableStatus: config.defaultBillableStatus
+  });
+
   return (
     <Card className="p-6">
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          const formData = new FormData(e.currentTarget);
           await onUpdateConfig({
-            defaultHoursPerWeek: Number(formData.get('defaultHoursPerWeek')),
-            defaultOvertimeType: formData.get('defaultOvertimeType') as any,
-            requireApprovalsByDefault: formData.get('requireApprovalsByDefault') === 'true',
-            allowOvertimeByDefault: formData.get('allowOvertimeByDefault') === 'true',
-            defaultBillableStatus: formData.get('defaultBillableStatus') === 'true',
+            defaultHoursPerWeek: Number(e.currentTarget.defaultHoursPerWeek.value),
+            defaultOvertimeType: formState.defaultOvertimeType,
+            requireApprovalsByDefault: formState.requireApprovalsByDefault,
+            allowOvertimeByDefault: formState.allowOvertimeByDefault,
+            defaultBillableStatus: formState.defaultBillableStatus,
           });
         }}
         className="space-y-4"
@@ -44,34 +51,49 @@ export function ConfigurationTab({
 
         <FormField label="Default Overtime Type">
           <Select
-            name="defaultOvertimeType"
-            defaultValue={config.defaultOvertimeType}
+            value={formState.defaultOvertimeType}
+            onValueChange={(value) => {
+              setFormState(prev => ({ ...prev, defaultOvertimeType: value }));
+            }}
           >
-            <option value="no">No Overtime</option>
-            <option value="eligible">Eligible Projects Only</option>
-            <option value="all">All Projects</option>
+            <SelectTrigger>
+              {formState.defaultOvertimeType === 'no' ? 'No Overtime' :
+               formState.defaultOvertimeType === 'eligible' ? 'Eligible Projects Only' :
+               'All Projects'}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no">No Overtime</SelectItem>
+              <SelectItem value="eligible">Eligible Projects Only</SelectItem>
+              <SelectItem value="all">All Projects</SelectItem>
+            </SelectContent>
           </Select>
         </FormField>
 
         <div className="space-y-4 pt-4">
           <Checkbox
             name="requireApprovalsByDefault"
-            value="true"
-            defaultChecked={config.requireApprovalsByDefault}
+            checked={formState.requireApprovalsByDefault}
+            onCheckedChange={(checked: boolean) => {
+              setFormState(prev => ({ ...prev, requireApprovalsByDefault: checked }));
+            }}
             label="Require approvals by default for new projects"
           />
 
           <Checkbox
             name="allowOvertimeByDefault"
-            value="true"
-            defaultChecked={config.allowOvertimeByDefault}
+            checked={formState.allowOvertimeByDefault}
+            onCheckedChange={(checked: boolean) => {
+              setFormState(prev => ({ ...prev, allowOvertimeByDefault: checked }));
+            }}
             label="Allow overtime by default for new projects"
           />
 
           <Checkbox
             name="defaultBillableStatus"
-            value="true"
-            defaultChecked={config.defaultBillableStatus}
+            checked={formState.defaultBillableStatus}
+            onCheckedChange={(checked: boolean) => {
+              setFormState(prev => ({ ...prev, defaultBillableStatus: checked }));
+            }}
             label="Set tasks as billable by default"
           />
         </div>
