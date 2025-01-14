@@ -266,6 +266,13 @@ export interface Leave {
   updatedAt: string;
 }
 
+export interface LeaveBalance {
+  leaveName: string,
+  leaveTypeId: string,
+  numberOfUnits: number,
+  typeOfUnits: string
+};
+
 export interface LeaveCache {
   leave: Leave[];
   lastRefreshed: any; // Firestore Timestamp
@@ -276,12 +283,7 @@ export interface XeroLeaveResponse {
   Status: string;
   ProviderName: string;
   DateTimeUTC: string;
-  LeaveBalances: Array<{
-    leaveName: string,
-    leaveTypeId: string,
-    numberOfUnits: number,
-    typeOfUnits: string
-  }>;
+  LeaveBalances: Array<LeaveBalance>;
   LeaveApplications: Array<{
     LeaveApplicationID: string;
     EmployeeID: string;
