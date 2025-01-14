@@ -29,8 +29,8 @@ export function ForecastReportSummary({ forecasts, actuals, month }: ForecastRep
       
       if (project && user) {
         // Use project role rates if defined, otherwise fall back to user rates
-        const sellRate = projectRole?.sellRate ?? user.sellRate;
-        const costRate = projectRole?.costRate ?? user.costRate;
+        const sellRate = projectRole?.sellRate || user.sellRate || 0;
+        const costRate = projectRole?.costRate || user.costRate || 0;
         
         forecastRevenue += forecast.hours * sellRate;
         forecastCost += forecast.hours * costRate;

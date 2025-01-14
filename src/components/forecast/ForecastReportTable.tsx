@@ -113,8 +113,8 @@ export function ForecastReportTable({ forecasts, actuals, month }: ForecastRepor
           if (!projectRole) return;
 
           // Use project role rates if defined, otherwise fall back to user rates
-          const sellRate = projectRole.sellRate ?? user.sellRate;
-          const costRate = projectRole.costRate ?? user.costRate;
+          const sellRate = projectRole.sellRate || user.sellRate || 0;
+          const costRate = projectRole.costRate || user.costRate || 0;
 
           // Calculate forecast hours and financials
           const forecastHours = getForecastHours(user.id, project.id, projectRole.id);
