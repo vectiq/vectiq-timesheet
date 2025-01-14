@@ -97,6 +97,7 @@ export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; 
   const employeeLeaveRef = doc(db, COLLECTION, userId);
   try {
     await setDoc(employeeLeaveRef, {
+      leaveBalances: xeroResponse.LeaveBalances,
       userId,
       leave: transformedLeave || [],
       updatedAt: now

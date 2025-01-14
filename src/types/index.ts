@@ -276,6 +276,12 @@ export interface XeroLeaveResponse {
   Status: string;
   ProviderName: string;
   DateTimeUTC: string;
+  LeaveBalances: Array<{
+    leaveName: string,
+    leaveTypeId: string,
+    numberOfUnits: number,
+    typeOfUnits: string
+  }>;
   LeaveApplications: Array<{
     LeaveApplicationID: string;
     EmployeeID: string;
