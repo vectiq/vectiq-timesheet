@@ -15,6 +15,8 @@ export async function getXeroConfig(): Promise<XeroConfig> {
       clientId: '',
       tenantId: '',
       redirectUri: '',
+      overtimePayItemCode: '',
+      ordinaryHoursEarningsId: '',
       scopes: []
     };
   }

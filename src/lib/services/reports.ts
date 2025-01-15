@@ -1,5 +1,6 @@
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, functions } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { format, parseISO } from 'date-fns';
 import { getWorkingDaysInPeriod } from '@/lib/utils/date';
 import type { 
@@ -132,6 +133,51 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
   };
 }
 
+export async function submitOvertime(
+  overtimeData: OvertimeReportData,
+  startDate: string,
+  endDate: string,
+  month: string
+): Promise<void> {
+  // First check if already submitted
+  const submissionRef = collection(db, 'overtimeSubmissions');
+  const q = query(
+    submissionRef,
+    where('submissionMonth', '==', month)
+  );
+  
+  const snapshot = await getDocs(q);
+  if (!snapshot.empty) {
+    throw new Error('Overtime has already been submitted for this month');
+  }
+
+  // Get all users
+  const usersSnapshot = await getDocs(collection(db, 'users'));
+  const users = usersSnapshot.docs;
+  const overtimeEntries = overtimeData.entries.map(entry => ({
+    ...entry,
+    xeroEmployeeId: users.find(u => u.id === entry.userId)?.data().xeroEmployeeId,
+  }));
+
+  // Call Firebase function to process overtime
+  const processOvertime = httpsCallable(functions, 'processOvertime');
+  await processOvertime({ 
+    overtimeEntries: overtimeEntries,
+    startDate,
+    endDate
+  });
+}
+
+export async function checkOvertimeSubmission(month: string): Promise<boolean> {
+  const submissionRef = collection(db, 'overtimeSubmissions');
+  const q = query(
+    submissionRef,
+    where('submissionMonth', '==', month)
+  );
+  
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+}
 async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeReportData> {
   // Get all required data
   const [usersSnapshot, timeEntriesSnapshot, projectsSnapshot, approvalsSnapshot] = await Promise.all([
@@ -184,8 +230,8 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
 
     // For eligible overtime, only include overtime-inclusive projects
     if (user.overtime === 'eligible' && !project.overtimeInclusive) return;
-
-    // For projects requiring approval, only count approved hours
+    
+    // Track approval status for projects requiring approval
     if (project.requiresApproval) {
       const approval = approvals.find(a => 
         a.project.id === project.id &&
@@ -193,7 +239,12 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
         parseISO(a.startDate) <= entryDate &&
         parseISO(a.endDate) >= entryDate
       );
-      if (!approval) return;
+      // Include the hours but mark as unsubmitted/pending as appropriate
+      if (!approval) {
+        entry.approvalStatus = 'unsubmitted';
+      } else {
+        entry.approvalStatus = approval.status;
+      }
     }
 
     // Track total hours for the user
@@ -229,12 +280,23 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
           const project = projects.get(projectId);
           const projectOvertimeHours = (hours / projectHoursTotal) * userOvertimeHours;
           
-          // Check approval status for this project
-          const approval = approvals.find(a => 
-            a.project.id === projectId &&
-            a.userId === user.id &&
-            a.status === 'approved'
+          // Get all approvals for this project/user
+          const projectApprovals = approvals.filter(a => 
+            a.project.id === projectId && 
+            a.userId === user.id
           );
+
+          // Determine approval status
+          let approvalStatus = 'approved';
+          if (project?.requiresApproval) {
+            if (projectApprovals.length === 0) {
+              approvalStatus = 'unsubmitted';
+            } else if (projectApprovals.some(a => a.status === 'pending')) {
+              approvalStatus = 'pending';
+            } else if (!projectApprovals.some(a => a.status === 'approved')) {
+              approvalStatus = 'rejected';
+            }
+          }
           
           return {
             projectId,
@@ -242,7 +304,8 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
             hours,
             overtimeHours: projectOvertimeHours,
             requiresApproval: project?.requiresApproval || false,
-            isApproved: !!approval || !project?.requiresApproval
+            approvalStatus,
+            isApproved: approvalStatus === 'approved' || !project?.requiresApproval
           };
         })
         .sort((a, b) => b.hours - a.hours);

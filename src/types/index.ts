@@ -174,6 +174,8 @@ export interface XeroConfig {
   clientId: string;
   redirectUri: string;
   tenantId: string;
+  overtimePayItemCode: string;
+  ordinaryHoursEarningsId: string;
   scopes: string[];
 }
 
@@ -266,16 +268,16 @@ export interface Leave {
   updatedAt: string;
 }
 
-export interface LeaveBalance {
-  leaveName: string,
-  leaveTypeId: string,
-  numberOfUnits: number,
-  typeOfUnits: string
-};
-
 export interface LeaveCache {
   leave: Leave[];
   lastRefreshed: any; // Firestore Timestamp
+}
+
+export interface LeaveBalance{
+    leaveName: string,
+    leaveTypeId: string,
+    numberOfUnits: number,
+    typeOfUnits: string
 }
 
 export interface XeroLeaveResponse {

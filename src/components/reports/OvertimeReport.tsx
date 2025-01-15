@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { useReports } from '@/lib/hooks/useReports';
+import { submitOvertime, checkOvertimeSubmission } from '@/lib/services/reports';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
@@ -11,14 +11,46 @@ import { Button } from '@/components/ui/Button';
 import { Badge, BadgeVariant } from '@/components/ui/Badge';
 import { useClients } from '@/lib/hooks/useClients';
 import { cn } from '@/lib/utils/styles';
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export function OvertimeReport() {
   const dateNav = useDateNavigation({ type: 'month' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const currentMonth = format(dateNav.currentDate, 'MM/yyyy');
+
   const { data, isLoading } = useReports({ 
     type: 'overtime',
     startDate: format(dateNav.dateRange.start, 'yyyy-MM-dd'),
     endDate: format(dateNav.dateRange.end, 'yyyy-MM-dd')
   });
+
+  useEffect(() => {
+    async function checkSubmission() {
+      const submitted = await checkOvertimeSubmission(currentMonth);
+      setIsSubmitted(submitted);
+    }
+    checkSubmission();
+  }, [currentMonth]);
+
+  const handleSubmit = async () => {
+    if (!data) return;
+    
+    const startDate = format(dateNav.dateRange.start, 'yyyy-MM-dd');
+    const endDate = format(dateNav.dateRange.end, 'yyyy-MM-dd');
+    
+    try {
+      setIsSubmitting(true);
+      await submitOvertime(data, startDate, endDate, currentMonth);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error('Failed to submit overtime:', error);
+      alert('Failed to submit overtime: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -26,7 +58,14 @@ export function OvertimeReport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting || isSubmitted || !data?.entries.length}
+        >
+          {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          {isSubmitted ? 'Submitted' : 'Submit to Xero'}
+        </Button>
         <DateNavigation
           currentDate={dateNav.currentDate}
           onPrevious={dateNav.goToPrevious}
@@ -56,7 +95,6 @@ export function OvertimeReport() {
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Overtime Hours
                       </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Projects
                       </th>
@@ -82,27 +120,25 @@ export function OvertimeReport() {
                             </span>
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm">
-                          <div className="space-y-1">
-                            {entry.projects.some(p => p.requiresApproval && !p.isApproved) ? (
-                              <Badge variant="warning">Pending Approval</Badge>
-                            ) : (
-                              <Badge variant="success">Approved</Badge>
-                            )}
-                          </div>
-                        </td>
                         <td className="px-3 py-4 text-sm text-gray-500">
                           <div className="space-y-1">
                             {entry.projects.map(project => (
-                              <div key={project.projectId} className="flex justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span>{project.projectName}</span>
-                                  {project.requiresApproval && !project.isApproved && (
-                                    <Badge variant="warning" className="text-xs">Pending</Badge>
-                                  )}
-                                </div>
-                                <span className="font-medium">
-                                  <span className="ml-1">{project.hours.toFixed(2)}</span>
+                              <div key={project.projectId} className="flex items-center gap-2">
+                                <span className="flex-1">{project.projectName}</span>
+                                {project.requiresApproval && (
+                                  <Badge 
+                                    variant={
+                                      project.approvalStatus === 'approved' ? 'success' :
+                                     project.approvalStatus === 'unsubmitted' ? 'warning' :
+                                     project.approvalStatus === 'pending' ? 'warning' : 'destructive'
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {project.approvalStatus.charAt(0).toUpperCase() + project.approvalStatus.slice(1)}
+                                  </Badge>
+                                )}
+                                <span className="font-medium text-gray-900 min-w-[60px] text-right">
+                                  {project.hours.toFixed(2)}
                                 </span>
                               </div>
                             ))}
@@ -119,7 +155,6 @@ export function OvertimeReport() {
                       <td className="px-3 py-3 text-sm font-medium text-yellow-600">
                         {data?.summary.totalOvertimeHours.toFixed(2)}
                       </td>
-                      <td />
                       <td />
                     </tr>
                   </tfoot>
