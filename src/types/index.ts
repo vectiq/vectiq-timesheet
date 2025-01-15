@@ -93,6 +93,7 @@ export interface User {
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
   hoursPerWeek: number;
+  leaveApproverId?: string;
   costRate: number;
   sellRate: number;
   xeroEmployeeId?: string;
