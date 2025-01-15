@@ -122,18 +122,16 @@ export function ForecastTable({
                 </td>
               </tr>
               {group.projects.map(project => {
-                // Get all users assigned to this project's tasks
-                const projectAssignments = users.flatMap(user => 
-                  (user.projectAssignments || [])
-                    .filter(assignment => assignment.projectId === project.id)
-                    .map(assignment => ({
-                      user,
-                      taskId: assignment.taskId,
-                      task: project.tasks.find(r => r.id === assignment.taskId)
-                    }))
-                );
+                // Get all task assignments from the project
+                const taskAssignments = project.tasks.flatMap(task => 
+                  (task.userAssignments || []).map(assignment => ({
+                    user: users.find(u => u.id === assignment.userId),
+                    task,
+                    taskId: task.id
+                  }))
+                ).filter(a => a.user); // Filter out assignments where user not found
 
-                if (projectAssignments.length === 0) return null;
+                if (taskAssignments.length === 0) return null;
                 const isCollapsed = collapsedProjects.has(project.id);
 
                 return (
@@ -155,19 +153,19 @@ export function ForecastTable({
                         {project.name}
                       </td>
                     </tr>
-                    {!isCollapsed && projectAssignments.map((assignment, index) => {
-                      const key = `${assignment.user.id}-${project.id}-${assignment.taskId}`;
+                    {!isCollapsed && taskAssignments.map((assignment) => {
+                      const key = `${assignment.user.id}-${project.id}-${assignment.task.id}`;
                       const existingForecast = forecastMap.get(key);
                       const defaultHours = calculateDefaultHours(
                         workingDays,
-                        assignment.user.hoursPerWeek
+                        assignment.user.hoursPerWeek || 40
                       );
 
                       return (
                         <tr key={key}>
                           <td></td>
                           <td></td>
-                          <Td>{assignment.task?.name}</Td>
+                          <Td>{assignment.task.name}</Td>
                           <Td>{assignment.user.name}</Td>
                           <Td className="text-right">
                             <ForecastInput
@@ -176,7 +174,7 @@ export function ForecastTable({
                               onChange={(hours) => handleHoursChange(
                                 assignment.user.id,
                                 project.id,
-                                assignment.taskId,
+                                assignment.task.id,
                                 hours
                               )}
                             />

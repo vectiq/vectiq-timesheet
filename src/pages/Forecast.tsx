@@ -38,8 +38,8 @@ export default function Forecast() {
     let previousRevenue = 0;
     let previousCosts = 0;
     
-    // Helper to get hours for a user/project/task combination
-    const getHours = (userId: string, projectId: string, taskId: string, entries: any[]) => {
+    // Helper to get hours for a forecast entry
+    const getHours = (userId: string, projectId: string, taskId: string, entries: ForecastEntry[]) => {
       const forecast = entries.find(f => 
         f.userId === userId && 
         f.projectId === projectId && 
@@ -50,36 +50,37 @@ export default function Forecast() {
         return forecast.hours;
       }
       
-      // Calculate default hours if no forecast exists
-      const user = users.find(u => u.id === userId);
-      if (user?.projectAssignments?.some(a => 
-        a.projectId === projectId && 
-        a.taskId === taskId
-      )) {
-        return calculateDefaultHours(workingDays, user.hoursPerWeek || 40);
+      // Calculate default hours if no forecast exists and user is assigned to the task
+      const project = projects.find(p => p.id === projectId);
+      const task = project?.tasks.find(t => t.id === taskId);
+      const isAssigned = task?.userAssignments?.some(a => a.userId === userId);
+      
+      if (isAssigned) {
+        const user = users.find(u => u.id === userId);
+        return calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
       }
       
       return 0;
     };
 
-    // Calculate totals for all user assignments
-    users.forEach(user => {
-      user.projectAssignments?.forEach(assignment => {
-        const project = projects.find(p => p.id === assignment.projectId);
-        const projectTask = project?.tasks.find(r => r.id === assignment.taskId);
+    // Calculate totals for all project task assignments
+    projects.forEach(project => {
+      project.tasks.forEach(task => {
+        task.userAssignments?.forEach(assignment => {
+          const user = users.find(u => u.id === assignment.userId);
+          if (!user) return;
         
-        if (project && projectTask) {
-          const hours = getHours(user.id, project.id, projectTask.id, forecasts);
-          const prevHours = getHours(user.id, project.id, projectTask.id, previousForecasts);
+          const hours = getHours(user.id, project.id, task.id, forecasts);
+          const prevHours = getHours(user.id, project.id, task.id, previousForecasts);
           
-          const sellRate = projectTask.sellRate || user.sellRate || 0;
-          const costRate = projectTask.costRate || user.costRate || 0;
+          const sellRate = task.sellRate || user.sellRate || 0;
+          const costRate = task.costRate || user.costRate || 0;
           
           revenue += hours * sellRate;
           costs += hours * costRate;
           previousRevenue += prevHours * sellRate;
           previousCosts += prevHours * costRate;
-        }
+        });
       });
     });
     

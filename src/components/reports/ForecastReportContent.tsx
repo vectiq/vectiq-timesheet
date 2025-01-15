@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth } from 'date-fns';
 import { useForecasts } from '@/lib/hooks/useForecasts';
+import { useUsers } from '@/lib/hooks/useUsers';
+import { useProjects } from '@/lib/hooks/useProjects';
+import { useClients } from '@/lib/hooks/useClients';
 import { useReports } from '@/lib/hooks/useReports';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { ForecastReportSummary } from '@/components/forecast/ForecastReportSummary';
 import { ForecastReportTable } from '@/components/forecast/ForecastReportTable';
+import { getWorkingDaysForMonth } from '@/lib/utils/workingDays';
 import type { ReportFilters } from '@/types';
 
 interface ForecastReportContentProps {
@@ -16,8 +20,15 @@ interface ForecastReportContentProps {
 export function ForecastReportContent({ filters, onFiltersChange }: ForecastReportContentProps) {
   const [currentDate, setCurrentDate] = useState(startOfMonth(new Date(filters.startDate)));
   const currentMonth = format(currentDate, 'yyyy-MM');
+  const workingDays = getWorkingDaysForMonth(currentMonth);
 
-  const { forecasts, isLoading: isLoadingForecasts } = useForecasts(
+  const { users, isLoading: isLoadingUsers } = useUsers();
+  const { projects, isLoading: isLoadingProjects } = useProjects();
+  const { clients, isLoading: isLoadingClients } = useClients();
+  const { 
+    forecasts,
+    isLoading: isLoadingForecasts,
+  } = useForecasts(
     currentMonth
   );
   
@@ -34,7 +45,7 @@ export function ForecastReportContent({ filters, onFiltersChange }: ForecastRepo
   const handleNext = () => setCurrentDate(addMonths(currentDate, 1));
   const handleToday = () => setCurrentDate(startOfMonth(new Date()));
 
-  if (isLoadingForecasts || isLoadingReports) {
+  if (isLoadingForecasts || isLoadingReports || isLoadingUsers || isLoadingProjects || isLoadingClients) {
     return <LoadingScreen />;
   }
 
@@ -54,12 +65,19 @@ export function ForecastReportContent({ filters, onFiltersChange }: ForecastRepo
         forecasts={forecasts}
         actuals={reportData}
         month={currentMonth}
+        users={users}
+        projects={projects}
+        workingDays={workingDays}
       />
 
       <ForecastReportTable
         forecasts={forecasts}
         actuals={reportData}
         month={currentMonth}
+        users={users}
+        projects={projects}
+        clients={clients}
+        workingDays={workingDays}
       />
     </div>
   );

@@ -4,16 +4,17 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
-import { useUsers } from '@/lib/hooks/useUsers';
-import { useProjects } from '@/lib/hooks/useProjects';
-import { useClients } from '@/lib/hooks/useClients';
 import { getWorkingDaysForMonth, calculateDefaultHours } from '@/lib/utils/workingDays';
-import type { ForecastEntry, ReportData } from '@/types';
+import type { ForecastEntry, ReportData, User, Project, Client } from '@/types';
 
 interface ForecastReportTableProps {
   forecasts: ForecastEntry[];
   actuals: ReportData;
   month: string;
+  users: User[];
+  projects: Project[];
+  clients: Client[];
+  workingDays: number;
 }
 
 interface ProjectSummary {
@@ -30,9 +31,9 @@ interface ProjectSummary {
     cost: number;
     grossMargin: number;
   };
-  roles: Array<{
-    roleId: string;
-    roleName: string;
+  tasks: Array<{
+    taskId: string;
+    taskName: string;
     userId: string;
     userName: string;
     forecast: {
@@ -48,12 +49,16 @@ interface ProjectSummary {
   }>;
 }
 
-export function ForecastReportTable({ forecasts, actuals, month }: ForecastReportTableProps) {
+export function ForecastReportTable({ 
+  forecasts, 
+  actuals, 
+  month,
+  users,
+  projects,
+  clients,
+  workingDays
+}: ForecastReportTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const { users } = useUsers();
-  const { projects } = useProjects();
-  const { clients } = useClients();
-  const workingDays = getWorkingDaysForMonth(month);
 
   // Calculate project summaries with forecasts and actuals
   const projectSummaries = useMemo((): ProjectSummary[] => {
@@ -65,24 +70,25 @@ export function ForecastReportTable({ forecasts, actuals, month }: ForecastRepor
     }
 
     // Helper to get forecast hours for a user/project/role
-    const getForecastHours = (userId: string, projectId: string, roleId: string) => {
+    const getForecastHours = (userId: string, projectId: string, taskId: string) => {
       const forecast = forecasts.find(f => 
         f.userId === userId && 
         f.projectId === projectId && 
-        f.roleId === roleId
+        f.taskId === taskId
       );
       
       if (forecast) {
         return forecast.hours;
       }
       
-      // Calculate default hours if no forecast exists
-      const user = users.find(u => u.id === userId);
-      if (user?.projectAssignments?.some(a => 
-        a.projectId === projectId && 
-        a.roleId === roleId
-      )) {
-        return calculateDefaultHours(workingDays, user.hoursPerWeek || 40);
+      // Calculate default hours if no forecast exists and user is assigned to the task
+      const project = projects.find(p => p.id === projectId);
+      const task = project?.tasks.find(t => t.id === taskId);
+      const isAssigned = task?.userAssignments?.some(a => a.userId === userId);
+      
+      if (isAssigned) {
+        const user = users.find(u => u.id === userId);
+        return calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
       }
       
       return 0;
@@ -99,32 +105,28 @@ export function ForecastReportTable({ forecasts, actuals, month }: ForecastRepor
         clientName: client.name,
         forecast: { revenue: 0, cost: 0, grossMargin: 0 },
         actual: { revenue: 0, cost: 0, grossMargin: 0 },
-        roles: []
+        tasks: []
       };
 
-      // Process each role and user assignment
-      users.forEach(user => {
-        const assignments = user.projectAssignments?.filter(a => 
-          a.projectId === project.id
-        ) || [];
+      // Process each task and its user assignments
+      project.tasks.forEach(task => {
+        task.userAssignments?.forEach(assignment => {
+          const user = users.find(u => u.id === assignment.userId);
+          if (!user) return;
 
-        assignments.forEach(assignment => {
-          const projectRole = project.roles.find(r => r.id === assignment.roleId);
-          if (!projectRole) return;
-
-          // Use project role rates if defined, otherwise fall back to user rates
-          const sellRate = projectRole.sellRate ?? user.sellRate;
-          const costRate = projectRole.costRate ?? user.costRate;
+          // Use task rates if defined, otherwise fall back to user rates
+          const sellRate = task.sellRate || user.sellRate || 0;
+          const costRate = task.costRate || user.costRate || 0;
 
           // Calculate forecast hours and financials
-          const forecastHours = getForecastHours(user.id, project.id, projectRole.id);
+          const forecastHours = getForecastHours(user.id, project.id, task.id);
           const forecastRevenue = forecastHours * sellRate;
           const forecastCost = forecastHours * costRate;
 
           // Get actual hours and financials from time entries
           const actualEntries = actuals.entries.filter(entry =>
             entry.projectName === project.name &&
-            entry.roleName === projectRole.name
+            entry.taskName === task.name
           );
 
           const actualHours = actualEntries.reduce((sum, entry) => sum + entry.hours, 0);
@@ -137,10 +139,10 @@ export function ForecastReportTable({ forecasts, actuals, month }: ForecastRepor
           summary.actual.revenue += actualRevenue;
           summary.actual.cost += actualCost;
 
-          // Add role summary
-          summary.roles.push({
-            roleId: projectRole.id,
-            roleName: projectRole.name,
+          // Add task summary
+          summary.tasks.push({
+            taskId: task.id,
+            taskName: task.name,
             userId: user.id,
             userName: user.name,
             forecast: {
@@ -275,7 +277,7 @@ export function ForecastReportTable({ forecasts, actuals, month }: ForecastRepor
                       <Table>
                         <TableHeader>
                           <tr>
-                            <Th>Role</Th>
+                            <Th>Task</Th>
                             <Th>User</Th>
                             <Th className="text-right">Forecast Hours</Th>
                             <Th className="text-right">Actual Hours</Th>
@@ -285,18 +287,18 @@ export function ForecastReportTable({ forecasts, actuals, month }: ForecastRepor
                           </tr>
                         </TableHeader>
                         <TableBody>
-                          {project.roles.map((role, index) => (
-                            <tr key={`${role.roleId}-${role.userId}`}>
-                              <Td>{role.roleName}</Td>
-                              <Td>{role.userName}</Td>
-                              <Td className="text-right">{role.forecast.hours.toFixed(1)}</Td>
-                              <Td className="text-right">{role.actual.hours.toFixed(1)}</Td>
-                              <Td className="text-right">{formatCurrency(role.forecast.revenue)}</Td>
-                              <Td className="text-right">{formatCurrency(role.actual.revenue)}</Td>
+                          {project.tasks.map((task, index) => (
+                            <tr key={`${task.taskId}-${task.userId}`}>
+                              <Td>{task.taskName}</Td>
+                              <Td>{task.userName}</Td>
+                              <Td className="text-right">{task.forecast.hours.toFixed(1)}</Td>
+                              <Td className="text-right">{task.actual.hours.toFixed(1)}</Td>
+                              <Td className="text-right">{formatCurrency(task.forecast.revenue)}</Td>
+                              <Td className="text-right">{formatCurrency(task.actual.revenue)}</Td>
                               <Td>
                                 {getVarianceBadge(
-                                  role.actual.revenue - role.forecast.revenue,
-                                  role.forecast.revenue
+                                  task.actual.revenue - task.forecast.revenue,
+                                  task.forecast.revenue
                                 )}
                               </Td>
                             </tr>
