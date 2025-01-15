@@ -5,7 +5,7 @@ export interface ProjectTask {
   costRate: number;
   sellRate: number;
   billable: boolean;
-  xetaskaveTypeId?: string;
+  xeroLeaveTypeId?: string;
   active: boolean;
   userAssignments: UserAssignment[];
 }

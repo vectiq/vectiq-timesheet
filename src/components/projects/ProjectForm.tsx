@@ -34,7 +34,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       endDate: '',
       requiresApproval: false,
       overtimeInclusive: true,
-      xetaskaveTypeId: '',
+      xeroLeaveTypeId: '',
     },
     shouldUnregister: false, // Prevent fields from being unregistered when removed
   });
