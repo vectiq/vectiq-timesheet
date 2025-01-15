@@ -1,6 +1,7 @@
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format, parseISO } from 'date-fns';
+import { doc, getDoc } from 'firebase/firestore';
 import { getWorkingDaysInPeriod } from '@/lib/utils/date';
 import type { 
   ReportFilters, 
@@ -135,6 +136,21 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
   };
 }
 
+export async function checkOvertimeSubmission(month: string): Promise<boolean> {
+  const submissionRef = doc(db, 'overtimeSubmissions', month);
+  const submissionDoc = await getDoc(submissionRef);
+  return submissionDoc.exists();
+}
+
+export async function submitOvertime(data: OvertimeReportData, startDate: string, endDate: string, month: string): Promise<void> {
+  const submissionRef = doc(db, 'overtimeSubmissions', month);
+  await setDoc(submissionRef, {
+    data,
+    startDate,
+    endDate,
+    submittedAt: new Date().toISOString()
+  });
+}
 async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeReportData> {
   // Get all required data
   const [usersSnapshot, timeEntriesSnapshot, projectsSnapshot, approvalsSnapshot] = await Promise.all([
