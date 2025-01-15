@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { cn } from '@/lib/utils/styles';
@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { FormField } from '@/components/ui/FormField';
-import { UserIcon, Mail, Shield, Briefcase, Calculator, Link, UserCheck, DollarSign } from 'lucide-react';
+import { UserIcon, Mail, Shield, Briefcase, Calculator, Link, UserCheck, DollarSign, History } from 'lucide-react';
 import type { User } from '@/types';
+import { SalaryHistoryDialog } from './SalaryHistoryDialog';
+import { CostRateHistoryDialog } from './CostRateHistoryDialog';
 
 interface UserDialogProps {
   open: boolean;
@@ -24,6 +26,8 @@ export function UserDialog({
   user,
   onSubmit,
 }: UserDialogProps) {
+  const [isSalaryHistoryOpen, setIsSalaryHistoryOpen] = useState(false);
+  const [isCostRateHistoryOpen, setCostRateHistoryOpen] = useState(false);
   const {
     register,
     handleSubmit,
@@ -46,17 +50,26 @@ export function UserDialog({
 
   const { users } = useUsers();
   const employeeType = watch('employeeType');
-  const salary = watch('salary');
   const currentLeaveApproverId = watch('leaveApproverId');
 
+  // Get current salary and cost rate
+  const currentSalary = useMemo(() => {
+    if (!user?.salary?.length) return null;
+    return user.salary.sort((a, b) => b.date.getTime() - a.date.getTime())[0].salary;
+  }, [user?.salary]);
+
+  const currentCostRate = useMemo(() => {
+    if (!user?.costRate?.length) return null;
+    return user.costRate.sort((a, b) => b.date.getTime() - a.date.getTime())[0].costRate;
+  }, [user?.costRate]);
   // Calculate cost rate from salary for employees
   useEffect(() => {
-    if (employeeType === 'employee' && salary) {
+    if (employeeType === 'employee' && currentSalary) {
       const annualWorkingHours = 52 * 38; // Fixed 38 hour week
-      const costRate = salary / annualWorkingHours;
+      const costRate = currentSalary / annualWorkingHours;
       setValue('costRate', Math.round(costRate * 100) / 100);
     }
-  }, [employeeType, salary, setValue]);
+  }, [employeeType, currentSalary, setValue]);
   useEffect(() => {
     if (open) {
       reset(user || {
@@ -199,45 +212,35 @@ export function UserDialog({
                 <Calculator className="h-4 w-4" />
                 Salary Information
               </div>
-              <FormField label="Annual Salary Package (inc. Super)">
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    {...register('salary', { valueAsNumber: true })}
-                    className="pl-9"
-                    placeholder="0.00"
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700">Current Annual Salary</div>
+                  {currentSalary ? (
+                    <div className="text-2xl font-semibold mt-1">${currentSalary.toLocaleString()}</div>
+                  ) : (
+                    <div className="text-sm text-gray-500 mt-1">No salary set</div>
+                  )}
                 </div>
-              </FormField>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSalaryHistoryOpen(true);
+                  }}
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  Manage History
+                </Button>
+              </div>
             </div>
           )}
 
           <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <DollarSign className="h-4 w-4" />
-              Billing Rates
+              Sell Rate
             </div>
-            <div className="grid grid-cols-2 gap-4">
-            <FormField label="Cost Rate ($/hr)">
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1 h-4 w-4 text-gray-400" />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  {...register('costRate', { valueAsNumber: true })}
-                  disabled={employeeType === 'employee'}
-                  className={`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                    employeeType === 'employee' ? 'bg-gray-100' : ''
-                  }`}                 
-                  placeholder="0.00"
-                />
-              </div>
-            </FormField>
-
             <FormField label="Sell Rate ($/hr)">
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1 h-4 w-4 text-gray-400" />
@@ -250,8 +253,10 @@ export function UserDialog({
                   placeholder="0.00"
                 />
               </div>
+              <p className="mt-1 text-xs text-gray-500">
+                The sell rate is used for billing clients. Cost rates are managed separately.
+              </p>
             </FormField>
-            </div>
           </div>
 
           <div className="space-y-4 bg-gray-50 p-4 rounded-lg">

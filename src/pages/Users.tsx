@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { UsersTable } from '@/components/users/UsersTable';
 import { UserDialog } from '@/components/users/UserDialog';
+import { RatesDialog } from '@/components/users/RatesDialog';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import {
   AlertDialog,
@@ -27,6 +28,7 @@ export default function Users() {
   } = useUsers();
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRatesUser, setSelectedRatesUser] = useState<User | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; userId: string | null }>({
     isOpen: false,
@@ -36,6 +38,10 @@ export default function Users() {
   const handleOpenCreateDialog = () => {
     setSelectedUser(null);
     setIsUserDialogOpen(true);
+  };
+
+  const handleManageRates = (user: User) => {
+    setSelectedRatesUser(user);
   };
 
   const handleSubmit = async (data: Omit<User, 'id'>) => {
@@ -63,6 +69,13 @@ export default function Users() {
     }
   };
 
+  const handleSaveRates = async (updates: { salary?: SalaryItem[]; costRate?: CostRate[] }) => {
+    if (selectedRatesUser) {
+      await updateUser(selectedRatesUser.id, updates);
+      setSelectedRatesUser(null);
+    }
+  };
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -81,6 +94,7 @@ export default function Users() {
         <UsersTable 
           users={users}
           onEdit={handleEdit}
+          onManageRates={handleManageRates}
           onDelete={handleDelete}
         />
       </div>
@@ -90,6 +104,13 @@ export default function Users() {
         onOpenChange={setIsUserDialogOpen}
         user={selectedUser}
         onSubmit={handleSubmit}
+      />
+
+      <RatesDialog
+        open={!!selectedRatesUser}
+        onOpenChange={(open) => !open && setSelectedRatesUser(null)}
+        user={selectedRatesUser || null}
+        onSave={handleSaveRates}
       />
 
       <AlertDialog 

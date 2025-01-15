@@ -84,17 +84,27 @@ export interface ReportSummary {
   profitMargin: number;
 }
 
+export interface SalaryItem{
+  salary: number;
+  date: Date;
+}
+
+export interface CostRate{
+  costRate: number;
+  date: Date;
+}
+
 export interface User {
   id: string;
   email: string;
   name: string;
   employeeType: 'employee' | 'contractor' | 'company';
-  salary?: number;
+  salary?: SalaryItem[];
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
   hoursPerWeek: number;
   leaveApproverId?: string;
-  costRate: number;
+  costRate: CostRate[];
   sellRate: number;
   xeroEmployeeId?: string;
   createdAt: Date;
