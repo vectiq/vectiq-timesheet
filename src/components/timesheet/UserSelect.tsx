@@ -2,6 +2,7 @@ import { User as UserIcon } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { User } from '@/types';
+import { useMemo } from 'react';
 
 interface UserSelectProps {
   users: User[];
@@ -12,6 +13,18 @@ interface UserSelectProps {
 export function UserSelect({ users, selectedUserId, onChange }: UserSelectProps) {
   const selectedUser = users.find(user => user.id === selectedUserId);
   const currentUserId = auth.currentUser?.uid;
+  
+  // Sort users with current user first, then alphabetically
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      // Current user always comes first
+      if (a.id === currentUserId) return -1;
+      if (b.id === currentUserId) return 1;
+      
+      // Otherwise sort alphabetically by name
+      return a.name.localeCompare(b.name);
+    });
+  }, [users, currentUserId]);
 
   return (
     <Select value={selectedUserId} onValueChange={onChange}>
@@ -27,7 +40,7 @@ export function UserSelect({ users, selectedUserId, onChange }: UserSelectProps)
         </div>
       </SelectTrigger>
       <SelectContent>
-        {users.map(user => (
+        {sortedUsers.map(user => (
           <SelectItem 
             key={user.id} 
             value={user.id}

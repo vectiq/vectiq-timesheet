@@ -65,6 +65,7 @@ export function useLeave() {
   return {
     // Data and loading states
     leave: data?.leave || [],
+    leaveBalances: data?.leaveBalances || [],
     isLoading,
     isError,
     error,

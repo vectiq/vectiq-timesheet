@@ -12,7 +12,7 @@ import {
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase'; 
-import type { Leave, XeroLeaveResponse } from '@/types';
+import type { Leave, XeroLeaveResponse, LeaveBalance } from '@/types';
 
 const COLLECTION = 'employeeLeave';
 const CACHE_TIME = 60 * 60 * 1000; // 1 hour in milliseconds
@@ -42,7 +42,7 @@ function transformXeroLeave(xeroLeave: XeroLeaveResponse['LeaveApplications'][0]
   };
 }
 
-async function getCachedLeave(userId: string): Promise<{ leave: Leave[]; lastRefreshed: Date } | null> {
+async function getCachedLeave(userId: string): Promise<{ leave: Leave[]; leaveBalances: LeaveBalance[]; lastRefreshed: Date } | null> {
   const leaveDoc = await getDoc(doc(db, COLLECTION, userId));
   if (!leaveDoc.exists()) return null;
 
@@ -53,6 +53,7 @@ async function getCachedLeave(userId: string): Promise<{ leave: Leave[]; lastRef
   if (updatedAt && Date.now() - updatedAt.getTime() < CACHE_TIME) {
     return {
       leave: data.leave,
+      leaveBalances: data.leaveBalances,
       lastRefreshed: updatedAt
     };
   }
@@ -61,9 +62,9 @@ async function getCachedLeave(userId: string): Promise<{ leave: Leave[]; lastRef
 }
 
 // Get leave requests from Xero and sync to Firestore
-export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; lastRefreshed: Date }> {
+export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; leaveBalances: LeaveBalance[]; lastRefreshed: Date }> {
   const userId = auth.currentUser?.uid;
-  if (!userId) return { leave: [], lastRefreshed: new Date() };
+  if (!userId) return { leave: [], leaveBalances:[], lastRefreshed: new Date() };
 
   // Try cache first unless force refresh
     const cached = await getCachedLeave(userId);
@@ -109,6 +110,7 @@ export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; 
   
   return {
     leave: transformedLeave,
+    leaveBalances: xeroResponse.LeaveBalances,
     lastRefreshed: now
   };
 }
