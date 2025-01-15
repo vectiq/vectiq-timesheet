@@ -109,7 +109,7 @@
 /* Apply font family to all elements */
 @layer base {
   html {
-    font-family: 'Aeonik', system-ui, sans-serif;
+    font-family: 'Aeonik', system-ui, sans-serif !important;
     letter-spacing: 0.05em;
     line-height: 1.5;
   }
