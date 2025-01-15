@@ -1,11 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { CalendarDays } from 'lucide-react';
+import { useProjects } from '@/lib/hooks/useProjects';
 import type { Leave } from '@/types';
 
 interface LeaveDialogProps {
@@ -24,6 +25,7 @@ export function LeaveDialog({
   const {
     register,
     handleSubmit,
+    watch,
     setValue,
     reset,
     formState: { errors },
@@ -36,6 +38,14 @@ export function LeaveDialog({
       description: '',
     },
   });
+
+  const { projects } = useProjects();
+  
+  // Find Leave project and get its tasks
+  const leaveTypes = useMemo(() => {
+    const leaveProject = projects.find(p => p.name === 'Leave');
+    return leaveProject?.tasks || [];
+  }, [projects]);
 
   useEffect(() => {
     if (open) {
@@ -73,6 +83,7 @@ export function LeaveDialog({
       open={open}
       onClose={() => onOpenChange(false)}
       title={leave ? 'Edit Leave Request' : 'New Leave Request'}
+      subtitle="Submit a leave request for approval"
       icon={<CalendarDays className="h-5 w-5 text-indigo-500" />}
     >
       <div className="p-6">
@@ -112,13 +123,19 @@ export function LeaveDialog({
 
           <FormField label="Leave Type">
             <Select
-              {...register('leaveTypeId', { required: 'Leave type is required' })}
-              error={!!errors.leaveTypeId}
+              value={watch('leaveTypeId')}
+              onValueChange={(value) => setValue('leaveTypeId', value)}
             >
-              <option value="">Select Leave Type</option>
-              <option value="ANNUAL">Annual Leave</option>
-              <option value="SICK">Sick Leave</option>
-              <option value="PERSONAL">Personal Leave</option>
+              <SelectTrigger>
+                {watch('leaveTypeId') ? leaveTypes.find(t => t.xeroLeaveTypeId === watch('leaveTypeId'))?.name : 'Select Leave Type'}
+              </SelectTrigger>
+              <SelectContent>
+                {leaveTypes.map(type => (
+                  <SelectItem key={type.xeroLeaveTypeId} value={type.xeroLeaveTypeId}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
             {errors.leaveTypeId && (
               <p className="mt-1 text-sm text-red-600">{errors.leaveTypeId.message}</p>

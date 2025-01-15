@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useUsers } from '@/lib/hooks/useUsers';
 import { cn } from '@/lib/utils/styles';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/Select';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { FormField } from '@/components/ui/FormField';
-import { DollarSign, UserIcon, Mail, Shield, Briefcase, Calculator, Link } from 'lucide-react';
+import { UserIcon, Mail, Shield, Briefcase, Calculator, Link, UserCheck, DollarSign } from 'lucide-react';
 import type { User } from '@/types';
 
 interface UserDialogProps {
@@ -36,14 +37,17 @@ export function UserDialog({
       name: '',
       employeeType: 'employee',
       role: 'user',
+      leaveApproverId: '',
       projectAssignments: [],
       hoursPerWeek: 40,
       overtime: 'no',
     },
   });
 
+  const { users } = useUsers();
   const employeeType = watch('employeeType');
   const salary = watch('salary');
+  const currentLeaveApproverId = watch('leaveApproverId');
 
   // Calculate cost rate from salary for employees
   useEffect(() => {
@@ -250,6 +254,40 @@ export function UserDialog({
             </div>
           </div>
 
+          <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <UserCheck className="h-4 w-4" />
+              Leave Approval
+            </div>
+            
+            <FormField label="Leave Approver">
+              <Select
+                value={currentLeaveApproverId}
+                onValueChange={(value) => setValue('leaveApproverId', value)}
+                defaultValue={null}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select approver">
+                    {currentLeaveApproverId ? users.find(u => u.id === currentLeaveApproverId)?.name : 'Select approver'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No approver</SelectItem>
+                  {users
+                    .filter(u => u.id !== user?.id) // Can't select self as approver
+                    .map(u => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-gray-500">
+                Select who should approve this user's leave requests
+              </p>
+            </FormField>
+          </div>
           <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Link className="h-4 w-4" />
