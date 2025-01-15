@@ -1,12 +1,20 @@
 import { useState } from 'react';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { Button } from '@/components/ui/Button';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { UsersTable } from '@/components/users/UsersTable';
 import { UserDialog } from '@/components/users/UserDialog';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { useConfirm } from '@/lib/hooks/useConfirm';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/AlertDialog';
 import type { User } from '@/types';
 
 export default function Users() {
@@ -20,7 +28,10 @@ export default function Users() {
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
-  const { confirm, dialog, handleClose } = useConfirm();
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; userId: string | null }>({
+    isOpen: false,
+    userId: null
+  });
 
   const handleOpenCreateDialog = () => {
     setSelectedUser(null);
@@ -42,15 +53,13 @@ export default function Users() {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await confirm({
-      title: 'Delete User',
-      message: 'Are you sure you want to delete this user? This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-    });
+    setDeleteConfirmation({ isOpen: true, userId: id });
+  };
 
-    if (confirmed) {
-      await deleteUser(id);
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmation.userId) {
+      await deleteUser(deleteConfirmation.userId);
+      setDeleteConfirmation({ isOpen: false, userId: null });
     }
   };
 
@@ -83,17 +92,31 @@ export default function Users() {
         onSubmit={handleSubmit}
       />
 
-      {dialog && (
-        <ConfirmDialog
-          open={dialog.isOpen}
-          title={dialog.title}
-          message={dialog.message}
-          confirmText={dialog.confirmText}
-          cancelText={dialog.cancelText}
-          onConfirm={() => handleClose(true)}
-          onCancel={() => handleClose(false)}
-        />
-      )}
+      <AlertDialog 
+        open={deleteConfirmation.isOpen} 
+        onOpenChange={(open) => setDeleteConfirmation(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <AlertDialogTitle>Delete User</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>
+              Are you sure you want to delete this user? This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
