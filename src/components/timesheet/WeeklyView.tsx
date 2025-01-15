@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, Th } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
-import { Plus, Copy } from 'lucide-react';
+import { Plus, Copy, Loader2, Clock } from 'lucide-react';
 import { TimesheetRow } from './TimesheetRow';
 import {
   AlertDialog,
@@ -16,8 +16,6 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/AlertDialog';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
-import { useClients } from '@/lib/hooks/useClients';
-import { useTasks } from '@/lib/hooks/useTasks';
 import { useCallback } from 'react';
 import type { Project } from '@/types';
 
@@ -38,6 +36,8 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
   const { 
     timeEntries,
     rows,
+    isLoading,
+    isCopying,
     hasEntriesForCurrentWeek,
     copyFromPreviousWeek,
     editingCell,
@@ -96,6 +96,15 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
 
   return (
     <Card>
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10">
+          <div className="flex flex-col items-center gap-3">
+            <Clock className="h-8 w-8 text-indigo-500 animate-pulse" />
+            <div className="text-sm font-medium text-gray-600">Loading timesheet...</div>
+          </div>
+        </div>
+      )}
+      <div className="relative">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -143,11 +152,21 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
             {!hasEntriesForCurrentWeek && (
               <Button
                 variant="secondary"
+                disabled={isCopying}
                 onClick={copyFromPreviousWeek}
                 className="mr-4"
               >
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Previous Week
+                {isCopying ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Copying...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Previous Week
+                  </>
+                )}
               </Button>
             )}
             <span className="font-medium text-gray-700">Weekly Total:</span>
@@ -183,6 +202,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </Card>
   );
 });
