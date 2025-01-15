@@ -1,4 +1,4 @@
-import { Clock, Users, FolderKanban, BarChart2, TrendingUp, LineChart, UserCircle, Settings, FileCheck, CalendarDays } from 'lucide-react';
+import { Clock, Users, FolderKanban, BarChart2, TrendingUp, LineChart, UserCircle, Settings, FileCheck, CalendarDays, HelpCircle } from 'lucide-react';
 
 export const navigationItems = [
   { name: 'Timesheet', href: '/', icon: Clock, roles: ['user', 'admin'] },
@@ -9,5 +9,6 @@ export const navigationItems = [
   { name: 'Projects', href: '/projects', icon: FolderKanban, roles: ['admin'] },
   { name: 'Clients', href: '/clients', icon: Users, roles: ['admin'] },
   { name: 'Users', href: '/users', icon: UserCircle, roles: ['admin'] },
-  { name: 'Admin', href: '/admin', icon: Settings, roles: ['admin'] }
+  { name: 'Admin', href: '/admin', icon: Settings, roles: ['admin'] },
+  { name: 'Help & Support', href: '/help', icon: HelpCircle, roles: ['user', 'admin'] }
 ] as const;

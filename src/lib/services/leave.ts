@@ -64,7 +64,7 @@ async function getCachedLeave(userId: string): Promise<{ leave: Leave[]; leaveBa
 // Get leave requests from Xero and sync to Firestore
 export async function getLeave(forceRefresh = false): Promise<{ leave: Leave[]; leaveBalances: LeaveBalance[]; lastRefreshed: Date }> {
   const userId = auth.currentUser?.uid;
-  if (!userId) return { leave: [], leaveBalances:[], lastRefreshed: new Date() };
+  if (!userId) return { leave: [], leaveBalances: [], lastRefreshed: new Date() };
 
   // Try cache first unless force refresh
     const cached = await getCachedLeave(userId);
