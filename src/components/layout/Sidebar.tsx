@@ -39,12 +39,8 @@ export function Sidebar() {
                       <Link
                         to={item.href}
                         className={cn(
-                          'group relative flex gap-x-3 rounded-lg p-2 pl-4 text-sm leading-6 transition-all duration-300',
-                          'hover:bg-gray-50 hover:shadow-lg',
-                          'before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-r',
-                          'before:from-transparent before:to-transparent before:opacity-0',
-                          'hover:before:from-gray-50 hover:before:to-transparent hover:before:opacity-100',
-                          'before:transition-opacity before:duration-300',
+                          'group flex gap-x-3 rounded-lg p-2 pl-4 text-sm leading-6 transition-all duration-300',
+                          'hover:bg-gray-50',
                           isActive
                             ? 'bg-gray-50 text-indigo-600 font-medium'
                             : 'text-gray-700 hover:text-gray-900 font-medium'
@@ -59,7 +55,9 @@ export function Sidebar() {
                               : 'text-gray-500 group-hover:text-gray-900'
                           )}
                         />
-                        <span className="font-medium tracking-wider">{item.name}</span>
+                        <span className={cn(
+                          "font-medium tracking-wider",
+                        )}>{item.name}</span>
                         {isActive && (
                           <>
                             <span className="absolute left-0 inset-y-2 w-1 bg-indigo-600 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.5)] animate-slide-in" />

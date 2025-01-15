@@ -9,11 +9,12 @@ import { useConfirm } from '@/lib/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function Leave() {
-  const { createLeave, updateLeave, leaveBalances, isCreating, isUpdating, isDeleting } = useLeave();
+  const { leave, leaveBalances, createLeave, updateLeave, deleteLeave, isCreating, isUpdating, isDeleting } = useLeave();
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { confirm, dialog, handleClose } = useConfirm();
   
+
   const handleOpenCreateDialog = () => {
     setSelectedLeave(null);
     setIsDialogOpen(true);

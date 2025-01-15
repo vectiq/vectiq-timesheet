@@ -118,7 +118,6 @@ export function IntegrationsTab({
 
             <FormField label="Tenant ID">
               <Input
-                type="url"
                 value={xeroConfig?.tenantId || ''}
                 onChange={(e) => onUpdateXeroConfig({
                   ...xeroConfig,
@@ -128,6 +127,34 @@ export function IntegrationsTab({
               />
               <p className="mt-1 text-xs text-gray-500">
                 The tenant ID is used to identify your Xero organization when making API calls
+              </p>
+            </FormField>
+
+            <FormField label="Ordinary Hours Earnings ID">
+              <Input
+                value={xeroConfig?.ordinaryHoursEarningsId || ''}
+                onChange={(e) => onUpdateXeroConfig({
+                  ...xeroConfig,
+                  ordinaryHoursEarningsId: e.target.value
+                })}
+                placeholder="e.g., 87654321-4321-4321-4321-432187654321"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                The Xero earnings rate ID to use for ordinary hours
+              </p>
+            </FormField>
+
+            <FormField label="Overtime Pay Item Code">
+              <Input
+                value={xeroConfig?.overtimePayItemCode || ''}
+                onChange={(e) => onUpdateXeroConfig({
+                  ...xeroConfig,
+                  overtimePayItemCode: e.target.value
+                })}
+                placeholder="e.g., OT001"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                The Xero pay item code to use when submitting overtime entries
               </p>
             </FormField>
 

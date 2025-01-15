@@ -16,6 +16,7 @@ import ForecastReport from '@/pages/ForecastReport';
 import Projects from '@/pages/Projects';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
+import Help from '@/pages/Help';
 import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
@@ -132,6 +133,7 @@ export default function App() {
                 </RoleProtectedRoute>
               }
             />
+            <Route path="help" element={<Help />} />
           </Route>
 
           {/* Catch all route - must be last */}

@@ -68,6 +68,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* PrimeReact customizations */
+.p-datatable .p-datatable-header {
+  background: transparent;
+  border: none;
+  padding: 1rem 0;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  background: #f9fafb;
+  border-width: 1px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  background: #ffffff;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  border-width: 1px;
+}
+
+.p-datatable .p-paginator {
+  background: transparent;
+  border: none;
+  padding: 1rem 0;
+}
+
+.p-datatable .p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.p-inputtext:enabled:focus {
+  box-shadow: 0 0 0 2px #e0e7ff;
+  border-color: #6366f1;
+}
+
 /* Apply font family to all elements */
 @layer base {
   html {
