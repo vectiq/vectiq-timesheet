@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Download } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
-import type { ReportFilters } from '@/types';
+import type { ReportFilters, User } from '@/types';
 
 interface ReportFiltersProps {
   filters: ReportFilters;
@@ -53,7 +53,7 @@ export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
               <option value="">All Users</option>
-              {users.map(user => (
+              {users.sort((a, b) => a.name.localeCompare(b.name)).map(user => (
                 <option key={user.id} value={user.id}>{user.name}</option>
               ))}
             </select>

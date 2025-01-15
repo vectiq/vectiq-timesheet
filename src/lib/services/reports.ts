@@ -12,6 +12,7 @@ import type {
   TimeEntry,
   Approval
 } from '@/types';
+import { capitaliseFirstChar } from '../utils';
 
 export async function generateReport(filters: ReportFilters): Promise<ReportData | OvertimeReportData> {
   if (filters.type === 'overtime') {
@@ -78,7 +79,7 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
           parseISO(a.endDate) >= parseISO(entry.date)
         );
         if (approval) {
-          approvalStatus = approval.status;
+          approvalStatus = capitaliseFirstChar((approval as any).status);
         }
       }
 

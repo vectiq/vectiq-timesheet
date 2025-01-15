@@ -1,172 +1,255 @@
-import { useState, useMemo } from 'react';
-import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table'; 
+import { useState } from 'react';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { InputText } from 'primereact/inputtext';
+import { Dropdown } from 'primereact/dropdown';
+import { Badge } from '@/components/ui/Badge';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDate } from '@/lib/utils/date';
 import type { ReportEntry } from '@/types';
-import { Badge } from '@/components/ui/Badge';
-import { format, parseISO, isAfter, isBefore, isEqual } from 'date-fns';
-import { ChevronUp, ChevronDown } from 'lucide-react';
-
-type SortField = keyof ReportEntry;
-type SortDirection = 'asc' | 'desc';
+import { FilterMatchMode } from 'primereact/api';
+import { Calendar } from 'primereact/calendar';
+import 'primereact/resources/themes/lara-light-indigo/theme.css';
+import 'primereact/resources/primereact.min.css';
+import 'primeicons/primeicons.css';
 
 interface ReportTableProps {
   data?: ReportEntry[];
   approvals?: any[];
 }
 
-function getSortedData(data: ReportEntry[], field: SortField, direction: SortDirection) {
-  return [...data].sort((a, b) => {
-    let comparison = 0;
-    
-    // Handle different field types
-    if (field === 'date') {
-      const dateA = parseISO(a[field]);
-      const dateB = parseISO(b[field]);
-      comparison = isAfter(dateA, dateB) ? 1 : isEqual(dateA, dateB) ? 0 : -1;
-    } else if (typeof a[field] === 'number') {
-      comparison = (a[field] as number) - (b[field] as number);
-    } else {
-      comparison = String(a[field]).localeCompare(String(b[field]));
-    }
-    
-    return direction === 'asc' ? comparison : -comparison;
-  });
-}
+const approvalStatuses = [
+  'Approval Not Required',
+  'Approved',
+  'No Approval',
+  'Rejected'
+];
 
-export function ReportTable({ data, approvals = [] }: ReportTableProps) {
-  if (!data?.length) {
+export function ReportTable({ data = [], approvals = [] }: ReportTableProps) {
+  const [filters, setFilters] = useState({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    date: { value: null, matchMode: FilterMatchMode.DATE_IS },
+    userName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    clientName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    projectName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    taskName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    approvalStatus: { value: null, matchMode: FilterMatchMode.EQUALS }
+  });
+  const [globalFilterValue, setGlobalFilterValue] = useState('');
+
+  const dateFilterTemplate = (options: any) => {
     return (
-      <div className="text-center py-12 text-gray-500">
-        No data available for the selected filters
+      <Calendar
+        value={options.value}
+        onChange={(e) => options.filterCallback(e.value)}
+        dateFormat="yy-mm-dd"
+        placeholder="Select Date"
+        className="p-column-filter w-full"
+      />
+    );
+  };
+
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    let _filters = { ...filters };
+    _filters.global.value = value;
+    setFilters(_filters);
+    setGlobalFilterValue(value);
+  };
+
+  const renderHeader = () => {
+    return (
+      <div className="flex justify-between items-center">
+        <span className="p-input-icon-left">
+          <i className="pi pi-search" />
+          <InputText
+            value={globalFilterValue}
+            onChange={onGlobalFilterChange}
+            placeholder="Search..."
+            className="p-2 border rounded-md"
+          />
+        </span>
       </div>
     );
-  }
-  const [sortField, setSortField] = useState<SortField>('date');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [filters, setFilters] = useState<Partial<Record<keyof ReportEntry, string>>>({});
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
   };
 
-  const handleFilterChange = (field: keyof ReportEntry, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const approvalStatusBodyTemplate = (rowData: ReportEntry) => {
+    return (
+      <Badge
+        variant={
+          rowData.approvalStatus === 'Approval Not Required' ? 'secondary' :
+          rowData.approvalStatus === 'Approved' ? 'success' :
+          rowData.approvalStatus === 'No Approval' ? 'warning' :
+          rowData.approvalStatus === 'Rejected' ? 'destructive' :
+          'default'
+        }
+      >
+        {rowData.approvalStatus}
+      </Badge>
+    );
   };
 
-  const filteredAndSortedData = useMemo(() => {
-    if (!data?.length) return [];
+  const approvalStatusFilterTemplate = (options: any) => {
+    return (
+      <Dropdown
+        value={options.value}
+        options={approvalStatuses}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select Status"
+        className="p-column-filter w-full"
+        showClear
+      />
+    );
+  };
 
-    // Apply filters
-    let filtered = data.filter(entry => {
-      return Object.entries(filters).every(([field, value]) => {
-        if (!value) return true;
-        const fieldValue = String(entry[field as keyof ReportEntry]).toLowerCase();
-        return fieldValue.includes(value.toLowerCase());
-      });
-    });
+  const textFilterTemplate = (options: any) => {
+    return (
+      <InputText
+        value={options.value || ''}
+        onChange={(e) => options.filterCallback(e.target.value)}
+        placeholder="Search"
+        className="p-column-filter w-full"
+      />
+    );
+  };
 
-    // Apply sorting
-    return getSortedData(filtered, sortField, sortDirection);
-  }, [data, filters, sortField, sortDirection]);
+  const currencyBodyTemplate = (rowData: ReportEntry, field: keyof ReportEntry) => {
+    return formatCurrency(rowData[field] as number);
+  };
+
+  const dateBodyTemplate = (rowData: ReportEntry) => {
+    return formatDate(rowData.date);
+  };
+
+  const hoursBodyTemplate = (rowData: ReportEntry) => {
+    return rowData.hours.toFixed(2);
+  };
 
   return (
-    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg">
-      <Table>
-        <TableHeader>
-          <tr className="border-b border-gray-200">
-            {[
-              { key: 'date', label: 'Date' },
-              { key: 'userName', label: 'User' },
-              { key: 'clientName', label: 'Client' },
-              { key: 'projectName', label: 'Project' },
-              { key: 'taskName', label: 'Task' },
-              { key: 'approvalStatus', label: 'Approval Status' },
-              { key: 'hours', label: 'Hours' },
-              { key: 'cost', label: 'Cost' },
-              { key: 'revenue', label: 'Revenue' },
-              { key: 'profit', label: 'Profit' }
-            ].map(({ key, label }) => (
-              <Th key={key}>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleSort(key as SortField)}
-                    className="flex items-center gap-1 hover:text-indigo-600"
-                  >
-                    {label}
-                    {sortField === key && (
-                      sortDirection === 'asc' ? 
-                        <ChevronUp className="h-4 w-4" /> : 
-                        <ChevronDown className="h-4 w-4" />
-                    )}
-                  </button>
-                  <input
-                    type="text"
-                    placeholder={`Filter ${label}`}
-                    className="w-full px-2 py-1 text-sm border rounded"
-                    onChange={(e) => handleFilterChange(key as keyof ReportEntry, e.target.value)}
-                    value={filters[key as keyof ReportEntry] || ''}
-                  />
-                </div>
-              </Th>
-            ))}
-          </tr>
-        </TableHeader>
-        <TableBody>
-          {filteredAndSortedData.map((entry) => (
-            <tr key={entry.id}>
-              <Td>{formatDate(entry.date)}</Td>
-              <Td>{entry.userName}</Td>
-              <Td>{entry.clientName}</Td>
-              <Td>{entry.projectName}</Td>
-              <Td>{entry.taskName}</Td>
-              <Td>
-                <Badge
-                  variant={
-                    entry.approvalStatus === 'Approval Not Required' ? 'secondary' :
-                    entry.approvalStatus === 'approved' ? 'success' :
-                    entry.approvalStatus === 'pending' ? 'warning' :
-                    entry.approvalStatus === 'rejected' ? 'destructive' :
-                    'default'
-                  }
-                >
-                  {entry.approvalStatus}
-                </Badge>
-              </Td>
-              <Td>{entry.hours}</Td>
-              <Td>{formatCurrency(entry.cost)}</Td>
-              <Td>{formatCurrency(entry.revenue)}</Td>
-              <Td>{formatCurrency(entry.profit)}</Td>
-            </tr>
-          ))}
-        </TableBody>
-      </Table>
-      
+    <div>
+      <DataTable
+        value={data}
+        paginator
+        rows={25}
+        rowsPerPageOptions={[25, 50, 100]}
+        dataKey="id"
+        filters={filters}
+        filterDisplay="menu"
+        loading={false}
+        globalFilterFields={['userName', 'clientName', 'projectName', 'taskName']}
+        header={renderHeader()}
+        emptyMessage="No data found."
+        removableSort
+        sortMode="single"
+        sortField="date"
+        showGridlines
+        stripedRows
+        className="p-datatable-sm [&_.p-datatable-tbody>tr>td]:transition-none [&_.p-inputtext::placeholder]:font-normal [&_.p-inputtext::placeholder]:text-gray-400"
+        tableStyle={{ minWidth: '50rem' }}
+      >
+        <Column 
+          field="date" 
+          header="Date" 
+          sortable 
+          filter
+          filterElement={dateFilterTemplate}
+          showFilterMenu={false}
+          body={dateBodyTemplate}
+          style={{ width: '10%' }}
+        />
+        <Column 
+          field="userName" 
+          header="User" 
+          sortable 
+          filter
+          filterElement={textFilterTemplate}
+          showFilterMenu={false}
+          style={{ width: '12%' }}
+        />
+        <Column 
+          field="clientName" 
+          header="Client" 
+          sortable 
+          filter
+          filterElement={textFilterTemplate}
+          showFilterMenu={false}
+          style={{ width: '12%' }}
+        />
+        <Column 
+          field="projectName" 
+          header="Project" 
+          sortable 
+          filter
+          filterElement={textFilterTemplate}
+          showFilterMenu={false}
+          style={{ width: '12%' }}
+        />
+        <Column 
+          field="taskName" 
+          header="Task" 
+          sortable 
+          filter
+          filterElement={textFilterTemplate}
+          showFilterMenu={false}
+          style={{ width: '12%' }}
+        />
+        <Column 
+          field="approvalStatus" 
+          header="Status" 
+          sortable 
+          filter
+          filterElement={approvalStatusFilterTemplate}
+          showFilterMenu={true}
+          filterMenuStyle={{ width: '20rem' }}
+          body={approvalStatusBodyTemplate}
+          style={{ width: '12%' }}
+        />
+        <Column 
+          field="hours" 
+          header="Hours" 
+          sortable 
+          body={hoursBodyTemplate}
+          style={{ width: '8%', textAlign: 'right' }}
+        />
+        <Column 
+          field="cost" 
+          header="Cost" 
+          sortable 
+          body={(rowData) => currencyBodyTemplate(rowData, 'cost')}
+          style={{ width: '8%', textAlign: 'right' }}
+        />
+        <Column 
+          field="revenue" 
+          header="Revenue" 
+          sortable 
+          body={(rowData) => currencyBodyTemplate(rowData, 'revenue')}
+          style={{ width: '8%', textAlign: 'right' }}
+        />
+        <Column 
+          field="profit" 
+          header="Profit" 
+          sortable 
+          body={(rowData) => currencyBodyTemplate(rowData, 'profit')}
+          style={{ width: '8%', textAlign: 'right' }}
+        />
+      </DataTable>
+
       {/* Debug Box */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Debug: Approval Records</h3>
-        <div className="space-y-2">
-          {approvals.map(approval => (
-            <div key={approval.id} className="text-sm">
-              <div className="font-medium">{approval.project?.name}</div>
-              <div className="text-gray-500">
-                Status: {approval.status} • Period: {format(parseISO(approval.startDate), 'MMM d')} - {format(parseISO(approval.endDate), 'MMM d')}
+      {approvals.length > 0 && (
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 className="text-sm font-medium text-gray-900 mb-2">Debug: Approval Records</h3>
+          <div className="space-y-2">
+            {approvals.map(approval => (
+              <div key={approval.id} className="text-sm">
+                <div className="font-medium">{approval.project?.name}</div>
+                <div className="text-gray-500">
+                  Status: {approval.status} • Period: {formatDate(approval.startDate)} - {formatDate(approval.endDate)}
+                </div>
               </div>
-            </div>
-          ))}
-          {approvals.length === 0 && (
-            <div className="text-sm text-gray-500">No approval records found for this period</div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
