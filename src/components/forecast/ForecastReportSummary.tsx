@@ -2,39 +2,72 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { ArrowUpIcon, ArrowDownIcon, TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
-import { useProjects } from '@/lib/hooks/useProjects';
-import { useUsers } from '@/lib/hooks/useUsers';
-import type { ForecastEntry, ReportData } from '@/types';
+import { calculateDefaultHours } from '@/lib/utils/workingDays';
+import type { ForecastEntry, ReportData, User, Project } from '@/types';
 
 interface ForecastReportSummaryProps {
   forecasts: ForecastEntry[];
   actuals: ReportData;
   month: string;
+  users: User[];
+  projects: Project[];
+  workingDays: number;
 }
 
-export function ForecastReportSummary({ forecasts, actuals, month }: ForecastReportSummaryProps) {
-  const { projects } = useProjects();
-  const { users } = useUsers();
-
+export function ForecastReportSummary({ 
+  forecasts, 
+  actuals, 
+  month,
+  users,
+  projects,
+  workingDays
+}: ForecastReportSummaryProps) {
   const summary = useMemo(() => {
     // Calculate forecast totals
     let forecastRevenue = 0;
     let forecastCost = 0;
 
-    forecasts.forEach(forecast => {
-      // Find the project and role to get rates
-      const project = projects.find(p => p.id === forecast.projectId);
-      const user = users.find(u => u.id === forecast.userId);
-      const projectRole = project?.roles?.find(r => r.id === forecast.roleId);
+    // Helper to get hours for a forecast entry
+    const getHours = (userId: string, projectId: string, taskId: string) => {
+      const forecast = forecasts.find(f => 
+        f.userId === userId && 
+        f.projectId === projectId && 
+        f.taskId === taskId
+      );
       
-      if (project && user) {
-        // Use project role rates if defined, otherwise fall back to user rates
-        const sellRate = projectRole?.sellRate || user.sellRate || 0;
-        const costRate = projectRole?.costRate || user.costRate || 0;
-        
-        forecastRevenue += forecast.hours * sellRate;
-        forecastCost += forecast.hours * costRate;
+      if (forecast) {
+        return forecast.hours;
       }
+      
+      // Calculate default hours if no forecast exists and user is assigned to the task
+      const project = projects.find(p => p.id === projectId);
+      const task = project?.tasks.find(t => t.id === taskId);
+      const isAssigned = task?.userAssignments?.some(a => a.userId === userId);
+      
+      if (isAssigned) {
+        const user = users.find(u => u.id === userId);
+        return calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
+      }
+      
+      return 0;
+    };
+
+    // Calculate totals for all project task assignments
+    projects.forEach(project => {
+      project.tasks.forEach(task => {
+        task.userAssignments?.forEach(assignment => {
+          const user = users.find(u => u.id === assignment.userId);
+          if (!user) return;
+        
+          const hours = getHours(user.id, project.id, task.id);
+          
+          const sellRate = task.sellRate || user.sellRate || 0;
+          const costRate = task.costRate || user.costRate || 0;
+          
+          forecastRevenue += hours * sellRate;
+          forecastCost += hours * costRate;
+        });
+      });
     });
 
     const forecastGrossMargin = forecastRevenue - forecastCost;

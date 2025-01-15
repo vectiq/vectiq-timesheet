@@ -22,7 +22,9 @@ export function ForecastSummary({ currentMonth, previousMonth }: ForecastSummary
   const revenueTrend = revenueDiff >= 0 ? 'up' : 'down';
   const costsDiff = currentMonth.costs - previousMonth.costs;
   const costsTrend = costsDiff >= 0 ? 'up' : 'down';
-  const grossMarginDiff = (currentMonth.revenue - currentMonth.costs) - (previousMonth.revenue - previousMonth.costs);
+  const currentGrossMargin = currentMonth.revenue - currentMonth.costs;
+  const previousGrossMargin = previousMonth.revenue - previousMonth.costs;
+  const grossMarginDiff = currentGrossMargin - previousGrossMargin;
   const grossMarginTrend = grossMarginDiff >= 0 ? 'up' : 'down';
   
   return (
@@ -74,7 +76,7 @@ export function ForecastSummary({ currentMonth, previousMonth }: ForecastSummary
           <h3 className="text-sm font-medium text-gray-500">Gross Margin</h3>
           <div className="flex flex-col">
             <p className="text-2xl font-semibold text-gray-900 truncate">
-              {formatCurrency(currentMonth.revenue - currentMonth.costs)}
+              {formatCurrency(currentGrossMargin)}
             </p>
             <div className={`flex items-center mt-1 ${grossMarginTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
               {grossMarginTrend === 'up' ? (
@@ -95,7 +97,9 @@ export function ForecastSummary({ currentMonth, previousMonth }: ForecastSummary
           <h3 className="text-sm font-medium text-gray-500">Margin %</h3>
           <div className="flex flex-col">
             <p className="text-2xl font-semibold text-gray-900">
-              {currentMonth.margin.toFixed(1)}%
+              {(currentMonth.revenue > 0 
+                ? (currentGrossMargin / currentMonth.revenue) * 100 
+                : 0).toFixed(1)}%
             </p>
             <div className={`flex items-center mt-1 ${marginTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
               {marginTrend === 'up' ? (
