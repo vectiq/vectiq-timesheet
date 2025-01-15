@@ -5,6 +5,7 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
 import { format, parseISO } from 'date-fns';
+import { getWorkingDaysForMonth } from '@/lib/utils/workingDays';
 import type { OvertimeReportEntry } from '@/types';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,7 @@ export function OvertimeReport() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const currentMonth = format(dateNav.currentDate, 'MM/yyyy');
+  const workingDays = getWorkingDaysForMonth(format(dateNav.currentDate, 'yyyy-MM'));
 
   const { data, isLoading } = useReports({ 
     type: 'overtime',
@@ -90,6 +92,9 @@ export function OvertimeReport() {
                         Hours/Week
                       </th>
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                        Standard Hours
+                      </th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Total Hours
                       </th>
                       <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
@@ -109,6 +114,9 @@ export function OvertimeReport() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {entry.hoursPerWeek}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {(entry.hoursPerWeek * workingDays / 5).toFixed(2)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {entry.totalHours.toFixed(2)}

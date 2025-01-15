@@ -36,7 +36,7 @@ export function ProjectTasks({
     costRate: string;
     sellRate: string;
     billable: boolean;
-    xetaskaveTypeId?: string;
+    xeroLeaveTypeId?: string;
   } | null>(null);
   const [selectedUser, setSelectedUser] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -45,7 +45,7 @@ export function ProjectTasks({
     costRate: '',
     sellRate: '',
     billable: false,
-    xetaskaveTypeId: ''
+    xeroLeaveTypeId: ''
   });
 
   // Update local state when project changes
@@ -101,7 +101,7 @@ export function ProjectTasks({
       costRate: parseFloat(newTaskData.costRate) || 0,
       sellRate: parseFloat(newTaskData.sellRate) || 0,
       billable: newTaskData.billable,
-      xetaskaveTypeId: localProject.name === 'Leave' ? newTaskData.xetaskaveTypeId : '',
+      xeroLeaveTypeId: localProject.name === 'Leave' ? newTaskData.xeroLeaveTypeId : '',
       userAssignments: []
     };
 
@@ -118,7 +118,7 @@ export function ProjectTasks({
       costRate: '',
       sellRate: '',
       billable: false,
-      xetaskaveTypeId: ''
+      xeroLeaveTypeId: ''
     });
   };
 
@@ -184,7 +184,7 @@ export function ProjectTasks({
       costRate: task.costRate.toString(),
       sellRate: task.sellRate.toString(),
       billable: task.billable,
-      xetaskaveTypeId: task.xetaskaveTypeId
+      xeroLeaveTypeId: task.xeroLeaveTypeId
     });
     setSelectedTask('');
   };
@@ -234,8 +234,8 @@ export function ProjectTasks({
                 <FormField label="Xero Leave Type ID">
                   <Input
                     type="text"
-                    value={newTaskData.xetaskaveTypeId}
-                    onChange={(e) => setNewTaskData(prev => ({ ...prev, xetaskaveTypeId: e.target.value }))}
+                    value={newTaskData.xeroLeaveTypeId}
+                    onChange={(e) => setNewTaskData(prev => ({ ...prev, xeroLeaveTypeId: e.target.value }))}
                     placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
                   />
                   <p className="mt-1 text-xs text-gray-500">
@@ -384,11 +384,11 @@ export function ProjectTasks({
                       <FormField label="Xero Leave Type ID">
                         <Input
                           type="text"
-                          value={editingTaskData?.xetaskaveTypeId}
+                          value={editingTaskData?.xeroLeaveTypeId}
                           onChange={(e) => {
                             setEditingTaskData(prev => ({
                               ...prev!,
-                              xetaskaveTypeId: e.target.value
+                              xeroLeaveTypeId: e.target.value
                             }));
                           }}
                           placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
