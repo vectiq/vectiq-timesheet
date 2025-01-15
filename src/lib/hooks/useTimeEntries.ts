@@ -35,6 +35,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const queryClient = useQueryClient();
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
+  const [isCopying, setIsCopying] = useState(false);
   const { projects } = useProjects();
   const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
   const effectiveUserId = effectiveTimesheetUser?.id;
@@ -231,37 +232,46 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
 
   const copyFromPreviousWeek = useCallback(async () => {
     if (!effectiveUserId || !dateRange) return;
+    if (isCopying) return; // Prevent multiple simultaneous copies
+    
+    setIsCopying(true);
 
     const previousWeekStart = new Date(dateRange.start);
     previousWeekStart.setDate(previousWeekStart.getDate() - 7);
     const previousWeekEnd = new Date(dateRange.end);
     previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
 
-    // Get previous week's entries
-    const previousEntries = await getTimeEntries(effectiveUserId, {
-      start: previousWeekStart,
-      end: previousWeekEnd
-    });
-
-    // Create new entries for current week
-    const promises = previousEntries.map(entry => {
-      const entryDate = new Date(entry.date);
-      const newDate = new Date(entryDate);
-      newDate.setDate(newDate.getDate() + 7);
-
-      return handleCreateEntry({
-        userId: effectiveUserId,
-        date: newDate.toISOString().split('T')[0],
-        clientId: entry.clientId,
-        projectId: entry.projectId,
-        taskId: entry.taskId,
-        hours: entry.hours,
-        description: entry.description || '',
+    try {
+      // Get previous week's entries
+      const previousEntries = await getTimeEntries(effectiveUserId, {
+        start: previousWeekStart,
+        end: previousWeekEnd
       });
-    });
 
-    await Promise.all(promises);
-  }, [effectiveUserId, dateRange, handleCreateEntry]);
+      // Create new entries for current week
+      const promises = previousEntries.map(entry => {
+        const entryDate = new Date(entry.date);
+        const newDate = new Date(entryDate);
+        newDate.setDate(newDate.getDate() + 7);
+
+        return handleCreateEntry({
+          userId: effectiveUserId,
+          date: newDate.toISOString().split('T')[0],
+          clientId: entry.clientId,
+          projectId: entry.projectId,
+          taskId: entry.taskId,
+          hours: entry.hours,
+          description: entry.description || '',
+        });
+      });
+
+      await Promise.all(promises);
+    } catch (error) {
+      console.error('Error copying from previous week:', error);
+    } finally {
+      setIsCopying(false);
+    }
+  }, [effectiveUserId, dateRange, handleCreateEntry, isCopying]);
 
   // Combine automatic and manual rows
   const rows = useMemo(() => {
@@ -366,6 +376,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     timeEntries,
     rows,
     editingCell,
+    isCopying,
     isLoading: query.isLoading,
     error: query.error,
     addRow,

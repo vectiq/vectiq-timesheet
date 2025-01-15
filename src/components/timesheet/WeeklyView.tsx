@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, Th } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
-import { Plus, Copy } from 'lucide-react';
+import { Plus, Copy, Loader2 } from 'lucide-react';
 import { TimesheetRow } from './TimesheetRow';
 import {
   AlertDialog,
@@ -38,6 +38,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
   const { 
     timeEntries,
     rows,
+    isCopying,
     hasEntriesForCurrentWeek,
     copyFromPreviousWeek,
     editingCell,
@@ -143,11 +144,21 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
             {!hasEntriesForCurrentWeek && (
               <Button
                 variant="secondary"
+                disabled={isCopying}
                 onClick={copyFromPreviousWeek}
                 className="mr-4"
               >
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Previous Week
+                {isCopying ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Copying...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Previous Week
+                  </>
+                )}
               </Button>
             )}
             <span className="font-medium text-gray-700">Weekly Total:</span>
