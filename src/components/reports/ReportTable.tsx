@@ -21,6 +21,7 @@ interface ReportTableProps {
 const approvalStatuses = [
   'Approval Not Required',
   'Approved',
+  'Pending',
   'No Approval',
   'Rejected'
 ];
@@ -80,6 +81,7 @@ export function ReportTable({ data = [], approvals = [] }: ReportTableProps) {
           rowData.approvalStatus === 'Approval Not Required' ? 'secondary' :
           rowData.approvalStatus === 'Approved' ? 'success' :
           rowData.approvalStatus === 'No Approval' ? 'warning' :
+          rowData.approvalStatus === 'Pending' ? 'warning' :
           rowData.approvalStatus === 'Rejected' ? 'destructive' :
           'default'
         }
