@@ -4,23 +4,28 @@ import { ArrowUpIcon, ArrowDownIcon, TrendingUp, TrendingDown, DollarSign, Perce
 import { formatCurrency } from '@/lib/utils/currency';
 import { calculateDefaultHours } from '@/lib/utils/workingDays';
 import type { ForecastEntry, ReportData, User, Project } from '@/types';
+import { Badge } from '@/components/ui/Badge';
 
 interface ForecastReportSummaryProps {
   forecasts: ForecastEntry[];
   actuals: ReportData;
-  month: string;
+  startDate: string;
+  endDate: string;
   users: User[];
   projects: Project[];
   workingDays: number;
+  isYearlyView?: boolean;
 }
 
 export function ForecastReportSummary({ 
   forecasts, 
   actuals, 
-  month,
+  startDate,
+  endDate,
   users,
   projects,
-  workingDays
+  workingDays,
+  isYearlyView
 }: ForecastReportSummaryProps) {
   const summary = useMemo(() => {
     // Calculate forecast totals
@@ -46,7 +51,8 @@ export function ForecastReportSummary({
       
       if (isAssigned) {
         const user = users.find(u => u.id === userId);
-        return calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
+        const defaultHours = calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
+        return isYearlyView ? defaultHours * 12 : defaultHours;
       }
       
       return 0;
@@ -118,10 +124,13 @@ export function ForecastReportSummary({
         <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 opacity-10 rounded-full" />
         </div>
-        <div className="p-6 relative">
+        <div className="p-6 relative space-y-2">
           <div className="flex items-center gap-2 text-blue-600 mb-4">
             <DollarSign className="h-5 w-5" />
             <h3 className="font-semibold">Revenue</h3>
+            {isYearlyView && (
+              <Badge variant="secondary" className="ml-auto">Financial Year</Badge>
+            )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">

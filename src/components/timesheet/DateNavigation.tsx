@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 interface DateNavigationProps {
   currentDate: Date;
@@ -17,6 +17,17 @@ export function DateNavigation({
   onToday,
   formatString,
 }: DateNavigationProps) {
+  // Safely format the date, escaping special characters if needed
+  const formatDate = (date: Date) => {
+    if (!isValid(date)) return '';
+    try {
+      return format(date, formatString.replace(/F/g, "'F'"));
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return format(date, 'MMMM yyyy');
+    }
+  };
+
   return (
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2">
@@ -31,7 +42,7 @@ export function DateNavigation({
         </Button>
       </div>
       <span className="text-lg font-medium">
-        {format(currentDate, formatString)}
+        {formatDate(currentDate)}
       </span>
     </div>
   );

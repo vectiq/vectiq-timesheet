@@ -10,11 +10,13 @@ import type { ForecastEntry, ReportData, User, Project, Client } from '@/types';
 interface ForecastReportTableProps {
   forecasts: ForecastEntry[];
   actuals: ReportData;
-  month: string;
+  startDate: string;
+  endDate: string;
   users: User[];
   projects: Project[];
   clients: Client[];
   workingDays: number;
+  isYearlyView?: boolean;
 }
 
 interface ProjectSummary {
@@ -52,11 +54,13 @@ interface ProjectSummary {
 export function ForecastReportTable({ 
   forecasts, 
   actuals, 
-  month,
+  startDate,
+  endDate,
   users,
   projects,
   clients,
-  workingDays
+  workingDays,
+  isYearlyView
 }: ForecastReportTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
@@ -78,7 +82,7 @@ export function ForecastReportTable({
       );
       
       if (forecast) {
-        return forecast.hours;
+        return isYearlyView ? forecast.hours * 12 : forecast.hours;
       }
       
       // Calculate default hours if no forecast exists and user is assigned to the task
@@ -88,7 +92,8 @@ export function ForecastReportTable({
       
       if (isAssigned) {
         const user = users.find(u => u.id === userId);
-        return calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
+        const defaultHours = calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
+        return isYearlyView ? defaultHours * 12 : defaultHours;
       }
       
       return 0;
