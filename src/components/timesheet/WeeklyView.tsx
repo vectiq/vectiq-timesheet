@@ -16,8 +16,6 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/AlertDialog';
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
-import { useClients } from '@/lib/hooks/useClients';
-import { useTasks } from '@/lib/hooks/useTasks';
 import { useCallback } from 'react';
 import type { Project } from '@/types';
 
