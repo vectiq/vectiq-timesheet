@@ -11,15 +11,21 @@ interface EffectiveTimesheetUserContextType {
 
 const EffectiveTimesheetUserContext = createContext<EffectiveTimesheetUserContextType | undefined>(undefined);
 
-export const EffectiveTimesheetUserProvider: React.FC = ({ children }) => {
+interface EffectiveTimesheetUserProviderProps {
+    children: React.ReactNode;
+}
+
+export const EffectiveTimesheetUserProvider: React.FC<EffectiveTimesheetUserProviderProps> = ({ children }) => {
     const queryClient = useQueryClient();
     const {currentUser} = useUsers();
     const [effectiveTimesheetUser, setEffectiveTimesheetUser] = useState<User | null>(null);
 
     const resetEffectiveTimesheetUser = useCallback(() => {
-        console.log("resetting user to: ", currentUser);
-        setEffectiveTimesheetUser(currentUser);
-    }, []);
+        if(currentUser != null){
+            console.log("resetting user to: ", currentUser);
+            setEffectiveTimesheetUser(currentUser);
+        }
+    }, [currentUser]);
 
     useEffect(() => {
         // Always set effective user to current user initially
@@ -27,7 +33,7 @@ export const EffectiveTimesheetUserProvider: React.FC = ({ children }) => {
             console.log("seting initial user", currentUser);
             setEffectiveTimesheetUser(currentUser);
         }
-      }, [currentUser]);
+      }, [currentUser, effectiveTimesheetUser]);
 
     function handleSetEffectiveUser(user: User) {
         if (currentUser?.role === 'admin') {
@@ -52,3 +58,4 @@ export const useEffectiveTimesheetUser = () => {
     }
     return context;
 };
+

@@ -50,6 +50,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const weekKey = dateRange 
     ? format(dateRange.start, 'yyyy-MM-dd')
     : '';
+
   // Get available projects and tasks for the user
   const availableAssignments = useMemo(() => {
     if (!effectiveUserId || !projects) return [];
@@ -123,6 +124,103 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
 
   const timeEntries = useMemo(() => query.data || [], [query.data]);
 
+  const handleCellChange = useCallback(async (
+    date: string,
+    row: TimesheetRow,
+    value: number | null
+  ) => {
+    if (!effectiveUserId || !row.clientId || !row.projectId || !row.taskId) return;
+    const weekKey = format(dateRange.start, 'yyyy-MM-dd');
+
+    // Find existing entry
+    const entry = timeEntries.find(e => 
+      e.date === date && 
+      e.clientId === row.clientId &&
+      e.projectId === row.projectId &&
+      e.taskId === row.taskId
+    );
+
+    // Optimistically update local state
+    const optimisticUpdate = {
+      queryKey: [QUERY_KEY, effectiveUserId, dateRange?.start, dateRange?.end],
+      updater: (old: TimeEntry[]) => {
+        if (!old) return old;
+        
+        if (entry) {
+          // Update existing entry
+          if (value === null) {
+            // Remove entry
+            return old.filter(e => e.id !== entry.id);
+          } else {
+            // Update hours
+            return old.map(e => 
+              e.id === entry.id 
+                ? { ...e, hours: value, updatedAt: new Date().toISOString() }
+                : e
+            );
+          }
+        } else if (value !== null) {
+          // Add new entry
+          const newEntry: TimeEntry = {
+            id: crypto.randomUUID(), // Temporary ID
+            userId: effectiveUserId,
+            date,
+            clientId: row.clientId,
+            projectId: row.projectId,
+            taskId: row.taskId,
+            hours: value,
+            description: '',
+          };
+          return [...old, newEntry];
+        }
+        return old;
+      }
+    };
+
+    // Immediately update cache
+    queryClient.setQueryData(optimisticUpdate.queryKey, optimisticUpdate.updater);
+
+    try {
+      if (entry) {
+        if (value === null) {
+          await handleDeleteEntry(entry.id);
+        } else {
+          await handleUpdateEntry(entry.id, { 
+            hours: value,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else if (value !== null) {
+        await handleCreateEntry({
+          userId: effectiveUserId,
+          date,
+          clientId: row.clientId,
+          projectId: row.projectId,
+          taskId: row.taskId,
+          hours: value,
+          description: '',
+        });
+        
+        // Remove the manual row after creating a time entry
+        setManualRows(current => ({
+          ...current,
+          [weekKey]: (current[weekKey] || []).filter(manualRow => 
+            !(manualRow.clientId === row.clientId && 
+              manualRow.projectId === row.projectId && 
+              manualRow.taskId === row.taskId)
+          )
+        }));
+      }
+    } catch (error) {
+      // On error, rollback to previous state
+      queryClient.setQueryData(
+        optimisticUpdate.queryKey,
+        timeEntries
+      );
+      console.error('Error updating time entry:', error);
+    }
+  }, [effectiveUserId, timeEntries, dateRange, handleCreateEntry, handleUpdateEntry, handleDeleteEntry, queryClient]);
+
   const hasEntriesForCurrentWeek = useMemo(() => {
     if (!dateRange) return false;
     return timeEntries.some(entry => {
@@ -192,53 +290,6 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     return allRows;
   }, [timeEntries, manualRows, weekKey]);
 
-  const handleCellChange = useCallback(async (
-    date: string,
-    row: TimesheetRow,
-    value: number | null
-  ) => {
-    if (!effectiveUserId || !row.clientId || !row.projectId || !row.taskId) return;
-    const weekKey = format(dateRange.start, 'yyyy-MM-dd');
-
-    const entry = timeEntries.find(e => 
-      e.date === date && 
-      e.clientId === row.clientId &&
-      e.projectId === row.projectId &&
-      e.taskId === row.taskId
-    );
-
-    if (entry) {
-      if (value === null) {
-        await handleDeleteEntry(entry.id);
-      } else {
-        await handleUpdateEntry(entry.id, { 
-          hours: value,
-          updatedAt: new Date().toISOString()
-        });
-      }
-    } else if (value !== null) {
-      await handleCreateEntry({
-        userId: effectiveUserId,
-        date,
-        clientId: row.clientId,
-        projectId: row.projectId,
-        taskId: row.taskId,
-        hours: value,
-        description: '',
-      });
-      
-      // Remove the manual row after creating a time entry
-      setManualRows(current => ({
-        ...current,
-        [weekKey]: (current[weekKey] || []).filter(manualRow => 
-          !(manualRow.clientId === row.clientId && 
-            manualRow.projectId === row.projectId && 
-            manualRow.taskId === row.taskId)
-        )
-      }));
-    }
-  }, [effectiveUserId, timeEntries, handleCreateEntry, handleUpdateEntry, handleDeleteEntry]);
-
   const addRow = useCallback(() => {
     setManualRows(current => ({
       ...current,
@@ -288,26 +339,26 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         const currentRows = current[weekKey] || [];
         const manualIndex = index - uniqueRowCount;
         const newRows = [...currentRows];
-      if ('clientId' in updates) {
-        newRows[manualIndex] = { 
-          clientId: updates.clientId || '',
-          projectId: '',
-          taskId: ''
+        if ('clientId' in updates) {
+          newRows[manualIndex] = { 
+            clientId: updates.clientId || '',
+            projectId: '',
+            taskId: ''
+          };
+        } else if ('projectId' in updates) {
+          newRows[manualIndex] = { 
+            ...newRows[manualIndex],
+            projectId: updates.projectId || '',
+            taskId: ''
+          };
+        } else {
+          newRows[manualIndex] = { ...newRows[manualIndex], ...updates };
+        }
+        return {
+          ...current,
+          [weekKey]: newRows
         };
-      } else if ('projectId' in updates) {
-        newRows[manualIndex] = { 
-          ...newRows[manualIndex],
-          projectId: updates.projectId || '',
-          taskId: ''
-        };
-      } else {
-        newRows[manualIndex] = { ...newRows[manualIndex], ...updates };
-      }
-      return {
-        ...current,
-        [weekKey]: newRows
-      };
-    });
+      });
     }
   }, [rows.length, manualRows, weekKey]);
 
