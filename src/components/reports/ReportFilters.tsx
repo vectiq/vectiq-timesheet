@@ -58,7 +58,7 @@ export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem key="all" value="all">All Users</SelectItem>
-                {users.map(user => (
+                {users.sort((a, b) => a.name.localeCompare(b.name)).map(user => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name}
                   </SelectItem>
@@ -77,7 +77,7 @@ export function ReportFilters({ filters, onChange }: ReportFiltersProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Projects</SelectItem>
-                {projects.map(project => (
+                {projects.sort((a, b) => a.name.localeCompare(b.name)).map(project => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.name}
                   </SelectItem>
