@@ -1,4 +1,4 @@
-import { Edit, Trash2, UserPlus } from 'lucide-react';
+import { Edit, Trash2, ListTodo } from 'lucide-react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -63,7 +63,7 @@ export function ProjectsTable({
                   onClick={() => onManageAssignments(project)}
                   title="Manage tasks and assignments"
                 >
-                  <UserPlus className="h-4 w-4" />
+                  <ListTodo className="h-4 w-4" />
                 </Button>
                 <Button 
                   variant="secondary" 

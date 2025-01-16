@@ -60,16 +60,38 @@ export async function updateProject(projectData: Project): Promise<void> {
   const { id, tasks, ...projectFields } = projectData;
   if (!id) throw new Error('Project ID is required for update');
 
-  const projectRef = doc(db, COLLECTION, id);
-  const projectUpdate = {
-    ...projectFields, 
-    tasks: tasks.map(task => ({
-      ...task,
-      projectId: id,
-      userAssignments: task.userAssignments || []
-    })),
-    updatedAt: serverTimestamp(),
+  // Deep clean object to remove undefined values and standardize nulls
+  const cleanObject = (obj: any): any => {
+    const cleaned = { ...obj };
+    Object.keys(cleaned).forEach(key => {
+      if (cleaned[key] === undefined) {
+        delete cleaned[key];
+      } else if (cleaned[key] === null) {
+        // Keep null values
+      } else if (Array.isArray(cleaned[key])) {
+        cleaned[key] = cleaned[key].map((item: any) => 
+          typeof item === 'object' && item !== null ? cleanObject(item) : item
+        );
+      } else if (typeof cleaned[key] === 'object' && cleaned[key] !== null) {
+        cleaned[key] = cleanObject(cleaned[key]);
+      }
+    });
+    return cleaned;
   };
+
+  // Clean up tasks array
+  const cleanedTasks = tasks.map(task => cleanObject({
+    ...task,
+    userAssignments: task.userAssignments || [],
+    teamId: task.teamId || null
+  }));
+
+  const projectRef = doc(db, COLLECTION, id);
+  const projectUpdate = cleanObject({
+    ...projectFields, 
+    tasks: cleanedTasks,
+    updatedAt: serverTimestamp(),
+  });
   
   await updateDoc(projectRef, projectUpdate);
 }

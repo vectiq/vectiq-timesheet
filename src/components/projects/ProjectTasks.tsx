@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useTasks } from '@/lib/hooks/useTasks';
+import { useTeams } from '@/lib/hooks/useTeams';
 import { UserPlus, X, Edit2, Users, Plus } from 'lucide-react';
 import type { Project, ProjectTask } from '@/types';
 
@@ -29,6 +30,7 @@ export function ProjectTasks({
 }: ProjectTasksProps) {
   const { users } = useUsers();
   const { tasks: allTasks } = useTasks();
+  const { teams } = useTeams();
   const [localProject, setLocalProject] = useState<Project | null>(project);
   const [selectedTask, setSelectedTask] = useState('');
   const [editingTaskId, setEditingTaskId] = useState('');
@@ -36,6 +38,7 @@ export function ProjectTasks({
     costRate: string;
     sellRate: string;
     billable: boolean;
+    teamId?: string;
     xeroLeaveTypeId?: string;
   } | null>(null);
   const [selectedUser, setSelectedUser] = useState('');
@@ -45,6 +48,7 @@ export function ProjectTasks({
     costRate: '',
     sellRate: '',
     billable: false,
+    teamId: null,
     xeroLeaveTypeId: ''
   });
 
@@ -101,6 +105,7 @@ export function ProjectTasks({
       costRate: parseFloat(newTaskData.costRate) || 0,
       sellRate: parseFloat(newTaskData.sellRate) || 0,
       billable: newTaskData.billable,
+      teamId: newTaskData.teamId || undefined,
       xeroLeaveTypeId: localProject.name === 'Leave' ? newTaskData.xeroLeaveTypeId : '',
       userAssignments: []
     };
@@ -118,6 +123,7 @@ export function ProjectTasks({
       costRate: '',
       sellRate: '',
       billable: false,
+      teamId: '',
       xeroLeaveTypeId: ''
     });
   };
@@ -158,11 +164,12 @@ export function ProjectTasks({
   const handleUpdateTask = (taskId: string, updates: Partial<ProjectTask>) => {
     if (!localProject) return;
 
-    // Parse number values
+    // Clean and standardize updates
     const parsedUpdates = {
       ...updates,
       costRate: typeof updates.costRate === 'string' ? parseFloat(updates.costRate) || 0 : updates.costRate,
       sellRate: typeof updates.sellRate === 'string' ? parseFloat(updates.sellRate) || 0 : updates.sellRate,
+      teamId: updates.teamId === 'none' || updates.teamId === '' ? null : updates.teamId
     };
 
     const updatedProject = {
@@ -184,6 +191,7 @@ export function ProjectTasks({
       costRate: task.costRate.toString(),
       sellRate: task.sellRate.toString(),
       billable: task.billable,
+      teamId: task.teamId,
       xeroLeaveTypeId: task.xeroLeaveTypeId
     });
     setSelectedTask('');
@@ -264,6 +272,25 @@ export function ProjectTasks({
                 </FormField>
               </div>
 
+              <FormField label="Team">
+                <Select
+                  value={newTaskData.teamId}
+                  onValueChange={(value) => setNewTaskData(prev => ({ ...prev, teamId: value }))}
+                >
+                  <SelectTrigger>
+                    {newTaskData.teamId ? teams.find(t => t.id === newTaskData.teamId)?.name : 'Select Team'}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Team</SelectItem>
+                    {teams.map(team => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+
               <Checkbox
                 checked={newTaskData.billable}
                 onChange={(e) => setNewTaskData(prev => ({ ...prev, billable: e.target.checked }))}
@@ -296,54 +323,67 @@ export function ProjectTasks({
                 key={task.id} 
                 className={`p-4 rounded-lg border ${
                   selectedTask === task.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
-                }`}
+                } relative`}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between">
                     <div>
                       <span className="font-medium text-gray-900">{task.name}</span>
                       <div className="text-sm text-gray-500 mt-1">
                         Cost: ${task.costRate}/hr • Sell: ${task.sellRate}/hr
-                        {task.billable && <span className="ml-2 text-green-600">Billable</span>}
                       </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          handleStartEditing(task);
+                        }}
+                        className="p-1.5 text-blue-600"
+                        title="Edit task details"
+                      >
+                        <Edit2 className="h-4 w-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedTask === task.id) {
+                            setSelectedTask('');
+                          } else {
+                            setSelectedTask(task.id);
+                            setEditingTaskId('');
+                          }
+                        }}
+                        className="p-1.5 text-indigo-600"
+                        title="Manage assignments"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleRemoveTask(task.id)}
+                        className="p-1.5 text-red-500 hover:text-red-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        handleStartEditing(task);
-                      }}
-                      className="p-1.5 text-blue-600"
-                      title="Edit task details"
-                    >
-                      <Edit2 className="h-4 w-4 text-gray-500" />
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        if (selectedTask === task.id) {
-                          setSelectedTask('');
-                        } else {
-                          setSelectedTask(task.id);
-                          setEditingTaskId('');
-                        }
-                      }}
-                      className="p-1.5 text-indigo-600"
-                      title="Manage assignments"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleRemoveTask(task.id)}
-                      className="p-1.5 text-red-500 hover:text-red-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                  
+                  {/* Task Badges */}
+                  <div className="absolute bottom-4 right-4 flex gap-2">
+                    {task.billable && (
+                      <div className="px-2 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-md border border-green-100">
+                        Billable
+                      </div>
+                    )}
+                    {task.teamId && (
+                      <div className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-100">
+                        {teams.find(t => t.id === task.teamId)?.name}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -379,6 +419,32 @@ export function ProjectTasks({
                         />
                       </FormField>
                     </div>
+
+                    <FormField label="Team">
+                      <Select
+                        value={editingTaskData?.teamId || ''}
+                        onValueChange={(value) => {
+                          setEditingTaskData(prev => ({
+                            ...prev!,
+                            teamId: value || undefined
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          {editingTaskData?.teamId ? 
+                            teams.find(t => t.id === editingTaskData.teamId)?.name : 
+                            'Select Team'}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Team</SelectItem>
+                          {teams.map(team => (
+                            <SelectItem key={team.id} value={team.id}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
 
                     {localProject.name === 'Leave' && (
                       <FormField label="Xero Leave Type ID">
