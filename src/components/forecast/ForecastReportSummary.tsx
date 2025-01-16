@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { ArrowUpIcon, ArrowDownIcon, TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
-import { calculateDefaultHours } from '@/lib/utils/workingDays';
+import { calculateForecastHours, calculateForecastFinancials } from '@/lib/services/forecasts';
 import type { ForecastEntry, ReportData, User, Project } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 
@@ -28,35 +28,8 @@ export function ForecastReportSummary({
   isYearlyView
 }: ForecastReportSummaryProps) {
   const summary = useMemo(() => {
-    // Calculate forecast totals
     let forecastRevenue = 0;
     let forecastCost = 0;
-
-    // Helper to get hours for a forecast entry
-    const getHours = (userId: string, projectId: string, taskId: string) => {
-      const forecast = forecasts.find(f => 
-        f.userId === userId && 
-        f.projectId === projectId && 
-        f.taskId === taskId
-      );
-      
-      if (forecast) {
-        return forecast.hours;
-      }
-      
-      // Calculate default hours if no forecast exists and user is assigned to the task
-      const project = projects.find(p => p.id === projectId);
-      const task = project?.tasks.find(t => t.id === taskId);
-      const isAssigned = task?.userAssignments?.some(a => a.userId === userId);
-      
-      if (isAssigned) {
-        const user = users.find(u => u.id === userId);
-        const defaultHours = calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
-        return isYearlyView ? defaultHours * 12 : defaultHours;
-      }
-      
-      return 0;
-    };
 
     // Calculate totals for all project task assignments
     projects.forEach(project => {
@@ -64,14 +37,31 @@ export function ForecastReportSummary({
         task.userAssignments?.forEach(assignment => {
           const user = users.find(u => u.id === assignment.userId);
           if (!user) return;
-        
-          const hours = getHours(user.id, project.id, task.id);
-          
-          const sellRate = task.sellRate || user.sellRate || 0;
-          const costRate = task.costRate || user.costRate || 0;
-          
-          forecastRevenue += hours * sellRate;
-          forecastCost += hours * costRate;
+
+          const { hours } = calculateForecastHours({
+            forecasts,
+            userId: user.id,
+            projectId: project.id,
+            taskId: task.id,
+            workingDays,
+            hoursPerWeek: user.hoursPerWeek || 40,
+            isYearlyView
+          });
+
+          const revenue = calculateForecastFinancials({
+            hours,
+            taskRate: task.sellRate,
+            userRate: user.sellRate
+          }).revenue;
+
+          const cost = calculateForecastFinancials({
+            hours,
+            taskRate: task.costRate,
+            userRate: user.costRate
+          }).cost;
+
+          forecastRevenue += revenue;
+          forecastCost += cost;
         });
       });
     });
@@ -115,7 +105,7 @@ export function ForecastReportSummary({
         marginPercent: marginPercentVariance
       }
     };
-  }, [forecasts, actuals, projects]);
+  }, [forecasts, actuals, projects, users, workingDays, isYearlyView]);
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

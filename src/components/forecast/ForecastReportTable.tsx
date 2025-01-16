@@ -3,8 +3,8 @@ import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { calculateForecastHours, calculateForecastFinancials } from '@/lib/services/forecasts';
 import { formatCurrency } from '@/lib/utils/currency';
-import { getWorkingDaysForMonth, calculateDefaultHours } from '@/lib/utils/workingDays';
 import type { ForecastEntry, ReportData, User, Project, Client } from '@/types';
 
 interface ForecastReportTableProps {
@@ -68,36 +68,7 @@ export function ForecastReportTable({
   const projectSummaries = useMemo((): ProjectSummary[] => {
     const summaries = new Map<string, ProjectSummary>();
 
-    // Early return if no actuals data
-    if (!actuals?.entries) {
-      return [];
-    }
-
-    // Helper to get forecast hours for a user/project/role
-    const getForecastHours = (userId: string, projectId: string, taskId: string) => {
-      const forecast = forecasts.find(f => 
-        f.userId === userId && 
-        f.projectId === projectId && 
-        f.taskId === taskId
-      );
-      
-      if (forecast) {
-        return isYearlyView ? forecast.hours * 12 : forecast.hours;
-      }
-      
-      // Calculate default hours if no forecast exists and user is assigned to the task
-      const project = projects.find(p => p.id === projectId);
-      const task = project?.tasks.find(t => t.id === taskId);
-      const isAssigned = task?.userAssignments?.some(a => a.userId === userId);
-      
-      if (isAssigned) {
-        const user = users.find(u => u.id === userId);
-        const defaultHours = calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
-        return isYearlyView ? defaultHours * 12 : defaultHours;
-      }
-      
-      return 0;
-    };
+    if (!actuals?.entries) return [];
 
     // Process each project
     projects.forEach(project => {
@@ -123,10 +94,29 @@ export function ForecastReportTable({
           const sellRate = task.sellRate || user.sellRate || 0;
           const costRate = task.costRate || user.costRate || 0;
 
-          // Calculate forecast hours and financials
-          const forecastHours = getForecastHours(user.id, project.id, task.id);
-          const forecastRevenue = forecastHours * sellRate;
-          const forecastCost = forecastHours * costRate;
+          // Get forecast hours
+          const { hours: forecastHours } = calculateForecastHours({
+            forecasts,
+            userId: user.id,
+            projectId: project.id,
+            taskId: task.id,
+            workingDays,
+            hoursPerWeek: user.hoursPerWeek || 40,
+            isYearlyView
+          });
+
+          // Calculate forecast financials
+          const { revenue: forecastRevenue } = calculateForecastFinancials({
+            hours: forecastHours,
+            taskRate: task.sellRate,
+            userRate: user.sellRate
+          });
+
+          const { cost: forecastCost } = calculateForecastFinancials({
+            hours: forecastHours,
+            taskRate: task.costRate,
+            userRate: user.costRate
+          });
 
           // Get actual hours and financials from time entries
           const actualEntries = actuals.entries.filter(entry =>

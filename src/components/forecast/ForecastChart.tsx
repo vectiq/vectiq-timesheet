@@ -15,6 +15,7 @@ import {
 import { formatCurrency } from '@/lib/utils/currency';
 import { format, addMonths, startOfMonth } from 'date-fns';
 import { getWorkingDaysForMonth, calculateDefaultHours } from '@/lib/utils/workingDays';
+import { calculateForecastHours, calculateForecastFinancials } from '@/lib/services/forecasts';
 import type { Project, User } from '@/types';
 
 interface ChartData {
@@ -57,44 +58,47 @@ export function ForecastChart({
   const chartData = useMemo(() => {
     const data: ChartData[] = [];
     let currentDate = startOfMonth(startDate);
-    
+
     while (currentDate <= endDate) {
       const monthKey = format(currentDate, 'yyyy-MM');
       const monthWorkingDays = getWorkingDaysForMonth(monthKey);
-      
-      // Calculate forecast totals for the month by combining hours with rates
+
+      // Initialize month totals
       let forecastRevenue = 0;
       let forecastCost = 0;
 
-      // Calculate totals for all project task assignments
       projects.forEach(project => {
         project.tasks.forEach(task => {
           task.userAssignments?.forEach(assignment => {
             const user = users.find(u => u.id === assignment.userId);
             if (!user) return;
 
-            // Get hours - either from forecast or calculate default
-            const forecast = forecasts.find(f => 
-              f.month === monthKey &&
-              f.userId === user.id && 
-              f.projectId === project.id && 
-              f.taskId === task.id
-            );
-            
-            let hours;
-            if (forecast) {
-              hours = forecast.hours;
-            } else {
-              // Calculate default hours based on working days
-              hours = calculateDefaultHours(monthWorkingDays, user.hoursPerWeek || 40);
-            }
-            
-            // Use task rates if defined, otherwise fall back to user rates
-            const sellRate = task.sellRate || user.sellRate || 0;
-            const costRate = task.costRate || user.costRate || 0;
-            
-            forecastRevenue += hours * sellRate;
-            forecastCost += hours * costRate;
+            // Get forecast hours
+            const { hours } = calculateForecastHours({
+              forecasts,
+              userId: user.id,
+              projectId: project.id,
+              taskId: task.id,
+              workingDays: monthWorkingDays,
+              hoursPerWeek: user.hoursPerWeek || 40,
+              isYearlyView: false
+            });
+
+            // Calculate forecast financials
+            const { revenue } = calculateForecastFinancials({
+              hours,
+              taskRate: task.sellRate,
+              userRate: user.sellRate
+            });
+
+            const { cost } = calculateForecastFinancials({
+              hours,
+              taskRate: task.costRate,
+              userRate: user.costRate
+            });
+
+            forecastRevenue += revenue;
+            forecastCost += cost;
           });
         });
       });

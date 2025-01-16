@@ -8,7 +8,8 @@ import { ForecastTable } from '@/components/forecast/ForecastTable';
 import { ForecastSummary } from '@/components/forecast/ForecastSummary';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { getWorkingDaysForMonth, calculateDefaultHours } from '@/lib/utils/workingDays';
+import { getWorkingDaysForMonth } from '@/lib/utils/workingDays';
+import { calculateForecastHours, calculateForecastFinancials } from '@/lib/services/forecasts';
 
 export default function Forecast() {
   const [currentDate, setCurrentDate] = useState(startOfMonth(new Date()));
@@ -30,39 +31,16 @@ export default function Forecast() {
   const handleToday = () => setCurrentDate(startOfMonth(new Date()));
 
   const workingDays = getWorkingDaysForMonth(currentMonth);
+  const previousMonth = format(subMonths(currentDate, 1), 'yyyy-MM');
+  const previousWorkingDays = getWorkingDaysForMonth(previousMonth);
   
   // Calculate summary metrics
   const summary = useMemo(() => {
-    let revenue = 0;
-    let costs = 0;
+    let forecastRevenue = 0;
+    let forecastCost = 0;
     let previousRevenue = 0;
     let previousCosts = 0;
     
-    // Helper to get hours for a forecast entry
-    const getHours = (userId: string, projectId: string, taskId: string, entries: ForecastEntry[]) => {
-      const forecast = entries.find(f => 
-        f.userId === userId && 
-        f.projectId === projectId && 
-        f.taskId === taskId
-      );
-      
-      if (forecast) {
-        return forecast.hours;
-      }
-      
-      // Calculate default hours if no forecast exists and user is assigned to the task
-      const project = projects.find(p => p.id === projectId);
-      const task = project?.tasks.find(t => t.id === taskId);
-      const isAssigned = task?.userAssignments?.some(a => a.userId === userId);
-      
-      if (isAssigned) {
-        const user = users.find(u => u.id === userId);
-        return calculateDefaultHours(workingDays, user?.hoursPerWeek || 40);
-      }
-      
-      return 0;
-    };
-
     // Calculate totals for all project task assignments
     projects.forEach(project => {
       project.tasks.forEach(task => {
@@ -70,27 +48,69 @@ export default function Forecast() {
           const user = users.find(u => u.id === assignment.userId);
           if (!user) return;
         
-          const hours = getHours(user.id, project.id, task.id, forecasts);
-          const prevHours = getHours(user.id, project.id, task.id, previousForecasts);
+          // Get current month forecast hours
+          const { hours } = calculateForecastHours({
+            forecasts,
+            userId: user.id,
+            projectId: project.id,
+            taskId: task.id,
+            workingDays,
+            hoursPerWeek: user.hoursPerWeek || 40,
+            isYearlyView: false
+          });
+
+          // Get previous month forecast hours
+          const { hours: prevHours } = calculateForecastHours({
+            forecasts: previousForecasts,
+            userId: user.id,
+            projectId: project.id,
+            taskId: task.id,
+            workingDays: previousWorkingDays,
+            hoursPerWeek: user.hoursPerWeek || 40,
+            isYearlyView: false
+          });
           
-          const sellRate = task.sellRate || user.sellRate || 0;
-          const costRate = task.costRate || user.costRate || 0;
+          // Calculate current month financials
+          const { revenue } = calculateForecastFinancials({
+            hours,
+            taskRate: task.sellRate,
+            userRate: user.sellRate
+          });
+
+          const { cost } = calculateForecastFinancials({
+            hours,
+            taskRate: task.costRate,
+            userRate: user.costRate
+          });
+
+          // Calculate previous month financials
+          const { revenue: prevRevenue } = calculateForecastFinancials({
+            hours: prevHours,
+            taskRate: task.sellRate,
+            userRate: user.sellRate
+          });
+
+          const { cost: prevCost } = calculateForecastFinancials({
+            hours: prevHours,
+            taskRate: task.costRate,
+            userRate: user.costRate
+          });
           
-          revenue += hours * sellRate;
-          costs += hours * costRate;
-          previousRevenue += prevHours * sellRate;
-          previousCosts += prevHours * costRate;
+          forecastRevenue += revenue;
+          forecastCost += cost;
+          previousRevenue += prevRevenue;
+          previousCosts += prevCost;
         });
       });
     });
     
-    const margin = revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0;
+    const margin = forecastRevenue > 0 ? ((forecastRevenue - forecastCost) / forecastRevenue) * 100 : 0;
     const previousMargin = previousRevenue > 0 ? ((previousRevenue - previousCosts) / previousRevenue) * 100 : 0;
     
     return {
       currentMonth: {
-        revenue,
-        costs,
+        revenue: forecastRevenue,
+        costs: forecastCost,
         margin
       },
       previousMonth: {
@@ -99,7 +119,7 @@ export default function Forecast() {
         margin: previousMargin
       }
     };
-  }, [forecasts, previousForecasts, users, projects, workingDays]);
+  }, [forecasts, previousForecasts, users, projects, workingDays, previousWorkingDays]);
 
   if (isLoadingUsers || isLoadingProjects || isLoadingForecasts || isLoadingClients) {
     return <LoadingScreen />;

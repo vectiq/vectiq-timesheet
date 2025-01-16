@@ -1,6 +1,8 @@
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { formatCurrency } from '@/lib/utils/currency';
+import { calculateForecastHours, calculateForecastFinancials } from '@/lib/services/forecasts';
+import type { User, Project } from '@/types';
 
 interface ForecastSummaryProps {
   currentMonth: {
