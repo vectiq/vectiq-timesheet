@@ -105,6 +105,8 @@ export interface User {
   hoursPerWeek: number;
   teamId?: string;
   xeroEmployeeId?: string;
+  salary?: SalaryItem[];
+  costRate?: CostRate[];
   createdAt: Date;
   updatedAt: Date;
 }
