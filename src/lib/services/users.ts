@@ -85,7 +85,7 @@ export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedA
   const user: User = {
     id: userCredential.data.uid,
     ...data,
-    teamId: data.teamId === 'null' ? null : data.teamId,
+    teamId: data.teamId === 'none' ? undefined : data.teamId,
     projectAssignments: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -160,7 +160,7 @@ export async function updateUser(id: string, data: Partial<User>): Promise<void>
   // Clean up teamId handling
   const updateData = {
     ...data,
-    teamId: data.teamId === 'null' ? null : data.teamId || null,
+    teamId: data.teamId === 'none' ? undefined : data.teamId,
     updatedAt: serverTimestamp(),
   };
 
