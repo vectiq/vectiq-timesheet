@@ -3,57 +3,20 @@ import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, AlertTriangle, CheckCircle } from 'lucide-react';
-import { useNotes } from '@/lib/hooks/useNotes';
 import { format } from 'date-fns';
 import type { ProcessingProject } from '@/types';
 
-interface NoteIndicatorProps {
-  projectId: string;
-  currentMonth: Date;
-}
-
-const NoteIndicator = ({ projectId, currentMonth }: NoteIndicatorProps) => {
-  const { notes } = useNotes(projectId, currentMonth);
-  
-  const pendingActions = notes.filter(note => 
-    note.type === 'action' && note.status === 'pending'
-  ).length;
-  
-  const totalNotes = notes.length;
-  
-  if (pendingActions > 0) {
-    return (
-      <div className="relative">
-        <StickyNote className="h-4 w-4 text-amber-600 animate-pulse" />
-        <span className="absolute -top-1.5 -right-1.5 h-3 w-3 bg-amber-500 rounded-full border-2 border-white" />
-      </div>
-    );
-  }
-  
-  if (totalNotes > 0) {
-    return (
-      <div className="relative">
-        <StickyNote className="h-4 w-4 text-blue-600" />
-        <span className="absolute -top-1.5 -right-1.5 h-3 w-3 bg-blue-500 rounded-full border-2 border-white" />
-      </div>
-    );
-  }
-  
-  return <StickyNote className="h-4 w-4" />;
-};
 
 interface ProcessingTableProps {
   projects: ProcessingProject[];
   onUpdateStatus: (args: { projectId: string; status: 'not started' | 'draft' | 'sent' }) => Promise<void>;
   isUpdating: boolean;
-  onShowNotes: (projectId: string) => void;
 }
 
 export function ProcessingTable({ 
   projects, 
   onUpdateStatus,
   isUpdating,
-  onShowNotes
 }: ProcessingTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const currentMonth = new Date();
@@ -149,17 +112,7 @@ export function ProcessingTable({
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onShowNotes(project.id)}
-                        className="mr-2 relative group hover:scale-105 transition-transform duration-200"
-                      >
-                        <NoteIndicator 
-                          projectId={project.id}
-                          currentMonth={currentMonth}
-                        />
-                      </Button>
+
                       <Button 
                         variant="secondary" 
                         size="sm"

@@ -13,7 +13,6 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ProcessingTable } from '@/components/processing/ProcessingTable';
 import { ProcessingFilters } from '@/components/processing/ProcessingFilters';
-import { ProcessingNotes } from '@/components/processing/ProcessingNotes';
 import { ProcessingSummary } from '@/components/processing/ProcessingSummary';
 import { useProcessing } from '@/lib/hooks/useProcessing';
 import { useMemo } from 'react';
@@ -126,17 +125,11 @@ export default function MonthlyProcessing() {
               projects={filteredProjects}
               onUpdateStatus={updateStatus}
               isUpdating={isUpdating}
-              onShowNotes={(projectId) => setSelectedProjectId(projectId)}
             />
           </>
         )}
       </Card>
 
-        <ProcessingNotes 
-          projectId={selectedProjectId}
-          date={selectedMonth}
-          onClose={() => setSelectedProjectId(null)}
-        />
     </div>
   );
 }

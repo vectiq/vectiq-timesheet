@@ -111,6 +111,8 @@ export interface User {
   updatedAt: Date;
 }
 
+
+
 export interface ReportData {
   entries: ReportEntry[];
   summary: ReportSummary;
@@ -248,15 +250,54 @@ export interface TestDataOptions {
 
 export interface Note {
   id: string;
-  projectId: string;
-  month: string;          // Format: YYYY-MM
-  type: 'action' | 'info';
   text: string;
   status?: 'pending' | 'completed';
+  priority?: 'low' | 'medium' | 'high';
+  createdBy: string;
   createdAt: string;
-  isPinned?: boolean;
-  originalMonth: string;    // The month the note was originally created in
   updatedAt?: string;
+}
+
+export interface ProjectProcessingNote {
+  projectId: string;
+  month: string; // Format: YYYY-MM
+  notes: Note[];
+}
+
+export interface MonthlyProcessingNote {
+  month: string; // Format: YYYY-MM
+  notes: Note[];
+}
+
+export interface PayRun {
+  PayRunID: string;
+  PayrollCalendarID: string;
+  PayRunPeriodStartDate: string; // ISO date string
+  PayRunPeriodEndDate: string; // ISO date string
+  PaymentDate: string; // ISO date string
+  Wages: number;
+  Deductions: number;
+  Tax: number;
+  Super: number;
+  Reimbursement: number;
+  NetPay: number;
+  PayRunStatus: string;
+  UpdatedDateUTC: string; // ISO date string
+  Payslips: Payslip[];
+}
+
+export interface Payslip {
+  EmployeeID: string;
+  PayslipID: string;
+  FirstName: string;
+  LastName: string;
+  Wages: number;
+  Deductions: number;
+  Tax: number;
+  Super: number;
+  Reimbursements: number;
+  NetPay: number;
+  UpdatedDateUTC: string; // ISO date string
 }
 
 export interface ForecastEntry {

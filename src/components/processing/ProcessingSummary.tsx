@@ -48,11 +48,6 @@ export function ProcessingSummary({ data }: ProcessingSummaryProps) {
             Reminders
             <Badge variant="warning" className="ml-auto">3</Badge>
           </Button>
-
-          <Button variant="secondary" className="w-full justify-start">
-            <StickyNote className="h-4 w-4 mr-2" />
-            Notes
-          </Button>
         </div>
       </Card>
     </div>
