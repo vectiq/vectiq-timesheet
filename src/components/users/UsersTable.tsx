@@ -1,4 +1,4 @@
-import { Edit, Trash2, UserPlus } from 'lucide-react';
+import { Edit, Trash2, Calculator } from 'lucide-react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -9,12 +9,14 @@ import { useMemo } from 'react';
 interface UsersTableProps {
   users: User[];
   onEdit: (user: User) => void;
+  onManageRates: (user: User) => void;
   onDelete: (id: string) => void;
 }
 
 export function UsersTable({ 
   users, 
   onEdit, 
+  onManageRates,
   onDelete,
 }: UsersTableProps) {
   const { projects, isLoading: isLoadingProjects } = useProjects();
@@ -88,6 +90,9 @@ export function UsersTable({
               </Td>
               <Td className="text-right">
                 <div className="flex justify-end gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => onManageRates(user)}>
+                    <Calculator className="h-4 w-4" />
+                  </Button>
                   <Button variant="secondary" size="sm" onClick={() => onEdit(user)}>
                     <Edit className="h-4 w-4" />
                   </Button>
