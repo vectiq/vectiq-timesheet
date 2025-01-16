@@ -116,7 +116,6 @@ export function ForecastReportSummary({
         </div>
         <div className="p-6 relative space-y-2">
           <div className="flex items-center gap-2 text-blue-600 mb-4">
-            <DollarSign className="h-5 w-5" />
             <h3 className="font-semibold">Revenue</h3>
             {isYearlyView && (
               <Badge variant="secondary" className="ml-auto">Financial Year</Badge>
@@ -161,7 +160,6 @@ export function ForecastReportSummary({
         </div>
         <div className="p-6 relative">
           <div className="flex items-center gap-2 text-red-600 mb-4">
-            <DollarSign className="h-5 w-5" />
             <h3 className="font-semibold">Cost</h3>
           </div>
           
@@ -203,7 +201,6 @@ export function ForecastReportSummary({
         </div>
         <div className="p-6 relative">
           <div className="flex items-center gap-2 text-green-600 mb-4">
-            <Percent className="h-5 w-5" />
             <h3 className="font-semibold">Gross Margin</h3>
           </div>
           
@@ -240,9 +237,9 @@ export function ForecastReportSummary({
               <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
             )}
             <span className={`text-sm font-medium ${
-              summary.variance.marginPercent >= 0 ? 'text-green-600' : 'text-red-600'
+              summary.variance.margin >= 0 ? 'text-green-600' : 'text-red-600'
             }`}>
-              {Math.abs(summary.variance.marginPercent).toFixed(1)}% variance
+              {formatCurrency(Math.abs(summary.variance.margin))} variance
             </span>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { formatCurrency } from '@/lib/utils/currency';
 import { calculateForecastHours, calculateForecastFinancials } from '@/lib/services/forecasts';
@@ -31,91 +31,103 @@ export function ForecastSummary({ currentMonth, previousMonth }: ForecastSummary
   
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-      <Card className="p-4">
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">Forecast Revenue</h3>
-          <div className="flex flex-col">
-            <p className="text-2xl font-semibold text-gray-900 truncate">
-              {formatCurrency(currentMonth.revenue)}
-            </p>
-            <div className={`flex items-center mt-1 ${revenueTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-              {revenueTrend === 'up' ? (
-                <ArrowUpIcon className="h-4 w-4 shrink-0" />
-              ) : (
-                <ArrowDownIcon className="h-4 w-4 shrink-0" />
-              )}
-              <span className="text-sm font-medium ml-1 truncate">
-                {formatCurrency(Math.abs(revenueDiff))}
-              </span>
-            </div>
-          </div>
+      <Card className="relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 opacity-10 rounded-full" />
         </div>
-      </Card>
-
-      <Card className="p-4">
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">Forecast Costs</h3>
-          <div className="flex flex-col">
-            <p className="text-2xl font-semibold text-gray-900 truncate">
-              {formatCurrency(currentMonth.costs)}
-            </p>
-            <div className={`flex items-center mt-1 ${costsTrend === 'down' ? 'text-green-600' : 'text-red-600'}`}>
-              {costsTrend === 'up' ? (
-                <ArrowUpIcon className="h-4 w-4 shrink-0" />
-              ) : (
-                <ArrowDownIcon className="h-4 w-4 shrink-0" />
-              )}
-              <span className="text-sm font-medium ml-1 truncate">
-                {formatCurrency(Math.abs(costsDiff))}
-              </span>
-            </div>
+        <div className="p-6 relative space-y-2">
+          <div className="flex items-center gap-2 text-blue-600 mb-4">
+            <h3 className="font-semibold">Forecast Revenue</h3>
           </div>
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">Gross Margin</h3>
-          <div className="flex flex-col">
-            <p className="text-2xl font-semibold text-gray-900 truncate">
-              {formatCurrency(currentGrossMargin)}
-            </p>
-            <div className={`flex items-center mt-1 ${grossMarginTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-              {grossMarginTrend === 'up' ? (
-                <ArrowUpIcon className="h-4 w-4 shrink-0" />
-              ) : (
-                <ArrowDownIcon className="h-4 w-4 shrink-0" />
-              )}
-              <span className="text-sm font-medium ml-1 truncate">
-                {formatCurrency(Math.abs(grossMarginDiff))}
-              </span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-500">Margin %</h3>
-          <div className="flex flex-col">
-            <p className="text-2xl font-semibold text-gray-900">
-              {(currentMonth.revenue > 0 
-                ? (currentGrossMargin / currentMonth.revenue) * 100 
-                : 0).toFixed(1)}%
-            </p>
-            <div className={`flex items-center mt-1 ${marginTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-              {marginTrend === 'up' ? (
-                <ArrowUpIcon className="h-4 w-4 shrink-0" />
-              ) : (
-                <ArrowDownIcon className="h-4 w-4 shrink-0" />
-              )}
-              <span className="text-sm font-medium ml-1">
-                {Math.abs(marginDiff).toFixed(1)}%
+          <p className="text-2xl font-bold text-gray-900">
+            {formatCurrency(currentMonth.revenue)}
+          </p>
+          <div className={`mt-4 flex items-center ${revenueTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+            {revenueTrend === 'up' ? (
+              <TrendingUp className="h-4 w-4 mr-1" />
+            ) : (
+              <TrendingDown className="h-4 w-4 mr-1" />
+            )}
+            <span className="text-sm font-medium">
+              {formatCurrency(Math.abs(revenueDiff))} variance
             </span>
           </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      <Card className="relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-red-600 opacity-10 rounded-full" />
+        </div>
+        <div className="p-6 relative space-y-2">
+          <div className="flex items-center gap-2 text-red-600 mb-4">
+            <h3 className="font-semibold">Forecast Costs</h3>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            {formatCurrency(currentMonth.costs)}
+          </p>
+          <div className={`mt-4 flex items-center ${costsTrend === 'down' ? 'text-green-600' : 'text-red-600'}`}>
+            {costsTrend === 'up' ? (
+              <TrendingUp className="h-4 w-4 mr-1" />
+            ) : (
+              <TrendingDown className="h-4 w-4 mr-1" />
+            )}
+            <span className="text-sm font-medium">
+              {formatCurrency(Math.abs(costsDiff))} variance
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-green-600 opacity-10 rounded-full" />
+        </div>
+        <div className="p-6 relative space-y-2">
+          <div className="flex items-center gap-2 text-green-600 mb-4">
+            <h3 className="font-semibold">Gross Margin</h3>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            {formatCurrency(currentGrossMargin)}
+          </p>
+          <div className={`mt-4 flex items-center ${grossMarginTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+            {grossMarginTrend === 'up' ? (
+              <TrendingUp className="h-4 w-4 mr-1" />
+            ) : (
+              <TrendingDown className="h-4 w-4 mr-1" />
+            )}
+            <span className="text-sm font-medium">
+              {formatCurrency(Math.abs(grossMarginDiff))} variance
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-indigo-600 opacity-10 rounded-full" />
+        </div>
+        <div className="p-6 relative space-y-2">
+          <div className="flex items-center gap-2 text-indigo-600 mb-4">
+            <h3 className="font-semibold">Margin %</h3>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            {(currentMonth.revenue > 0 
+              ? (currentGrossMargin / currentMonth.revenue) * 100 
+              : 0).toFixed(1)}%
+          </p>
+          <div className={`mt-4 flex items-center ${marginTrend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+            {marginTrend === 'up' ? (
+              <TrendingUp className="h-4 w-4 mr-1" />
+            ) : (
+              <TrendingDown className="h-4 w-4 mr-1" />
+            )}
+            <span className="text-sm font-medium">
+              {Math.abs(marginDiff).toFixed(1)}% variance
+            </span>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
