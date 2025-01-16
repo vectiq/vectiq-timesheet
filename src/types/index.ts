@@ -86,12 +86,12 @@ export interface ReportSummary {
 
 export interface SalaryItem{
   salary: number;
-  date: Date;
+  date: string;  // ISO date string
 }
 
 export interface CostRate{
   costRate: number;
-  date: Date;
+  date: string;  // ISO date string
 }
 
 export interface User {
@@ -99,13 +99,10 @@ export interface User {
   email: string;
   name: string;
   employeeType: 'employee' | 'contractor' | 'company';
-  salary?: SalaryItem[];
   role: 'admin' | 'user';
   overtime: 'no' | 'eligible' | 'all';
   hoursPerWeek: number;
-  leaveApproverId?: string;
-  costRate: CostRate[];
-  sellRate: number;
+  teamId?: string;
   xeroEmployeeId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -179,6 +176,11 @@ export interface SystemConfig {
   requireApprovalsByDefault: boolean;
   allowOvertimeByDefault: boolean;
   defaultBillableStatus: boolean;
+  payrollTaxPercentage: number;
+  payrollTaxFreeThreshold: number;
+  insurancePercentage: number;
+  superannuationPercentage: number;
+  costRateFormula: string;
 }
 
 export interface XeroConfig {
@@ -294,6 +296,14 @@ export interface LeaveBalance{
 export interface XeroLeaveResponse {
   Id: string;
   Status: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  managerId: string;
+  createdAt: string;
+  updatedAt: string;
   ProviderName: string;
   DateTimeUTC: string;
   LeaveBalances: Array<LeaveBalance>;

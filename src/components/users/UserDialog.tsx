@@ -8,10 +8,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { FormField } from '@/components/ui/FormField';
-import { UserIcon, Mail, Shield, Briefcase, Calculator, Link, UserCheck, DollarSign, History } from 'lucide-react';
+import { Link, User as UserIcon, Briefcase, Users } from 'lucide-react';
 import type { User } from '@/types';
-import { SalaryHistoryDialog } from './SalaryHistoryDialog';
-import { CostRateHistoryDialog } from './CostRateHistoryDialog';
+import { useTeams } from '@/lib/hooks/useTeams';
 
 interface UserDialogProps {
   open: boolean;
@@ -26,50 +25,30 @@ export function UserDialog({
   user,
   onSubmit,
 }: UserDialogProps) {
-  const [isSalaryHistoryOpen, setIsSalaryHistoryOpen] = useState(false);
-  const [isCostRateHistoryOpen, setCostRateHistoryOpen] = useState(false);
   const {
     register,
     handleSubmit,
     watch,
     setValue,
-    formState: { errors }, 
     reset,
+    formState: { errors }, 
   } = useForm<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>({
     defaultValues: user || {
       email: '',
       name: '',
       employeeType: 'employee',
       role: 'user',
-      leaveApproverId: '',
       projectAssignments: [],
       hoursPerWeek: 40,
       overtime: 'no',
     },
+    shouldUnregister: false, // Prevent fields from being unregistered when removed
   });
 
   const { users } = useUsers();
+  const { teams } = useTeams();
   const employeeType = watch('employeeType');
-  const currentLeaveApproverId = watch('leaveApproverId');
-
-  // Get current salary and cost rate
-  const currentSalary = useMemo(() => {
-    if (!user?.salary?.length) return null;
-    return user.salary.sort((a, b) => b.date.getTime() - a.date.getTime())[0].salary;
-  }, [user?.salary]);
-
-  const currentCostRate = useMemo(() => {
-    if (!user?.costRate?.length) return null;
-    return user.costRate.sort((a, b) => b.date.getTime() - a.date.getTime())[0].costRate;
-  }, [user?.costRate]);
-  // Calculate cost rate from salary for employees
-  useEffect(() => {
-    if (employeeType === 'employee' && currentSalary) {
-      const annualWorkingHours = 52 * 38; // Fixed 38 hour week
-      const costRate = currentSalary / annualWorkingHours;
-      setValue('costRate', Math.round(costRate * 100) / 100);
-    }
-  }, [employeeType, currentSalary, setValue]);
+  
   useEffect(() => {
     if (open) {
       reset(user || {
@@ -205,94 +184,33 @@ export function UserDialog({
               </div>
             </div>
           </div>
-          
-          {employeeType === 'employee' && (
-            <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <Calculator className="h-4 w-4" />
-                Salary Information
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-gray-700">Current Annual Salary</div>
-                  {currentSalary ? (
-                    <div className="text-2xl font-semibold mt-1">${currentSalary.toLocaleString()}</div>
-                  ) : (
-                    <div className="text-sm text-gray-500 mt-1">No salary set</div>
-                  )}
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsSalaryHistoryOpen(true);
-                  }}
-                >
-                  <History className="h-4 w-4 mr-2" />
-                  Manage History
-                </Button>
-              </div>
-            </div>
-          )}
 
           <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-              <DollarSign className="h-4 w-4" />
-              Sell Rate
-            </div>
-            <FormField label="Sell Rate ($/hr)">
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1 h-4 w-4 text-gray-400" />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  {...register('sellRate', { valueAsNumber: true })}
-                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none block w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="0.00"
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                The sell rate is used for billing clients. Cost rates are managed separately.
-              </p>
-            </FormField>
-          </div>
-
-          <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-              <UserCheck className="h-4 w-4" />
-              Leave Approval
+              <Users className="h-4 w-4" />
+              Team Assignment
             </div>
             
-            <FormField label="Leave Approver">
-              <Select
-                value={currentLeaveApproverId}
-                onValueChange={(value) => setValue('leaveApproverId', value)}
-                defaultValue={null}
+            <FormField label="Team">
+              <Select 
+                value={watch('teamId') || 'null'} 
+                onValueChange={(value) => setValue('teamId', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select approver">
-                    {currentLeaveApproverId ? users.find(u => u.id === currentLeaveApproverId)?.name : 'Select approver'}
-                  </SelectValue>
+                  {watch('teamId') ? teams.find(t => t.id === watch('teamId'))?.name : 'Select Team'}
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No approver</SelectItem>
-                  {users
-                    .filter(u => u.id !== user?.id) // Can't select self as approver
-                    .map(u => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))
-                  }
+                  <SelectItem value="null">No Team</SelectItem>
+                  {teams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-xs text-gray-500">
-                Select who should approve this user's leave requests
-              </p>
             </FormField>
           </div>
+
           <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Link className="h-4 w-4" />

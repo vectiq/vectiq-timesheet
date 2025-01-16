@@ -21,6 +21,7 @@ import {
 } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import { generatePassword } from '@/lib/utils/password';
+import { calculateCostRate } from '@/lib/utils/costRate';
 import type { User, ProjectAssignment } from '@/types';
 
 const COLLECTION = 'users';
@@ -84,10 +85,17 @@ export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedA
   const user: User = {
     id: userCredential.data.uid,
     ...data,
+    teamId: data.teamId === 'null' ? null : data.teamId,
     projectAssignments: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
+
+  // Remove sell rate if it exists in data
+  if ('sellRate' in user) {
+    delete user.sellRate;
+  }
+
   try {
     await setDoc(userRef, user);
   } catch (error) {
@@ -101,12 +109,67 @@ export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedA
   return user;
 }
 
+async function getSystemConfig(): Promise<SystemConfig> {
+  const configRef = doc(db, 'config', 'system_config');
+  const configDoc = await getDoc(configRef);
+  
+  if (!configDoc.exists()) {
+    throw new Error('System configuration not found');
+  }
+  
+  return configDoc.data() as SystemConfig;
+}
+
 export async function updateUser(id: string, data: Partial<User>): Promise<void> {
   const userRef = doc(db, COLLECTION, id);
+  const userDoc = await getDoc(userRef);
+  
+  if (!userDoc.exists()) {
+    throw new Error('User not found');
+  }
+
+  const user = userDoc.data() as User;
+  
+  // If this is an employee and salary is being updated, recalculate cost rate
+  if (user.employeeType === 'employee' && data.salary) {
+    try {
+      const config = await getSystemConfig();
+      const latestSalary = data.salary.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      )[0];
+      
+      if (latestSalary) {
+        const costRate = calculateCostRate(latestSalary.salary, config);
+        
+        // Add new cost rate entry
+        const now = new Date();
+        data.costRate = [
+          {
+            costRate,
+            date: now.toISOString()
+          },
+          ...(user.costRate || [])
+        ];
+      }
+    } catch (error) {
+      console.error('Error calculating cost rate:', error);
+      throw new Error('Failed to update cost rate');
+    }
+  }
+
+  // Clean up teamId handling
   const updateData = {
     ...data,
+    teamId: data.teamId === 'null' ? null : data.teamId || null,
     updatedAt: serverTimestamp(),
   };
+
+  // Remove undefined values to prevent Firestore errors
+  Object.keys(updateData).forEach(key => {
+    if (updateData[key] === undefined) {
+      delete updateData[key];
+    }
+  });
   await updateDoc(userRef, updateData);
 }
 

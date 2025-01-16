@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { calculateCostRate } from '@/lib/utils/costRate';
+import { Loader2 } from 'lucide-react';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
@@ -6,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { DollarSign, Plus, Trash2, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
-import type { User, SalaryItem, CostRate } from '@/types';
+import type { User, SalaryItem, CostRate, SystemConfig } from '@/types';
 
 interface RatesDialogProps {
   open: boolean;
@@ -27,10 +31,22 @@ export function RatesDialog({
   // Initialize cost rate history
   const [costRateHistory, setCostRateHistory] = useState<CostRate[]>([]);
 
+  // Helper function to safely format dates
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return 'Never';
+    try {
+      return format(new Date(date), 'MMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
   // Form state
   const [newSalary, setNewSalary] = useState('');
   const [newCostRate, setNewCostRate] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
+  const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Initialize history when user changes
@@ -50,46 +66,87 @@ export function RatesDialog({
     }
   }, [user]);
 
-  const handleAddSalary = () => {
+  const handleAddSalary = async () => {
     const salary = parseFloat(newSalary);
     const date = new Date(effectiveDate);
-
-    if (isNaN(salary) || !date || !isFinite(date.getTime())) return;
-
-    // Check if date is valid
-    const latestDate = salaryHistory[0]?.date ? new Date(salaryHistory[0].date) : null;
-    if (latestDate && date < latestDate) {
-      alert('New date cannot be before the latest existing date');
+    
+    // Input validation
+    if (isNaN(salary) || !date || !isFinite(date.getTime())) {
+      alert('Please enter a valid salary and date');
       return;
     }
 
-    const newHistory = [
-      { salary, date: date.toISOString() },
-      ...salaryHistory
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (salary <= 0) {
+      alert('Salary must be greater than zero');
+      return;
+    }
+    
+    try {
+      setIsCalculating(true);
 
-    setSalaryHistory(newHistory);
-    setNewSalary('');
-    setEffectiveDate('');
+      // Format date consistently
+      const isoDate = date.toISOString();
 
-    // Auto-calculate cost rate for employees
-    if (user.employeeType === 'employee') {
-      const annualWorkingHours = 52 * 38; // Fixed 38 hour week
-      const costRate = salary / annualWorkingHours;
-      const roundedCostRate = Math.round(costRate * 100) / 100;
-
-      const newCostRateHistory = [
-        { costRate: roundedCostRate, date: date.toISOString() },
-        ...costRateHistory
+      const newHistory = [
+        { salary, date: isoDate },
+        ...salaryHistory
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      setCostRateHistory(newCostRateHistory);
+      setSalaryHistory(newHistory);
+
+      // Auto-calculate cost rate for employees
+      if (user.employeeType === 'employee') {
+        try {
+          // Get system config to calculate cost rate
+          const configRef = doc(db, 'config', 'system_config');
+          const configDoc = await getDoc(configRef);
+          
+          if (!configDoc.exists()) {
+            throw new Error('System configuration not found');
+          }
+          
+          const config = configDoc.data() as SystemConfig;
+
+          // Validate config
+          if (!config.costRateFormula) {
+            throw new Error('Cost rate formula not configured');
+          }
+
+          if (!config.payrollTaxPercentage || !config.insurancePercentage || !config.superannuationPercentage) {
+            throw new Error('Required configuration values are missing');
+          }
+
+          const costRate = calculateCostRate(salary, config);
+
+          const newCostRateHistory = [
+            { costRate, date: isoDate },
+            ...costRateHistory
+          ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          setCostRateHistory(newCostRateHistory);
+        } catch (error) {
+          console.error('Error calculating cost rate:', error);
+          alert('Failed to calculate cost rate: ' + (error instanceof Error ? error.message : 'Unknown error'));
+          return;
+        }
+      }
+
+      // Clear form only on success
+      setNewSalary('');
+      setEffectiveDate('');
+    } catch (error) {
+      console.error('Error adding salary:', error);
+      alert('Failed to add salary. Please try again.');
+      return;
+    } finally {
+      setIsCalculating(false);
     }
   };
 
   const handleAddCostRate = () => {
     const costRate = parseFloat(newCostRate);
     const date = new Date(effectiveDate);
+    const isoDate = date.toISOString();
 
     if (isNaN(costRate) || !date || !isFinite(date.getTime())) return;
 
@@ -101,7 +158,7 @@ export function RatesDialog({
     }
 
     const newHistory = [
-      { costRate, date: date.toISOString() },
+      { costRate, date: isoDate },
       ...costRateHistory
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -161,8 +218,8 @@ export function RatesDialog({
                 </span>
                 <span className="text-sm text-gray-500">/year</span>
               </div>
-              <div className="text-sm text-gray-500 mt-2">
-                Last updated: {salaryHistory[0]?.date ? format(new Date(salaryHistory[0].date), 'MMM d, yyyy') : 'Never'}
+              <div className="text-sm text-gray-500 mt-2"> 
+                Last updated: {formatDate(salaryHistory[0]?.date)}
               </div>
             </div>
           )}
@@ -172,10 +229,10 @@ export function RatesDialog({
               <span className="text-3xl font-bold text-gray-900">
                 ${costRateHistory[0]?.costRate.toLocaleString() || '0'}
               </span>
-              <span className="text-sm text-gray-500">/hour</span>
+              <span className="text-sm text-gray-500 ml-1">/hour</span>
             </div>
             <div className="text-sm text-gray-500 mt-2">
-              Last updated: {costRateHistory[0]?.date ? format(new Date(costRateHistory[0].date), 'MMM d, yyyy') : 'Never'}
+              Last updated: {formatDate(costRateHistory[0]?.date)}
             </div>
           </div>
         </div>
@@ -209,6 +266,7 @@ export function RatesDialog({
                 </FormField>
               </div>
               <Button onClick={handleAddSalary} disabled={!newSalary || !effectiveDate}>
+                {isCalculating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 <Plus className="h-4 w-4 mr-2" />
                 Add Salary
               </Button>
@@ -226,7 +284,7 @@ export function RatesDialog({
                 {salaryHistory.map((item, index) => (
                   <tr key={index}>
                     <Td>${item.salary.toLocaleString()}</Td>
-                    <Td>{format(new Date(item.date), 'MMM d, yyyy')}</Td>
+                    <Td>{formatDate(item.date)}</Td>
                     <Td>
                       <Button
                         variant="secondary"
@@ -286,7 +344,7 @@ export function RatesDialog({
                 {costRateHistory.map((item, index) => (
                   <tr key={index}>
                     <Td>${item.costRate.toLocaleString()}/hr</Td>
-                    <Td>{format(new Date(item.date), 'MMM d, yyyy')}</Td>
+                    <Td>{formatDate(item.date)}</Td>
                     <Td>
                       <Button
                         variant="secondary"

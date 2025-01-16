@@ -16,6 +16,7 @@ import ForecastReport from '@/pages/ForecastReport';
 import Projects from '@/pages/Projects';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
+import Teams from '@/pages/Teams';
 import Help from '@/pages/Help';
 import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
@@ -122,6 +123,14 @@ export default function App() {
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
                   <Users />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="teams"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Teams />
                 </RoleProtectedRoute>
               }
             />

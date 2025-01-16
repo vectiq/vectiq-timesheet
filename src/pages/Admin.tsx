@@ -132,8 +132,11 @@ export default function Admin() {
 
         {activeTab === 'calculations' && (
           <CalculationsTab
+            config={config}
+            isUpdating={isUpdating}
             onRecalculateProjectTotals={recalculateProjectTotals}
             isRecalculating={isRecalculating}
+            onUpdateConfig={updateConfig}
           />
         )}
       </div>
