@@ -41,14 +41,12 @@ export default function Forecast() {
     let previousRevenue = 0;
     let previousCosts = 0;
     
-    // Calculate totals for all project task assignments
     projects.forEach(project => {
       project.tasks.forEach(task => {
         task.userAssignments?.forEach(assignment => {
           const user = users.find(u => u.id === assignment.userId);
           if (!user) return;
         
-          // Get current month forecast hours
           const { hours } = calculateForecastHours({
             forecasts,
             userId: user.id,
@@ -59,7 +57,6 @@ export default function Forecast() {
             isYearlyView: false
           });
 
-          // Get previous month forecast hours
           const { hours: prevHours } = calculateForecastHours({
             forecasts: previousForecasts,
             userId: user.id,
@@ -70,32 +67,22 @@ export default function Forecast() {
             isYearlyView: false
           });
           
-          // Calculate current month financials
-          const { revenue } = calculateForecastFinancials({
+          // Calculate current month financials using task rates and user cost rates
+          const { revenue, cost } = calculateForecastFinancials({
             hours,
             taskRate: task.sellRate,
-            userRate: user.sellRate
+            date: format(currentDate, 'yyyy-MM-dd'),
+            user
           });
 
-          const { cost } = calculateForecastFinancials({
-            hours,
-            taskRate: task.costRate,
-            userRate: user.costRate
-          });
-
-          // Calculate previous month financials
-          const { revenue: prevRevenue } = calculateForecastFinancials({
+          // Calculate previous month financials using task rates and user cost rates
+          const { revenue: prevRevenue, cost: prevCost } = calculateForecastFinancials({
             hours: prevHours,
             taskRate: task.sellRate,
-            userRate: user.sellRate
+            date: format(subMonths(currentDate, 1), 'yyyy-MM-dd'),
+            user
           });
 
-          const { cost: prevCost } = calculateForecastFinancials({
-            hours: prevHours,
-            taskRate: task.costRate,
-            userRate: user.costRate
-          });
-          
           forecastRevenue += revenue;
           forecastCost += cost;
           previousRevenue += prevRevenue;

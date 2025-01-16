@@ -41,6 +41,22 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
   const clients = new Map(clientsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const approvals = approvalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+  // Helper function to get cost rate for a specific date
+  const getCostRateForDate = (user: User, date: string): number => {
+    if (!user.costRate || user.costRate.length === 0) return 0;
+    
+    // Sort cost rates by date descending
+    const sortedRates = [...user.costRate].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
+    // Find the first rate that is less than or equal to the entry date
+    const applicableRate = sortedRates.find(rate => 
+      new Date(rate.date) <= new Date(date)
+    );
+    
+    return applicableRate?.costRate || 0;
+  };
   // Filter and transform time entries
   const entries: ReportEntry[] = timeEntriesSnapshot.docs
     .map(doc => {
@@ -59,12 +75,11 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
       
       if (!project || !projectTask || !client || !user) return null;
 
-      // Get rates with proper fallback order:
-      // 1. Project task rates if defined AND not 0
-      // 2. User rates if not 0
-      // 3. Fallback to 0
-      const costRate = (projectTask?.costRate > 0 ? projectTask.costRate : user?.costRate || 0);
-      const sellRate = (projectTask?.sellRate > 0 ? projectTask.sellRate : user?.sellRate || 0);
+      // For cost rate, use task's cost rate if available and not 0, otherwise use user's historical cost rate
+      const costRate = projectTask?.costRate > 0 ? projectTask.costRate : getCostRateForDate(user, entry.date);
+      
+      // For sell rate, use task's sell rate
+      const sellRate = projectTask?.sellRate || 0;
 
       const hours = entry.hours || 0;
       const cost = hours * costRate;

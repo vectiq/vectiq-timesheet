@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { ArrowUpIcon, ArrowDownIcon, TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
@@ -48,17 +49,12 @@ export function ForecastReportSummary({
             isYearlyView
           });
 
-          const revenue = calculateForecastFinancials({
+          const { revenue, cost } = calculateForecastFinancials({
             hours,
             taskRate: task.sellRate,
-            userRate: user.sellRate
-          }).revenue;
-
-          const cost = calculateForecastFinancials({
-            hours,
-            taskRate: task.costRate,
-            userRate: user.costRate
-          }).cost;
+            date: format(new Date(startDate), 'yyyy-MM-dd'),
+            user
+          });
 
           forecastRevenue += revenue;
           forecastCost += cost;

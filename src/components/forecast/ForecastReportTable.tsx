@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -90,8 +91,8 @@ export function ForecastReportTable({
           const user = users.find(u => u.id === assignment.userId);
           if (!user) return;
 
-          // Use task rates if defined, otherwise fall back to user rates
-          const sellRate = task.sellRate || user.sellRate || 0;
+          // Use task rates for revenue
+          const sellRate = task.sellRate || 0;
           const costRate = task.costRate || user.costRate || 0;
 
           // Get forecast hours
@@ -106,16 +107,11 @@ export function ForecastReportTable({
           });
 
           // Calculate forecast financials
-          const { revenue: forecastRevenue } = calculateForecastFinancials({
+          const { revenue: forecastRevenue, cost: forecastCost } = calculateForecastFinancials({
             hours: forecastHours,
             taskRate: task.sellRate,
-            userRate: user.sellRate
-          });
-
-          const { cost: forecastCost } = calculateForecastFinancials({
-            hours: forecastHours,
-            taskRate: task.costRate,
-            userRate: user.costRate
+            date: format(new Date(startDate), 'yyyy-MM-dd'),
+            user
           });
 
           // Get actual hours and financials from time entries
