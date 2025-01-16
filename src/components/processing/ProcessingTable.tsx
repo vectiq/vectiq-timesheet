@@ -2,24 +2,39 @@ import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote } from 'lucide-react';
 import { format } from 'date-fns';
+import { NotesSlideout } from './NotesSlideout';
+import { useProcessingNotes } from '@/lib/hooks/useProcessingNotes';
 import type { ProcessingProject } from '@/types';
-
 
 interface ProcessingTableProps {
   projects: ProcessingProject[];
   onUpdateStatus: (args: { projectId: string; status: 'not started' | 'draft' | 'sent' }) => Promise<void>;
   isUpdating: boolean;
+  month: string;
 }
 
 export function ProcessingTable({ 
   projects, 
   onUpdateStatus,
   isUpdating,
+  month
 }: ProcessingTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const currentMonth = new Date();
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<ProcessingProject | null>(null);
+
+  const {
+    projectNotes,
+    addProjectNote,
+    updateProjectNote,
+    deleteProjectNote,
+    isLoadingProjectNotes
+  } = useProcessingNotes({
+    projectId: selectedProject?.id,
+    month
+  });
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects(prev => {
@@ -112,7 +127,16 @@ export function ProcessingTable({
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-2">
-
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedProject(project);
+                          setNotesOpen(true);
+                        }}
+                      >
+                        <StickyNote className="h-4 w-4" />
+                      </Button>
                       <Button 
                         variant="secondary" 
                         size="sm"
@@ -176,6 +200,22 @@ export function ProcessingTable({
           })}
         </TableBody>
       </Table>
+      
+      {selectedProject && (
+        <NotesSlideout
+          open={notesOpen}
+          onClose={() => {
+            setNotesOpen(false);
+            setSelectedProject(null);
+          }}
+          title={`Notes for ${selectedProject.name}`}
+          notes={projectNotes}
+          onAddNote={(note) => addProjectNote(note)}
+          onUpdateNote={updateProjectNote}
+          onDeleteNote={deleteProjectNote}
+          isLoading={isLoadingProjectNotes}
+        />
+      )}
     </div>
   );
 }

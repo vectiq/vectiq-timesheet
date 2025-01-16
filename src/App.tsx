@@ -9,7 +9,7 @@ import { Layout } from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
 import Leave from '@/pages/Leave';
-import MonthlyProcessing from '@/pages/MonthlyProcessing';
+import Processing from '@/pages/Processing';
 import Reports from '@/pages/Reports';
 import Forecast from '@/pages/Forecast';
 import ForecastReport from '@/pages/ForecastReport';
@@ -82,7 +82,7 @@ export default function App() {
               path="processing"
               element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
-                  <MonthlyProcessing />
+                  <Processing />
                 </RoleProtectedRoute>
               }
             />
