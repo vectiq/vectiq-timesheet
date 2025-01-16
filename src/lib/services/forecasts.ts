@@ -60,7 +60,7 @@ export function calculateForecastFinancials({
   taskRate?: number;
   userRate?: number;
 }): { revenue: number; cost: number } {
-  const rate = taskRate || userRate || 0;
+  const rate = (taskRate && taskRate !== 0) ? taskRate : (userRate || 0);
   return {
     revenue: hours * rate,
     cost: hours * rate
