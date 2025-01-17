@@ -100,7 +100,8 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
     projectGroup?: any;
     approvalId?: string;
   }>({ isOpen: false, type: 'submit' });
-  const { withdrawApproval, isWithdrawing, submitApproval } = useApprovals();
+  const [submittingProjectId, setSubmittingProjectId] = useState<string | null>(null);
+  const { withdrawApproval, isWithdrawing, submitApproval, isSubmitting } = useApprovals();
 
   const handleSubmitApproval = async (projectGroup) => {
     setConfirmationDialog({
@@ -112,6 +113,9 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
 
   const handleConfirmSubmit = async () => {
     try {
+      setSubmittingProjectId(confirmationDialog.projectGroup.project.id);
+      const projectId = confirmationDialog.projectGroup.project.id;
+      
       await submitApproval({
         project: confirmationDialog.projectGroup.project,
         client: clientGroup.client,
@@ -119,10 +123,21 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
         entries: confirmationDialog.projectGroup.entries,
         userId: userId
       });
+      
+      // Update local state to reflect the new pending status
+      clientGroup.projects.set(projectId, {
+        ...confirmationDialog.projectGroup,
+        approvalStatus: {
+          status: 'pending',
+          approvalId: crypto.randomUUID() // This will be replaced when the page refreshes
+        }
+      });
+      
     } catch (error) {
       console.error('Failed to submit approval:', error);
       alert('Failed to submit timesheet for approval');
     } finally {
+      setSubmittingProjectId(null);
       setConfirmationDialog({ isOpen: false, type: 'submit' });
     }
   };
@@ -184,10 +199,10 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
       </div>
 
       {/* Project Details */}
-      {isClientExpanded && Array.from(clientGroup.projects.values()).map(projectGroup => {
+      {isClientExpanded && Array.from(clientGroup.projects.entries()).map(([projectId, projectGroup]) => {
         const isProjectExpanded = expandedProjects.has(projectGroup.project.id);
         return ( 
-        <div key={projectGroup.project.id} className="pl-12 divide-y divide-gray-100">
+        <div key={`${clientGroup.client.id}-${projectId}`} className="pl-12 divide-y divide-gray-100">
           {/* Project Summary */}
           <div className="p-4 bg-gray-50 flex justify-between items-center gap-4">
             <div className="flex items-center gap-2">
@@ -233,10 +248,20 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
                             variant="secondary"
                             size="sm"
                             onClick={() => handleSubmitApproval(projectGroup)}
+                           disabled={submittingProjectId === projectGroup.project.id}
                             className="ml-2"
                           >
+                           {submittingProjectId === projectGroup.project.id ? (
+                             <>
+                               <span className="h-4 w-4 mr-1 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+                             <span>Submit for Approval</span>
+                             </>
+                           ) : (
+                            <>
                             <Send className="h-4 w-4 mr-1" />
-                            Submit for Approval
+                            <span>Submit for Approval</span>
+                            </>
+                           )}
                           </Button>
                       )}
                     </>
@@ -252,8 +277,11 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
 
           {/* Time Entries */}
           {isProjectExpanded && <div className="divide-y divide-gray-100">
-            {projectGroup.entries.map((entry, index) => (
-              <div key={index} className="p-4 pl-8 flex justify-between items-center text-sm">
+            {projectGroup.entries.map((entry) => (
+              <div 
+                key={`${clientGroup.client.id}-${projectId}-${entry.date}-${entry.task.name}`} 
+                className="p-4 pl-8 flex justify-between items-center text-sm"
+              >
                 <div>
                   <span className="text-gray-500">{formatDate(entry.date)}</span>
                   <span className="mx-2">·</span>
@@ -292,9 +320,24 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              disabled={isSubmitting || isWithdrawing}
               onClick={confirmationDialog.type === 'submit' ? handleConfirmSubmit : handleConfirmWithdraw}
             >
-              {confirmationDialog.type === 'submit' ? 'Submit' : 'Withdraw'}
+              {confirmationDialog.type === 'submit' ? (
+                isSubmitting ? (
+                  <>
+                    <span className="h-4 w-4 mr-1 animate-spin rounded-full border-2 border-gray-300 border-t-white" />
+                    Submitting...
+                  </>
+                ) : 'Submit'
+              ) : (
+                isWithdrawing ? (
+                  <>
+                    <span className="h-4 w-4 mr-1 animate-spin rounded-full border-2 border-gray-300 border-t-white" />
+                    Withdrawing...
+                  </>
+                ) : 'Withdraw'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
