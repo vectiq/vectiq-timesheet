@@ -10,12 +10,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
 export function PayrollTab() {
-  const { payRuns, stats, isLoading } = usePayroll({
+  const { payRuns, calendars, stats, isLoading } = usePayroll({
     selectedDate: new Date(),
     includeStats: true
   });
 
   const [expandedPayRuns, setExpandedPayRuns] = useState<Set<string>>(new Set());
+  const [expandedCalendars, setExpandedCalendars] = useState<Set<string>>(new Set());
 
   const togglePayRun = (payRunId: string) => {
     setExpandedPayRuns(prev => {
@@ -29,21 +30,20 @@ export function PayrollTab() {
     });
   };
 
+  const toggleCalendar = (calendarId: string) => {
+    setExpandedCalendars(prev => {
+      const next = new Set(prev);
+      if (next.has(calendarId)) {
+        next.delete(calendarId);
+      } else {
+        next.add(calendarId);
+      }
+      return next;
+    });
+  };
+
   if (isLoading) {
     return <LoadingScreen />;
-  }
-
-  if (!payRuns?.length) {
-    return (
-      <Card className="p-12 text-center">
-        <h3 className="text-lg font-medium text-gray-900">
-          No Payroll Data Available
-        </h3>
-        <p className="mt-2 text-sm text-gray-500">
-          There is no payroll data available for {format(new Date(), 'MMMM yyyy')}.
-        </p>
-      </Card>
-    );
   }
 
   // Calculate month totals
@@ -112,133 +112,165 @@ export function PayrollTab() {
         </div>
       </Card>
 
-      {/* Pay Runs List */}
+      {/* Pay Calendars */}
       <Card>
-        <div className="divide-y divide-gray-200">
-          {payRuns.map((payRun) => {
-            const isExpanded = expandedPayRuns.has(payRun.PayRunID);
-            
-            return (
-              <div key={payRun.PayRunID}>
-                {/* Pay Run Header */}
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => togglePayRun(payRun.PayRunID)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-gray-500" />
-                        )}
-                      </Button>
-                      <div>
-                        <h4 className="text-lg font-medium text-gray-900">
-                          Pay Run {format(new Date(payRun.PayRunPeriodStartDate), 'MMM d')} - {format(new Date(payRun.PayRunPeriodEndDate), 'MMM d, yyyy')}
-                        </h4>
-                        <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
-                          <span>{payRun.Payslips.length} Employees</span>
-                          <span>•</span>
-                          <span>Payment Date: {format(new Date(payRun.PaymentDate), 'MMM d, yyyy')}</span>
-                          <span>•</span>
-                          <Badge
-                            variant={payRun.PayRunStatus === 'POSTED' ? 'success' : 'warning'}
-                          >
-                            {payRun.PayRunStatus}
-                          </Badge>
+        <div className="p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Pay Calendars</h3>
+          <div className="space-y-4">
+            {calendars.map(calendar => (
+              <div
+                key={calendar.PayrollCalendarID}
+                className="bg-white rounded-lg border border-gray-200 overflow-hidden"
+              >
+                <div className="p-4 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{calendar.Name}</h4>
+                    <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+                      <Badge variant="secondary">{calendar.CalendarType}</Badge>
+                      <span>•</span>
+                      <span>Payment Date: {format(new Date(calendar.PaymentDate), 'MMM d, yyyy')}</span>
+                    </div>
+                  </div>
+                  <div className="text-right text-sm text-gray-500">
+                    Last Updated: {format(new Date(calendar.UpdatedDateUTC), 'MMM d, yyyy')}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Pay Runs */}
+      <Card>
+        <div className="p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Pay Runs</h3>
+          <div className="divide-y divide-gray-200">
+            {payRuns.map((payRun) => {
+              const isExpanded = expandedPayRuns.has(payRun.PayRunID);
+              
+              return (
+                <div key={payRun.PayRunID}>
+                  {/* Pay Run Header */}
+                  <div className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => togglePayRun(payRun.PayRunID)}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-gray-500" />
+                          )}
+                        </Button>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">
+                            Pay Run {format(new Date(payRun.PayRunPeriodStartDate), 'MMM d')} - {format(new Date(payRun.PayRunPeriodEndDate), 'MMM d, yyyy')}
+                          </h4>
+                          <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+                            <span>{payRun.Payslips.length} Employees</span>
+                            <span>•</span>
+                            <span>Payment Date: {format(new Date(payRun.PaymentDate), 'MMM d, yyyy')}</span>
+                            <span>•</span>
+                            <Badge
+                              variant={payRun.PayRunStatus === 'POSTED' ? 'success' : 'warning'}
+                            >
+                              {payRun.PayRunStatus}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-500">Net Pay</div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {formatCurrency(payRun.NetPay)}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-gray-500">Net Pay</div>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {formatCurrency(payRun.NetPay)}
-                      </div>
-                    </div>
                   </div>
-                </div>
 
-                {/* Expanded Pay Run Details */}
-                {isExpanded && (
-                  <div className="bg-gray-50 p-6 space-y-6">
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <p className="text-sm font-medium text-gray-600">Wages</p>
-                        <p className="mt-2 text-lg font-semibold text-gray-900">
-                          {formatCurrency(payRun.Wages)}
-                        </p>
+                  {/* Expanded Pay Run Details */}
+                  {isExpanded && (
+                    <div className="py-4 space-y-6">
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm font-medium text-gray-600">Wages</p>
+                          <p className="mt-2 text-lg font-semibold text-gray-900">
+                            {formatCurrency(payRun.Wages)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm font-medium text-gray-600">Tax</p>
+                          <p className="mt-2 text-lg font-semibold text-gray-900">
+                            {formatCurrency(payRun.Tax)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm font-medium text-gray-600">Super</p>
+                          <p className="mt-2 text-lg font-semibold text-gray-900">
+                            {formatCurrency(payRun.Super)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm font-medium text-gray-600">Deductions</p>
+                          <p className="mt-2 text-lg font-semibold text-gray-900">
+                            {formatCurrency(payRun.Deductions)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm font-medium text-gray-600">Reimbursements</p>
+                          <p className="mt-2 text-lg font-semibold text-gray-900">
+                            {formatCurrency(payRun.Reimbursement)}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm font-medium text-gray-600">Net Pay</p>
+                          <p className="mt-2 text-lg font-semibold text-indigo-600">
+                            {formatCurrency(payRun.NetPay)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <p className="text-sm font-medium text-gray-600">Tax</p>
-                        <p className="mt-2 text-lg font-semibold text-gray-900">
-                          {formatCurrency(payRun.Tax)}
-                        </p>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <p className="text-sm font-medium text-gray-600">Super</p>
-                        <p className="mt-2 text-lg font-semibold text-gray-900">
-                          {formatCurrency(payRun.Super)}
-                        </p>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <p className="text-sm font-medium text-gray-600">Deductions</p>
-                        <p className="mt-2 text-lg font-semibold text-gray-900">
-                          {formatCurrency(payRun.Deductions)}
-                        </p>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <p className="text-sm font-medium text-gray-600">Reimbursements</p>
-                        <p className="mt-2 text-lg font-semibold text-gray-900">
-                          {formatCurrency(payRun.Reimbursement)}
-                        </p>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <p className="text-sm font-medium text-gray-600">Net Pay</p>
-                        <p className="mt-2 text-lg font-semibold text-indigo-600">
-                          {formatCurrency(payRun.NetPay)}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Payslips Table */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <tr>
-                            <Th>Employee</Th>
-                            <Th className="text-right">Wages</Th>
-                            <Th className="text-right">Tax</Th>
-                            <Th className="text-right">Super</Th>
-                            <Th className="text-right">Deductions</Th>
-                            <Th className="text-right">Net Pay</Th>
-                          </tr>
-                        </TableHeader>
-                        <TableBody>
-                          {payRun.Payslips.map((payslip) => (
-                            <tr key={payslip.PayslipID}>
-                              <Td className="font-medium">
-                                {payslip.FirstName} {payslip.LastName}
-                              </Td>
-                              <Td className="text-right">{formatCurrency(payslip.Wages)}</Td>
-                              <Td className="text-right">{formatCurrency(payslip.Tax)}</Td>
-                              <Td className="text-right">{formatCurrency(payslip.Super)}</Td>
-                              <Td className="text-right">{formatCurrency(payslip.Deductions)}</Td>
-                              <Td className="text-right font-medium">{formatCurrency(payslip.NetPay)}</Td>
+                      {/* Payslips Table */}
+                      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <tr>
+                              <Th>Employee</Th>
+                              <Th className="text-right">Wages</Th>
+                              <Th className="text-right">Tax</Th>
+                              <Th className="text-right">Super</Th>
+                              <Th className="text-right">Deductions</Th>
+                              <Th className="text-right">Net Pay</Th>
                             </tr>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {payRun.Payslips.map((payslip) => (
+                              <tr key={payslip.PayslipID}>
+                                <Td className="font-medium">
+                                  {payslip.FirstName} {payslip.LastName}
+                                </Td>
+                                <Td className="text-right">{formatCurrency(payslip.Wages)}</Td>
+                                <Td className="text-right">{formatCurrency(payslip.Tax)}</Td>
+                                <Td className="text-right">{formatCurrency(payslip.Super)}</Td>
+                                <Td className="text-right">{formatCurrency(payslip.Deductions)}</Td>
+                                <Td className="text-right font-medium">{formatCurrency(payslip.NetPay)}</Td>
+                              </tr>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </Card>
     </div>

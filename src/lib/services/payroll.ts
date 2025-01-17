@@ -1,8 +1,27 @@
 import { collection, getDocs, query, where, orderBy, startAt, endAt } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { PayRun } from '@/types';
+import type { PayRun, PayrollCalendar } from '@/types';
 
 const COLLECTION = 'xeroPayRuns';
+const CALENDARS_COLLECTION = 'xeroPayCalendars';
+
+export async function getPayrollCalendars(): Promise<PayrollCalendar[]> {
+  try {
+    const calendarRef = collection(db, CALENDARS_COLLECTION);
+    const querySnapshot = await getDocs(calendarRef);
+    
+    if (querySnapshot.empty) {
+      return [];
+    }
+
+    return querySnapshot.docs
+      .map(doc => doc.data() as PayrollCalendar)
+      .sort((a, b) => new Date(b.StartDate).getTime() - new Date(a.StartDate).getTime());
+  } catch (error) {
+    console.error('Error fetching payroll calendars:', error);
+    throw error;
+  }
+}
 
 export async function getPayRun(month: string): Promise<PayRun[]> {
   try {

@@ -377,3 +377,18 @@ export interface FirestoreCollection {
   documents: any[];
   exportedAt: string;
 }
+
+export interface PayrollCalendar {
+  id: string;
+  PayrollCalendarID: string;
+  PaymentDate: string;
+  UpdatedDateUTC: string;
+  CalendarType: string;
+  ReferenceDate: string;
+  Name: string;
+  StartDate: string;
+  updatedAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
+}

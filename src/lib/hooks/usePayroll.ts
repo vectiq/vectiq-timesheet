@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { getPayRun, getPayRunHistory, getPayRunStats } from '@/lib/services/payroll';
-import type { PayRun } from '@/types';
+import { getPayRun, getPayRunHistory, getPayRunStats, getPayrollCalendars } from '@/lib/services/payroll';
+import type { PayRun, PayrollCalendar } from '@/types';
 
 const QUERY_KEYS = {
   payRun: 'payRun',
   history: 'payRunHistory',
-  stats: 'payRunStats'
+  stats: 'payRunStats',
+  calendars: 'payrollCalendars'
 } as const;
 
 interface UsePayrollOptions {
@@ -43,6 +44,12 @@ export function usePayroll({
     enabled: includeStats
   });
 
+  // Query for payroll calendars
+  const calendarsQuery = useQuery({
+    queryKey: [QUERY_KEYS.calendars],
+    queryFn: getPayrollCalendars
+  });
+
   // Get the latest pay run for the month
   const latestPayRun = payRunQuery.data?.length 
     ? payRunQuery.data.reduce((latest, current) => {
@@ -57,9 +64,11 @@ export function usePayroll({
     payRuns: payRunQuery.data || [],
     history: historyQuery.data,
     stats: statsQuery.data,
+    calendars: calendarsQuery.data || [],
     isLoading: payRunQuery.isLoading || 
       (includeHistory && historyQuery.isLoading) || 
-      (includeStats && statsQuery.isLoading),
-    error: payRunQuery.error || historyQuery.error || statsQuery.error
+      (includeStats && statsQuery.isLoading) ||
+      calendarsQuery.isLoading,
+    error: payRunQuery.error || historyQuery.error || statsQuery.error || calendarsQuery.error
   };
 }

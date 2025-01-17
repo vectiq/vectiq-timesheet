@@ -25,29 +25,16 @@ export function ProcessingTable({
   const [notesOpen, setNotesOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProcessingProject | null>(null);
 
-  // Create a map to store notes for each project
-  const notesMap = new Map();
-  
-  // Fetch notes for all projects
-  projects.forEach(project => {
-    const {
-      projectNotes,
-      addProjectNote,
-      updateProjectNote,
-      deleteProjectNote,
-      isLoadingProjectNotes
-    } = useProcessingNotes({
-      projectId: project.id,
-      month
-    });
-    
-    notesMap.set(project.id, {
-      notes: projectNotes,
-      addNote: addProjectNote,
-      updateNote: updateProjectNote,
-      deleteNote: deleteProjectNote,
-      isLoading: isLoadingProjectNotes
-    });
+  // Get notes for selected project only
+  const {
+    projectNotes,
+    addProjectNote,
+    updateProjectNote,
+    deleteProjectNote,
+    isLoadingProjectNotes
+  } = useProcessingNotes({
+    projectId: selectedProject?.id,
+    month
   });
 
   const toggleProject = (projectId: string) => {
@@ -113,7 +100,7 @@ export function ProcessingTable({
 
             return (
               <React.Fragment key={project.id}>
-                <tr key={project.id} className="border-t border-gray-200">
+                <tr key={`header-${project.id}`} className="border-t border-gray-200">
                   <Td>
                     <Button
                       variant="ghost"
@@ -164,12 +151,12 @@ export function ProcessingTable({
                         }}
                       >
                         <StickyNote className="h-4 w-4" />
-                        {notesMap.get(project.id)?.notes.length > 0 && (
+                        {project.id === selectedProject?.id && projectNotes.length > 0 && (
                           <Badge
                             variant="secondary"
                             className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 flex items-center justify-center text-xs"
                           >
-                            {notesMap.get(project.id)?.notes.length}
+                            {projectNotes.length}
                           </Badge>
                         )}
                       </Button>
@@ -188,13 +175,13 @@ export function ProcessingTable({
 
                 {isExpanded && (
                   <>
-                    <tr className="bg-gray-50">
+                    <tr key={`details-${project.id}`} className="bg-gray-50">
                       <td></td>
                       <td colSpan={7} className="py-2 px-4">
                         <div className="space-y-4">
                           <Table>
                             <TableHeader>
-                              <tr className="border-t border-gray-200">
+                              <tr key={`details-header-${project.id}`} className="border-t border-gray-200">
                                 <Th>Staff Member</Th>
                                 <Th>Task</Th>
                                 <Th>Timesheet Status</Th>
@@ -203,7 +190,7 @@ export function ProcessingTable({
                             </TableHeader>
                             <TableBody>
                               {project.assignments.map(assignment => (
-                                <tr key={`${project.id}-${assignment.userId}`}>
+                                <tr key={`${project.id}-${assignment.userId}-${assignment.taskId}`}>
                                   <Td className="font-medium">{assignment.userName}</Td>
                                   <Td>{assignment.taskName}</Td>
                                   <Td>
@@ -249,11 +236,11 @@ export function ProcessingTable({
             setSelectedProject(null);
           }}
           title={`Notes for ${selectedProject.name}`}
-          notes={notesMap.get(selectedProject.id)?.notes || []}
-          onAddNote={(note) => notesMap.get(selectedProject.id)?.addNote(note)}
-          onUpdateNote={(noteId, updates) => notesMap.get(selectedProject.id)?.updateNote(noteId, updates)}
-          onDeleteNote={(noteId) => notesMap.get(selectedProject.id)?.deleteNote(noteId)}
-          isLoading={notesMap.get(selectedProject.id)?.isLoading}
+          notes={projectNotes}
+          onAddNote={addProjectNote}
+          onUpdateNote={updateProjectNote}
+          onDeleteNote={deleteProjectNote}
+          isLoading={isLoadingProjectNotes}
         />
       )}
     </div>
