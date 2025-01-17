@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2, AlertCircle, Send } from 'lucide-react';
+import { ChevronRight, ChevronDown, Clock, CheckCircle, XCircle, Undo2, AlertCircle, Send, FolderKanban } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -92,7 +92,8 @@ function ApprovalBadge({ status, requiresApproval }: {
 }
 
 export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRowProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isClientExpanded, setIsClientExpanded] = useState(true);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [confirmationDialog, setConfirmationDialog] = useState<{
     isOpen: boolean;
     type: 'submit' | 'withdraw';
@@ -145,6 +146,18 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
     }
   };
 
+  const toggleProject = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="divide-y divide-gray-100">
       {/* Client Row */}
@@ -154,9 +167,9 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
             variant="ghost"
             size="sm"
             className="mr-2"
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => setIsClientExpanded(!isClientExpanded)}
           >
-            {isExpanded ? (
+            {isClientExpanded ? (
               <ChevronDown className="h-4 w-4" />
             ) : (
               <ChevronRight className="h-4 w-4" />
@@ -171,11 +184,25 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
       </div>
 
       {/* Project Details */}
-      {isExpanded && Array.from(clientGroup.projects.values()).map(projectGroup => (
+      {isClientExpanded && Array.from(clientGroup.projects.values()).map(projectGroup => {
+        const isProjectExpanded = expandedProjects.has(projectGroup.project.id);
+        return ( 
         <div key={projectGroup.project.id} className="pl-12 divide-y divide-gray-100">
           {/* Project Summary */}
           <div className="p-4 bg-gray-50 flex justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mr-2"
+                onClick={() => toggleProject(projectGroup.project.id)}
+              >
+                {isProjectExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
               <span className="font-medium">{projectGroup.project.name}</span>
               {projectGroup.approvalStatus && (
                 <div className="flex items-center gap-2"> 
@@ -224,7 +251,7 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
           </div>
 
           {/* Time Entries */}
-          <div className="divide-y divide-gray-100">
+          {isProjectExpanded && <div className="divide-y divide-gray-100">
             {projectGroup.entries.map((entry, index) => (
               <div key={index} className="p-4 pl-8 flex justify-between items-center text-sm">
                 <div>
@@ -238,9 +265,10 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
                 </span>
               </div>
             ))}
-          </div>
+          </div>}
         </div>
-      ))}
+      );
+      })}
       
       <AlertDialog 
         open={confirmationDialog.isOpen} 
