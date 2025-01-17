@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/Card';
 import { ProcessingFilters } from './ProcessingFilters';
 import { ProcessingTable } from './ProcessingTable';
+import { ProcessingSummary } from './ProcessingSummary';
 import type { ProcessingProject } from '@/types';
 
 interface InvoicingTabProps {
@@ -9,6 +10,7 @@ interface InvoicingTabProps {
   onFilterChange: (filters: any) => void;
   isUpdating: boolean;
   month: string;
+  data: ProcessingData;
 }
 
 export function InvoicingTab({
@@ -16,19 +18,23 @@ export function InvoicingTab({
   onUpdateStatus,
   onFilterChange,
   isUpdating,
-  month
+  month,
+  data
 }: InvoicingTabProps) {
   return (
-    <Card>
-      <div className="p-6 border-b border-gray-200">
-        <ProcessingFilters onFilterChange={onFilterChange} />
-      </div>
-      <ProcessingTable 
-        projects={projects}
-        onUpdateStatus={onUpdateStatus}
-        isUpdating={isUpdating}
-        month={month}
-      />
-    </Card>
+    <div className="space-y-6">
+      <ProcessingSummary data={data} />
+      <Card>
+        <div className="p-6 border-b border-gray-200">
+          <ProcessingFilters onFilterChange={onFilterChange} />
+        </div>
+        <ProcessingTable 
+          projects={projects}
+          onUpdateStatus={onUpdateStatus}
+          isUpdating={isUpdating}
+          month={month}
+        />
+      </Card>
+    </div>
   );
 }

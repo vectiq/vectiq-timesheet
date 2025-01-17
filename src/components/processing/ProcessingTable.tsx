@@ -102,8 +102,7 @@ export function ProcessingTable({
             <Th>Client</Th>
             <Th className="text-right">Hours</Th>
             <Th>Timesheet Approval</Th>
-            <Th>Type</Th>
-            <Th>Status</Th>
+            <Th>Processing Status</Th>
             <Th className="text-right">Actions</Th>
           </tr>
         </TableHeader>
@@ -150,11 +149,6 @@ export function ProcessingTable({
                     )}
                   </Td>
                   <Td>
-                    <Badge variant={isLaborHire ? 'default' : 'secondary'}>
-                      {isLaborHire ? 'Labor Hire' : 'Team Project'}
-                    </Badge>
-                  </Td>
-                  <Td>
                     {getStatusBadge(project.invoiceStatus)}
                   </Td>
                   <Td>
@@ -163,6 +157,7 @@ export function ProcessingTable({
                         variant="secondary"
                         size="sm"
                         className="relative"
+                        title="View project notes"
                         onClick={() => {
                           setSelectedProject(project);
                           setNotesOpen(true);
@@ -182,6 +177,7 @@ export function ProcessingTable({
                         variant="secondary" 
                         size="sm"
                         disabled={isUpdating}
+                        title="Toggle processing status"
                         onClick={() => handleStatusChange(project.id, project.invoiceStatus)}
                       >
                         Change Status

@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   getXeroConfig,
   updateXeroConfig,
+  exportCollectionAsJson,
   getSystemConfig,
   updateSystemConfig,
   getAdminStats,
@@ -74,6 +75,14 @@ export function useAdmin() {
   const validateMutation = useMutation({
     mutationFn: validateTimeEntries
   });
+  const [exportedData, setExportedData] = useState<string | undefined>();
+
+  const exportMutation = useMutation({
+    mutationFn: async (collectionName: string) => {
+      const data = await exportCollectionAsJson(collectionName);
+      setExportedData(JSON.stringify(data, null, 2));
+    }
+  });
 
   const handleUpdateConfig = useCallback(async (config: SystemConfig) => {
     await updateConfigMutation.mutateAsync(config);
@@ -95,12 +104,15 @@ export function useAdmin() {
     recalculateProjectTotals: recalculateMutation.mutateAsync,
     cleanupOrphanedData: cleanupMutation.mutateAsync,
     validateTimeEntries: validateMutation.mutateAsync,
+    exportCollection: exportMutation.mutateAsync,
+    exportedData,
     isUpdating: updateConfigMutation.isPending,
     isUpdatingXero: updateXeroConfigMutation.isPending,
     isGenerating: generateDataMutation.isPending,
     isClearing: clearDataMutation.isPending,
     isRecalculating: recalculateMutation.isPending,
     isCleaning: cleanupMutation.isPending,
-    isValidating: validateMutation.isPending
+    isValidating: validateMutation.isPending,
+    isExporting: exportMutation.isPending
   };
 }

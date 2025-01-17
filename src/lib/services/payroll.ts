@@ -1,0 +1,103 @@
+import { collection, getDocs, query, where, orderBy, startAt, endAt } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { PayRun } from '@/types';
+
+const COLLECTION = 'xeroPayRuns';
+
+export async function getPayRun(month: string): Promise<PayRun[]> {
+  try {
+    // Create query to find all documents where id starts with YYYYMM-
+    const payRunRef = collection(db, COLLECTION);
+    const q = query(
+      payRunRef,
+      where('__name__', '>=', `${month}-`),
+      where('__name__', '<', `${month}-\uf8ff`),
+      orderBy('__name__')
+    );
+
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return [];
+    }
+
+    return querySnapshot.docs.map(doc => doc.data() as PayRun);
+  } catch (error) {
+    console.error('Error fetching pay runs:', error);
+    throw error;
+  }
+}
+
+export async function getPayRunHistory(months: number = 12): Promise<PayRun[]> {
+  try {
+    const payRunRef = collection(db, COLLECTION);
+    const payRunDocs = await getDocs(payRunRef);
+
+    if (payRunDocs.empty) {
+      return [];
+    }
+
+    // Convert to array and sort by date descending
+    const payRuns = payRunDocs.docs
+      .map(doc => doc.data() as PayRun)
+      .sort((a, b) => {
+        const dateA = new Date(a.PayRunPeriodStartDate);
+        const dateB = new Date(b.PayRunPeriodStartDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+    // Return only the specified number of months
+    return payRuns.slice(0, months);
+  } catch (error) {
+    console.error('Error fetching pay run history:', error);
+    throw error;
+  }
+}
+
+export async function getPayRunStats(month: string): Promise<{
+  totalEmployees: number;
+  totalWages: number;
+  totalTax: number;
+  totalSuper: number;
+  averageNetPay: number;
+}> {
+  try {
+    const payRuns = await getPayRun(month);
+    
+    if (payRuns.length === 0) {
+      return {
+        totalEmployees: 0,
+        totalWages: 0,
+        totalTax: 0,
+        totalSuper: 0,
+        averageNetPay: 0
+      };
+    }
+
+    // Aggregate stats across all pay runs for the month
+    const stats = payRuns.reduce((acc, payRun) => {
+      acc.totalEmployees += payRun.Payslips.length;
+      acc.totalWages += payRun.Wages;
+      acc.totalTax += payRun.Tax;
+      acc.totalSuper += payRun.Super;
+      acc.totalNetPay += payRun.NetPay;
+      return acc;
+    }, {
+      totalEmployees: 0,
+      totalWages: 0,
+      totalTax: 0,
+      totalSuper: 0,
+      totalNetPay: 0
+    });
+
+    return {
+      ...stats,
+      averageNetPay: stats.totalEmployees > 0 
+        ? stats.totalNetPay / stats.totalEmployees 
+        : 0
+    };
+  } catch (error) {
+    console.error('Error calculating pay run stats:', error);
+    throw error;
+  }
+}

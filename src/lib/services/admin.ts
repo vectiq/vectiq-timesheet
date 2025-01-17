@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfWeek } from 'date-fns';
-import type { SystemConfig, AdminStats, TestDataOptions, XeroConfig } from '@/types';
+import type { SystemConfig, AdminStats, TestDataOptions, XeroConfig, FirestoreCollection } from '@/types';
 
 const CONFIG_DOC = 'system_config';
 const XERO_CONFIG_DOC = 'xero_config';
@@ -279,4 +279,33 @@ export async function validateTimeEntries(): Promise<{
 }> {
   // Implementation for validating time entries
   return { invalid: 0, fixed: 0 };
+}
+
+export async function exportCollectionAsJson(collectionName: string): Promise<FirestoreCollection> {
+  try {
+    // Validate collection name
+    if (!collectionName) {
+      throw new Error('Collection name is required');
+    }
+
+    // Get collection reference
+    const collectionRef = collection(db, collectionName);
+    const snapshot = await getDocs(collectionRef);
+
+    // Transform documents into JSON
+    const documents = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    return {
+      name: collectionName,
+      documentCount: documents.length,
+      documents,
+      exportedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error(`Error exporting collection ${collectionName}:`, error);
+    throw error;
+  }
 }

@@ -9,7 +9,7 @@ interface ProcessingTabsProps {
 export function ProcessingTabs({ activeTab, onTabChange }: ProcessingTabsProps) {
   const tabs = [
     { id: 'invoicing', name: 'Invoicing', icon: FileText },
-    { id: 'payroll', name: 'Payroll', icon: DollarSign, disabled: true }
+    { id: 'payroll', name: 'Payroll', icon: DollarSign }
   ];
 
   return (
@@ -27,17 +27,11 @@ export function ProcessingTabs({ activeTab, onTabChange }: ProcessingTabsProps) 
                 'focus:outline-none transition-colors duration-200',
                 activeTab === tab.id
                   ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                tab.disabled && 'opacity-50 cursor-not-allowed hover:text-gray-500 hover:border-transparent'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               )}
             >
               <Icon className="h-5 w-5" />
               {tab.name}
-              {tab.disabled && (
-                <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-                  Coming Soon
-                </span>
-              )}
             </button>
           );
         })}

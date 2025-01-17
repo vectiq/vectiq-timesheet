@@ -161,8 +161,22 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
   // Calculate summary statistics
   const summary = {
     totalProjects: processedProjects.length,
-    approvedTimesheets: processedProjects.reduce((count, project) => 
-      count + project.assignments.filter(a => a.approvalStatus === 'approved').length, 0),
+    approvedTimesheets: processedProjects.reduce((count, project) => {
+      // Only count projects that require approval
+      if (!project.requiresApproval) return count;
+      
+      // Count total assignments requiring approval
+      const totalAssignments = project.assignments.length;
+      
+      // Count approved assignments
+      const approvedAssignments = project.assignments.filter(
+        a => a.approvalStatus === 'approved'
+      ).length;
+      
+      // Only increment if all assignments are approved
+      return count + (totalAssignments === approvedAssignments ? 1 : 0);
+    }, 0),
+    totalRequiringApproval: processedProjects.filter(p => p.requiresApproval).length,
     generatedInvoices: processedProjects.filter(p => p.invoiceStatus === 'sent').length,
     urgentItems: processedProjects.filter(p => p.priority === 'high').length
   };

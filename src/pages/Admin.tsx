@@ -29,13 +29,16 @@ export default function Admin() {
     recalculateProjectTotals,
     cleanupOrphanedData,
     validateTimeEntries,
+    exportCollection,
+    exportedData,
     isUpdating,
     isUpdatingXero,
     isGenerating,
     isClearing,
     isRecalculating,
     isCleaning,
-    isValidating
+    isValidating,
+    isExporting
   } = useAdmin();
 
   if (isLoading || !config) {
@@ -123,10 +126,13 @@ export default function Admin() {
             onClearTestData={clearTestData}
             onCleanupOrphanedData={cleanupOrphanedData}
             onValidateTimeEntries={validateTimeEntries}
+            onExportCollection={exportCollection}
+            exportedData={exportedData}
             isGenerating={isGenerating}
             isClearing={isClearing}
             isCleaning={isCleaning}
             isValidating={isValidating}
+            isExporting={isExporting}
           />
         )}
 

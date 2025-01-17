@@ -230,6 +230,7 @@ export interface ProcessingData {
   summary: {
     totalProjects: number;
     approvedTimesheets: number;
+    totalRequiringApproval: number;
     generatedInvoices: number;
     urgentItems: number;
   };
@@ -368,4 +369,11 @@ export interface Team {
     UpdatedDateUTC?: string;
     PayOutType: string;
   }>;
+}
+
+export interface FirestoreCollection {
+  name: string;
+  documentCount: number;
+  documents: any[];
+  exportedAt: string;
 }

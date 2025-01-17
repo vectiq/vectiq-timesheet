@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import type { TestDataOptions } from '@/types';
 
 interface UtilitiesTabProps {
@@ -13,10 +13,13 @@ interface UtilitiesTabProps {
   onClearTestData: () => Promise<void>;
   onCleanupOrphanedData: () => Promise<void>;
   onValidateTimeEntries: () => Promise<{ invalid: number; fixed: number }>;
+  onExportCollection: (collectionName: string) => Promise<void>;
   isGenerating: boolean;
   isClearing: boolean;
   isCleaning: boolean;
   isValidating: boolean;
+  isExporting: boolean;
+  exportedData?: string;
 }
 
 export function UtilitiesTab({
@@ -24,10 +27,13 @@ export function UtilitiesTab({
   onClearTestData,
   onCleanupOrphanedData,
   onValidateTimeEntries,
+  onExportCollection,
   isGenerating,
   isClearing,
   isCleaning,
   isValidating,
+  isExporting,
+  exportedData
 }: UtilitiesTabProps) {
   const [weights, setWeights] = useState({
     pendingWeight: '10',
@@ -35,6 +41,21 @@ export function UtilitiesTab({
     rejectedWeight: '5',
     withdrawnWeight: '5'
   });
+  const [collectionName, setCollectionName] = useState('');
+  const [exportError, setExportError] = useState('');
+
+  const handleExport = async () => {
+    if (!collectionName.trim()) {
+      setExportError('Please enter a collection name');
+      return;
+    }
+    setExportError('');
+    try {
+      await onExportCollection(collectionName.trim());
+    } catch (error) {
+      setExportError(error.message);
+    }
+  };
 
   return (
     <Card className="divide-y divide-gray-200">
@@ -198,6 +219,52 @@ export function UtilitiesTab({
             Validate Entries
           </Button>
         </div>
+      </div>
+      
+      <div className="p-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Export Collection Data</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Export a Firestore collection as JSON
+            </p>
+          </div>
+          <div className="flex items-end gap-3">
+            <FormField label="Collection Name" error={exportError}>
+              <Input
+                type="text"
+                value={collectionName}
+                onChange={(e) => {
+                  setCollectionName(e.target.value);
+                  setExportError('');
+                }}
+                placeholder="e.g., users"
+                className="w-64"
+              />
+            </FormField>
+            <Button
+              onClick={handleExport}
+              disabled={isExporting || !collectionName.trim()}
+              className="mb-4"
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4 mr-2" />
+              )}
+              View Collection
+            </Button>
+          </div>
+        </div>
+        {exportedData && (
+          <div className="mt-4">
+            <textarea
+              readOnly
+              value={exportedData}
+              className="w-full h-96 font-mono text-sm p-4 rounded-md border border-gray-200 bg-gray-50"
+            />
+          </div>
+        )}
       </div>
     </Card>
   );
