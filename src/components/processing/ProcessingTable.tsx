@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { NotesSlideout } from './NotesSlideout';
 import { useProcessingNotes } from '@/lib/hooks/useProcessingNotes';
@@ -25,15 +25,29 @@ export function ProcessingTable({
   const [notesOpen, setNotesOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProcessingProject | null>(null);
 
-  const {
-    projectNotes,
-    addProjectNote,
-    updateProjectNote,
-    deleteProjectNote,
-    isLoadingProjectNotes
-  } = useProcessingNotes({
-    projectId: selectedProject?.id,
-    month
+  // Create a map to store notes for each project
+  const notesMap = new Map();
+  
+  // Fetch notes for all projects
+  projects.forEach(project => {
+    const {
+      projectNotes,
+      addProjectNote,
+      updateProjectNote,
+      deleteProjectNote,
+      isLoadingProjectNotes
+    } = useProcessingNotes({
+      projectId: project.id,
+      month
+    });
+    
+    notesMap.set(project.id, {
+      notes: projectNotes,
+      addNote: addProjectNote,
+      updateNote: updateProjectNote,
+      deleteNote: deleteProjectNote,
+      isLoading: isLoadingProjectNotes
+    });
   });
 
   const toggleProject = (projectId: string) => {
@@ -87,6 +101,7 @@ export function ProcessingTable({
             <Th>Project</Th>
             <Th>Client</Th>
             <Th className="text-right">Hours</Th>
+            <Th>Timesheet Approval</Th>
             <Th>Type</Th>
             <Th>Status</Th>
             <Th className="text-right">Actions</Th>
@@ -118,6 +133,23 @@ export function ProcessingTable({
                   <Td>{project.clientName}</Td>
                   <Td className="text-right">{project.totalHours.toFixed(1)}</Td>
                   <Td>
+                    {project.requiresApproval ? (
+                      <Badge
+                        variant={
+                          project.assignments.every(a => a.approvalStatus === 'approved') ? 'success' :
+                          project.assignments.some(a => a.approvalStatus === 'pending') ? 'warning' :
+                          'default'
+                        }
+                      >
+                        {project.assignments.every(a => a.approvalStatus === 'approved') ? 'All Approved' :
+                         project.assignments.some(a => a.approvalStatus === 'pending') ? 'Pending Approval' :
+                         'Not Submitted'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">No Approval Required</Badge>
+                    )}
+                  </Td>
+                  <Td>
                     <Badge variant={isLaborHire ? 'default' : 'secondary'}>
                       {isLaborHire ? 'Labor Hire' : 'Team Project'}
                     </Badge>
@@ -130,12 +162,21 @@ export function ProcessingTable({
                       <Button
                         variant="secondary"
                         size="sm"
+                        className="relative"
                         onClick={() => {
                           setSelectedProject(project);
                           setNotesOpen(true);
                         }}
                       >
                         <StickyNote className="h-4 w-4" />
+                        {notesMap.get(project.id)?.notes.length > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 flex items-center justify-center text-xs"
+                          >
+                            {notesMap.get(project.id)?.notes.length}
+                          </Badge>
+                        )}
                       </Button>
                       <Button 
                         variant="secondary" 
@@ -155,28 +196,13 @@ export function ProcessingTable({
                       <td></td>
                       <td colSpan={7} className="py-2 px-4">
                         <div className="space-y-4">
-                          <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-                            <div className="flex items-center gap-4">
-                              <Badge variant="success" className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {project.assignments.length} Users
-                              </Badge>
-                              {project.hasSpecialHandling && (
-                                <Badge variant="warning" className="flex items-center gap-1">
-                                  <AlertCircle className="h-3 w-3" />
-                                  Special Handling
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-
                           <Table>
                             <TableHeader>
                               <tr className="border-t border-gray-200">
-                                <Th>User</Th>
+                                <Th>Staff Member</Th>
                                 <Th>Task</Th>
+                                <Th>Timesheet Status</Th>
                                 <Th className="text-right">Total Hours</Th>
-                                <Th className="text-right">Actions</Th>
                               </tr>
                             </TableHeader>
                             <TableBody>
@@ -184,8 +210,26 @@ export function ProcessingTable({
                                 <tr key={`${project.id}-${assignment.userId}`}>
                                   <Td className="font-medium">{assignment.userName}</Td>
                                   <Td>{assignment.taskName}</Td>
+                                  <Td>
+                                    {project.requiresApproval ? (
+                                      <Badge
+                                        variant={
+                                          assignment.approvalStatus === 'approved' ? 'success' :
+                                          assignment.approvalStatus === 'pending' ? 'warning' :
+                                          assignment.approvalStatus === 'rejected' ? 'destructive' :
+                                          'default'
+                                        }
+                                      >
+                                        {assignment.approvalStatus === 'approved' ? 'Approved' :
+                                         assignment.approvalStatus === 'pending' ? 'Pending Approval' :
+                                         assignment.approvalStatus === 'rejected' ? 'Rejected' :
+                                         'Not Submitted'}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="secondary">No Approval Required</Badge>
+                                    )}
+                                  </Td>
                                   <Td className="text-right">{assignment.hours.toFixed(1)}</Td>
-                                  <Td></Td>
                                 </tr>
                               ))}
                             </TableBody>
@@ -209,11 +253,11 @@ export function ProcessingTable({
             setSelectedProject(null);
           }}
           title={`Notes for ${selectedProject.name}`}
-          notes={projectNotes}
-          onAddNote={(note) => addProjectNote(note)}
-          onUpdateNote={updateProjectNote}
-          onDeleteNote={deleteProjectNote}
-          isLoading={isLoadingProjectNotes}
+          notes={notesMap.get(selectedProject.id)?.notes || []}
+          onAddNote={(note) => notesMap.get(selectedProject.id)?.addNote(note)}
+          onUpdateNote={(noteId, updates) => notesMap.get(selectedProject.id)?.updateNote(noteId, updates)}
+          onDeleteNote={(noteId) => notesMap.get(selectedProject.id)?.deleteNote(noteId)}
+          isLoading={notesMap.get(selectedProject.id)?.isLoading}
         />
       )}
     </div>

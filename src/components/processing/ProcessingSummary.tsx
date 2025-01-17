@@ -57,11 +57,6 @@ export function ProcessingSummary({ data, month }: ProcessingSummaryProps) {
 
       <Card className="p-4">
         <div className="flex flex-col gap-3">
-          <Button variant="secondary" className="w-full justify-start">
-            <Bell className="h-4 w-4 mr-2" />
-            Reminders
-            <Badge variant="warning" className="ml-auto">3</Badge>
-          </Button>
           <Button 
             variant="secondary" 
             className="w-full flex items-center group hover:bg-gray-50"

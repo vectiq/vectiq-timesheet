@@ -1,7 +1,7 @@
 import { collection, getDocs, query, where, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
-import type { ProcessingData, ProcessingProject, TimeEntry } from '@/types';
+import type { ProcessingData, ProcessingProject, TimeEntry, Approval } from '@/types';
 
 interface ProjectStatus {
   projectId: string;
@@ -43,7 +43,12 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
       getDocs(collection(db, 'projects')),
       getDocs(collection(db, 'clients')),
       getDocs(collection(db, 'users')),
-      getDocs(collection(db, 'approvals')),
+      // Get approvals for the month
+      getDocs(query(
+        collection(db, 'approvals'),
+        where('startDate', '==', startDate),
+        where('endDate', '==', endDate)
+      )),
       getDocs(collection(db, 'projectStatuses'))
     ]);
 
@@ -59,6 +64,14 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
     if (status.month === month) {
       statusMap.set(status.projectId, status.status);
     }
+  });
+
+  // Create map of approvals by project and user
+  const approvalMap = new Map();
+  approvalsSnapshot.docs.forEach(doc => {
+    const approval = doc.data() as Approval;
+    const key = `${approval.project?.id}_${approval.userId}`;
+    approvalMap.set(key, approval);
   });
 
   // Get time entries and group by project
@@ -81,6 +94,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
     .map(project => {
       const client = clients.get(project.clientId);
       const projectEntries = entriesByProject.get(project.id) || [];
+      const projectData = projects.get(project.id);
 
       // Group entries by user and task
       const assignmentMap = new Map<string, {
@@ -89,6 +103,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
         taskId: string;
         taskName: string;
         hours: number;
+        approvalStatus: string;
       }>();
 
       projectEntries.forEach(entry => {
@@ -96,6 +111,16 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
         const task = project.tasks?.find(t => t.id === entry.taskId);
         
         if (!user || !task) return;
+
+        // Get approval status for this user's entries
+        const approvalKey = `${project.id}_${user.id}`;
+        const approval = approvalMap.get(approvalKey);
+        
+        // Determine approval status based on project settings
+        let approvalStatus = 'No Approval Required';
+        if (projectData?.requiresApproval) {
+          approvalStatus = approval ? approval.status : 'unsubmitted';
+        }
         
         const key = `${entry.userId}-${entry.taskId}`;
         const existing = assignmentMap.get(key);
@@ -108,7 +133,8 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
             userName: user.name,
             taskId: task.id,
             taskName: task.name,
-            hours: entry.hours
+            hours: entry.hours,
+            approvalStatus
           });
         }
       });
@@ -117,26 +143,13 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
       const assignments = Array.from(assignmentMap.values());
       const totalHours = assignments.reduce((sum, a) => sum + a.hours, 0);
 
-      // Get latest approval for this project
-      const approvals = approvalsSnapshot.docs
-        .filter(doc => {
-          const data = doc.data();
-          return data.project?.id === project.id &&
-            data.startDate >= startDate &&
-            data.endDate <= endDate;
-        })
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => b.submittedAt - a.submittedAt);
-
-      const latestApproval = approvals[0];
-
       return {
         id: project.id,
         name: project.name,
         clientId: project.clientId,
         clientName: client?.name || 'Unknown Client',
         totalHours,
-        timesheetStatus: latestApproval?.status || 'pending',
+        requiresApproval: projectData?.requiresApproval || false,
         invoiceStatus: statusMap.get(project.id) || 'not started',
         priority: totalHours > 100 ? 'high' : 'normal',
         hasSpecialHandling: project.requiresApproval,
@@ -148,7 +161,8 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
   // Calculate summary statistics
   const summary = {
     totalProjects: processedProjects.length,
-    approvedTimesheets: processedProjects.filter(p => p.timesheetStatus === 'approved').length,
+    approvedTimesheets: processedProjects.reduce((count, project) => 
+      count + project.assignments.filter(a => a.approvalStatus === 'approved').length, 0),
     generatedInvoices: processedProjects.filter(p => p.invoiceStatus === 'sent').length,
     urgentItems: processedProjects.filter(p => p.priority === 'high').length
   };
