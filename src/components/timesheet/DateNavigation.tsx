@@ -24,7 +24,7 @@ export function DateNavigation({
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <Button variant="secondary" size="sm" onClick={onToday}>
-          Today
+          Jump To Today
         </Button>
         <Button variant="secondary" size="sm" onClick={onNext}>
           <ChevronRight className="h-4 w-4" />
