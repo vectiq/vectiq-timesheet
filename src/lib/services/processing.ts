@@ -1,6 +1,5 @@
 import { collection, getDocs, query, where, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { format, eachDayOfInterval, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import type {
@@ -37,6 +36,10 @@ interface XeroInvoiceLineItem {
   Quantity: number;
   UnitAmount: number;
   AccountCode: string;
+  Tracking?: Array<{
+    Name: string;
+    Option: string;
+  }>;
 }
 
 interface XeroInvoice {
@@ -310,7 +313,7 @@ async function createInvoiceInXero(project: ProcessingProject): Promise<XeroInvo
   );
 
   // Create line items grouped by user and task
-  const lineItems = generateInvoiceLineItems(project);
+  const lineItems = await generateInvoiceLineItems(project);
 
   const invoice = {
     Type: "ACCREC",
@@ -329,12 +332,15 @@ async function createInvoiceInXero(project: ProcessingProject): Promise<XeroInvo
  * Generates line items for a Xero invoice by grouping hours by user and task.
  * This is an internal helper function used by createInvoiceInXero.
  */
-function generateInvoiceLineItems(project: ProcessingProject): XeroInvoiceLineItem[] {
+async function generateInvoiceLineItems(project: ProcessingProject): Promise<XeroInvoiceLineItem[]> {
   const taskMap = new Map(project.tasks?.map(task => [task.id, task]));
+  const teamsSnapshot = await getDocs(collection(db, 'teams'));
+  const teams = new Map(teamsSnapshot.docs.map(doc => [doc.id, doc.data().name]));
   const userTaskHours = new Map<string, Map<string, {
     hours: number;
     taskName: string;
     sellRate: number;
+    teamId?: string;
   }>>();
 
   // Group hours by user and task
@@ -356,7 +362,8 @@ function generateInvoiceLineItems(project: ProcessingProject): XeroInvoiceLineIt
       userTasks.set(key, {
         hours: assignment.hours,
         taskName: assignment.taskName,
-        sellRate: task.sellRate || 0
+        sellRate: task.sellRate || 0,
+        teamId: task.teamId
       });
     }
   });
@@ -368,12 +375,22 @@ function generateInvoiceLineItems(project: ProcessingProject): XeroInvoiceLineIt
     if (!user) return;
 
     tasks.forEach((taskData) => {
-      lineItems.push({
+      const lineItem: XeroInvoiceLineItem = {
         Description: `${taskData.taskName} - ${user.userName} - ${project.purchaseOrderNumber || ''}`,
         Quantity: taskData.hours,
         UnitAmount: taskData.sellRate,
         AccountCode: "200"
-      });
+      };
+
+      // Add tracking if task has a team
+      if (taskData.teamId && teams.has(taskData.teamId)) {
+        lineItem.Tracking = [{
+          Name: "Business Unit",
+          Option: teams.get(taskData.teamId)!
+        }];
+      }
+
+      lineItems.push(lineItem);
     });
   });
 
@@ -510,7 +527,6 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
         invoiceStatus: statusMap.get(project.id) || 'not started',
         priority: totalHours > 100 ? 'high' : 'normal',
         hasSpecialHandling: project.requiresApproval,
-        type: assignments.length === 1 ? 'labor_hire' : 'team',
         assignments
       } as ProcessingProject;
     });
