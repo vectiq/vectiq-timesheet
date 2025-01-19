@@ -1,7 +1,68 @@
 import { collection, getDocs, query, where, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { format } from 'date-fns';
-import type { ProcessingData, ProcessingProject, TimeEntry, Approval } from '@/types';
+import { format, eachDayOfInterval, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import type { 
+  ProcessingData, 
+  ProcessingProject, 
+  TimeEntry, 
+  Approval,
+  XeroInvoiceResponse 
+} from '@/types';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+async function getProjectTimeEntries(projectId: string, month: string): Promise<TimeEntry[]> {
+  const startDate = `${month}-01`;
+  const endDate = format(endOfMonth(parseISO(startDate)), 'yyyy-MM-dd');
+
+  const timeEntriesRef = collection(db, 'timeEntries');
+  const q = query(
+    timeEntriesRef,
+    where('projectId', '==', projectId),
+    where('date', '>=', startDate),
+    where('date', '<=', endDate)
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as TimeEntry[];
+}
+
+interface XeroInvoiceLineItem {
+  Description: string;
+  Quantity: number;
+  UnitAmount: number;
+  AccountCode: string;
+}
+
+interface XeroInvoice {
+  Type: string;
+  Reference: string;
+  Contact: {
+    ContactID: string;
+  };
+  LineItems: XeroInvoiceLineItem[];
+}
+
+interface XeroInvoiceResponse {
+  Id: string;
+  Status: string;
+  ProviderName: string;
+  DateTimeUTC: string;
+  Invoices: Array<{
+    InvoiceID: string;
+    Type: string;
+    InvoiceNumber: string;
+    Reference: string;
+    AmountDue: number;
+    AmountPaid: number;
+    Status: string;
+  }>;
+}
 
 interface ProjectStatus {
   projectId: string;
@@ -24,6 +85,298 @@ export async function updateProjectStatus(
     status,
     updatedAt: serverTimestamp()
   });
+}
+
+async function generateTimesheetPDF(project: ProcessingProject, month: string): Promise<Uint8Array> {
+  // Fetch all time entries for the project in this month
+  const timeEntries = await getProjectTimeEntries(project.id, month);
+  
+  // Create new PDF document
+  const doc = new jsPDF();
+  
+  // Set title
+  doc.setFontSize(16);
+  doc.text(`${project.name} - Timesheet Report`, 14, 15);
+  doc.setFontSize(12);
+  doc.text(`${project.clientName}`, 14, 22);
+  doc.text(`Month: ${format(new Date(month + '-01'), 'MMMM yyyy')}`, 14, 29);
+  doc.text(`Purchase Order: ${project.purchaseOrderNumber || 'N/A'}`, 14, 36);
+  
+  // Get all days in the month
+  const startDate = parseISO(`${month}-01`);
+  const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  
+  let yOffset = 45;
+  
+  // Group assignments by user
+  const userEntries = new Map();
+  timeEntries.forEach(entry => {
+    const assignment = project.assignments.find(a => 
+      a.userId === entry.userId && a.taskId === entry.taskId
+    );
+    if (!assignment) return;
+
+    if (!userEntries.has(entry.userId)) {
+      userEntries.set(entry.userId, {
+        userName: assignment.userName,
+        entries: []
+      });
+    }
+    userEntries.get(entry.userId).entries.push({
+      date: entry.date,
+      taskName: assignment.taskName,
+      hours: entry.hours
+    });
+  });
+  
+  // For each user
+  userEntries.forEach((userData, userId) => {
+    // Add user name as section header
+    doc.setFontSize(14);
+    doc.text(userData.userName, 14, yOffset);
+    yOffset += 10;
+    
+    // Sort entries by date
+    const sortedEntries = userData.entries.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Create table headers
+    const headers = [
+      ['Date', 'Task', 'Hours']
+    ];
+    
+    // Create table data
+    const data = sortedEntries.map(entry => [
+      format(parseISO(entry.date), 'MMM d, yyyy'),
+      entry.taskName,
+      entry.hours.toFixed(1)
+    ]);
+    
+    // Add user total row
+    const userTotal = sortedEntries.reduce((sum, entry) => sum + entry.hours, 0);
+    data.push([
+      '',
+      'Total',
+      userTotal.toFixed(1)
+    ]);
+    
+    // Add table
+    (doc as any).autoTable({
+      startY: yOffset,
+      head: headers,
+      body: data,
+      theme: 'grid',
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [66, 66, 66] },
+      margin: { left: 14 },
+      foot: [['', 'Total', userTotal.toFixed(1)]],
+      footStyles: { fontStyle: 'bold' }
+    });
+    
+    // Update yOffset for next section
+    yOffset = (doc as any).lastAutoTable.finalY + 15;
+    
+    // Add page if needed
+    if (yOffset > 250) {
+      doc.addPage();
+      yOffset = 20;
+    }
+  });
+  
+  // Add totals
+  doc.setFontSize(12);
+  doc.text(`Total Hours: ${project.totalHours.toFixed(1)}`, 14, yOffset);
+  
+  const pdfBytes = doc.output('arraybuffer');
+  return new Uint8Array(pdfBytes);
+}
+
+/**
+ * Generates a Xero invoice for a project's time entries and attaches a detailed timesheet PDF.
+ * This is the main function that should be called to create invoices.
+ */
+export async function generateInvoice(project: ProcessingProject): Promise<XeroInvoiceResponse> {
+  const functions = getFunctions();
+  const createInvoice = httpsCallable<{ invoiceData: XeroInvoice }, XeroInvoiceResponse>(
+    functions, 
+    'createXeroInvoice'
+  );
+
+  try {
+  const functions = getFunctions();
+  const createXeroInvoice = httpsCallable<{ invoiceData: XeroInvoice }, XeroInvoiceResponse>(
+    functions, 
+    'createXeroInvoice'
+  );
+
+  // Create a map of task details for quick lookup
+  const taskMap = new Map(project.tasks?.map(task => [task.id, task]));
+  
+  // Group assignments by user and task
+  const userTaskHours = new Map<string, Map<string, {
+    hours: number;
+    taskName: string;
+    sellRate: number;
+  }>>();
+
+  project.assignments.forEach(assignment => {
+    const task = taskMap.get(assignment.taskId);
+    if (!task) return;
+
+    if (!userTaskHours.has(assignment.userId)) {
+      userTaskHours.set(assignment.userId, new Map());
+    }
+    const userTasks = userTaskHours.get(assignment.userId)!;
+    
+    const key = assignment.taskId;
+    const existing = userTasks.get(key);
+    
+    if (existing) {
+      existing.hours += assignment.hours;
+    } else {
+      userTasks.set(key, {
+        hours: assignment.hours,
+        taskName: assignment.taskName,
+        sellRate: task.sellRate || 0
+      });
+    }
+  });
+  
+  // Create line items for each user's tasks
+  const lineItems: XeroInvoiceLineItem[] = [];
+  userTaskHours.forEach((tasks, userId) => {
+    const user = project.assignments.find(a => a.userId === userId);
+    if (!user) return;
+    
+    tasks.forEach((taskData, taskId) => {
+      lineItems.push({
+        Description: `${taskData.taskName} - ${user.userName} - ${project.purchaseOrderNumber || ''}`,
+        Quantity: taskData.hours,
+        UnitAmount: taskData.sellRate,
+        AccountCode: "200"
+      });
+    });
+  });
+
+  const invoice: XeroInvoice = {
+    Type: "ACCREC",
+    Reference: project.purchaseOrderNumber || '',
+    Contact: {
+      ContactID: project.xeroContactId || ''
+    },
+    LineItems: lineItems
+  };
+
+    // First create the invoice in Xero
+    const response = await createInvoiceInXero(project);
+    const invoiceId = response.Invoices?.[0]?.InvoiceID;
+    
+    if (!invoiceId) {
+      throw new Error('No invoice ID returned from Xero');
+    }
+
+    // Generate and attach the detailed timesheet PDF
+    const pdfBytes = await generateTimesheetPDF(project, format(new Date(), 'yyyy-MM'));
+    
+    const addAttachment = httpsCallable(functions, 'addXeroInvoiceAttachment');
+    
+    await addAttachment({
+      invoiceId,
+      attachmentData: Array.from(pdfBytes), // Convert Uint8Array to regular array for function call
+      attachmentName: `${project.name}-timesheet-${format(new Date(), 'yyyy-MM')}.pdf`
+    });
+
+    // Return both the invoice response and the PDF data for debugging
+    return {
+      ...response,
+      pdfData: Array.from(pdfBytes)
+    };
+  } catch (error) {
+    console.error('Error creating Xero invoice:', error);
+    throw error;
+  }
+}
+
+/**
+ * Creates an invoice in Xero with line items for each user's tasks.
+ * This is an internal helper function used by generateInvoice.
+ */
+async function createInvoiceInXero(project: ProcessingProject): Promise<XeroInvoiceResponse> {
+  const functions = getFunctions();
+  const createInvoice = httpsCallable<{ invoiceData: XeroInvoice }, XeroInvoiceResponse>(
+    functions, 
+    'createXeroInvoice'
+  );
+
+  // Create line items grouped by user and task
+  const lineItems = generateInvoiceLineItems(project);
+
+  const invoice = {
+    Type: "ACCREC",
+    Reference: project.purchaseOrderNumber || '',
+    Contact: {
+      ContactID: project.xeroContactId || ''
+    },
+    LineItems: lineItems
+  };
+
+  const response = await createInvoice({ invoiceData: invoice });
+  return response.data;
+}
+
+/**
+ * Generates line items for a Xero invoice by grouping hours by user and task.
+ * This is an internal helper function used by createInvoiceInXero.
+ */
+function generateInvoiceLineItems(project: ProcessingProject): XeroInvoiceLineItem[] {
+  const taskMap = new Map(project.tasks?.map(task => [task.id, task]));
+  const userTaskHours = new Map<string, Map<string, {
+    hours: number;
+    taskName: string;
+    sellRate: number;
+  }>>();
+
+  // Group hours by user and task
+  project.assignments.forEach(assignment => {
+    const task = taskMap.get(assignment.taskId);
+    if (!task) return;
+
+    if (!userTaskHours.has(assignment.userId)) {
+      userTaskHours.set(assignment.userId, new Map());
+    }
+    const userTasks = userTaskHours.get(assignment.userId)!;
+    
+    const key = assignment.taskId;
+    const existing = userTasks.get(key);
+    
+    if (existing) {
+      existing.hours += assignment.hours;
+    } else {
+      userTasks.set(key, {
+        hours: assignment.hours,
+        taskName: assignment.taskName,
+        sellRate: task.sellRate || 0
+      });
+    }
+  });
+
+  // Convert grouped data to line items
+  const lineItems: XeroInvoiceLineItem[] = [];
+  userTaskHours.forEach((tasks, userId) => {
+    const user = project.assignments.find(a => a.userId === userId);
+    if (!user) return;
+    
+    tasks.forEach((taskData) => {
+      lineItems.push({
+        Description: `${taskData.taskName} - ${user.userName} - ${project.purchaseOrderNumber || ''}`,
+        Quantity: taskData.hours,
+        UnitAmount: taskData.sellRate,
+        AccountCode: "200"
+      });
+    });
+  });
+
+  return lineItems;
 }
 
 export async function getProcessingData(month: string): Promise<ProcessingData> {
@@ -149,6 +502,9 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
         clientId: project.clientId,
         clientName: client?.name || 'Unknown Client',
         totalHours,
+        purchaseOrderNumber: project.purchaseOrderNumber,
+        xeroContactId: project.xeroContactId,
+        tasks: project.tasks,
         requiresApproval: projectData?.requiresApproval || false,
         invoiceStatus: statusMap.get(project.id) || 'not started',
         priority: totalHours > 100 ? 'high' : 'normal',

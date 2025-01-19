@@ -2,10 +2,21 @@ import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, MessageCircle, CircleDot, CircleDashed, CheckCircle2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/AlertDialog';
+import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, MessageCircle, CircleDot, CircleDashed, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { NotesSlideout } from './NotesSlideout';
 import { useProcessingNotes } from '@/lib/hooks/useProcessingNotes';
+import { useProcessing } from '@/lib/hooks/useProcessing';
 import type { ProcessingProject } from '@/types';
 
 interface ProcessingTableProps {
@@ -13,6 +24,22 @@ interface ProcessingTableProps {
   onUpdateStatus: (args: { projectId: string; status: 'not started' | 'draft' | 'sent' }) => Promise<void>;
   isUpdating: boolean;
   month: string;
+}
+
+interface XeroInvoiceLineItem {
+  Description: string;
+  Quantity: number;
+  UnitAmount: number;
+  AccountCode: string;
+}
+
+interface XeroInvoice {
+  Type: string;
+  Reference: string;
+  Contact: {
+    ContactID: string;
+  };
+  LineItems: XeroInvoiceLineItem[];
 }
 
 export function ProcessingTable({ 
@@ -24,6 +51,15 @@ export function ProcessingTable({
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [selectedProject, setSelectedProject] = useState<ProcessingProject | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [invoiceResponse, setInvoiceResponse] = useState<any | null>(null);
+  const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
+  const [pdfDebugData, setPdfDebugData] = useState<string | null>(null);
+  const [invoiceConfirmation, setInvoiceConfirmation] = useState<{ isOpen: boolean; project: ProcessingProject | null }>({
+    isOpen: false,
+    project: null
+  });
+  
+  const { generateInvoice, isGeneratingInvoice } = useProcessing(new Date(month + '-01'));
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -89,6 +125,33 @@ export function ProcessingTable({
       alert('Failed to update status. Please try again.');      
     }
   };
+
+  const handleGenerateInvoice = async (project: ProcessingProject) => {
+    setInvoiceConfirmation({ isOpen: true, project });
+  };
+
+  const handleConfirmInvoice = async () => {
+    const project = invoiceConfirmation.project;
+    if (!project) return;
+    setGeneratingInvoiceId(project.id);
+
+    try {
+      const response = await generateInvoice(project);
+      setInvoiceResponse(response);
+      if (response.pdfData) {
+        // Convert Uint8Array to base64 string for display
+        const base64String = btoa(String.fromCharCode.apply(null, response.pdfData));
+        setPdfDebugData(base64String);
+      }
+      setInvoiceConfirmation({ isOpen: false, project: null });
+    } catch (error) {
+      console.error('Failed to generate invoice:', error);
+      alert('Failed to generate invoice. Please check the console for details.');
+    }
+    setGeneratingInvoiceId(null);
+    setInvoiceConfirmation({ isOpen: false, project: null });
+  };
+
 
   return (
     <div className="overflow-x-auto">
@@ -181,6 +244,20 @@ export function ProcessingTable({
                       >
                         {getStatusIcon(project.invoiceStatus)}
                       </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={(generatingInvoiceId === project.id) || !project.xeroContactId}
+                        title="Generate Xero Invoice"
+                        onClick={() => handleGenerateInvoice(project)}
+                        className="p-2"
+                      >
+                        {generatingInvoiceId === project.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   </Td>
                 </tr>
@@ -255,6 +332,93 @@ export function ProcessingTable({
           isLoading={isLoadingProjectNotes}
         />
       )}
+      
+      {/* Debug Invoice Output */}
+      {invoiceResponse && (
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Generated Xero Invoice</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Invoice ID: {invoiceResponse.Invoices?.[0]?.InvoiceID}
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setInvoiceResponse(null);
+                setPdfDebugData(null);
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+          
+          <div className="bg-white p-4 rounded border space-y-2">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium">Status:</span>
+                <Badge variant="success" className="ml-2">
+                  {invoiceResponse.Invoices?.[0]?.Status}
+                </Badge>
+              </div>
+              <div>
+                <span className="font-medium">Invoice Number:</span>
+                <span className="ml-2">{invoiceResponse.Invoices?.[0]?.InvoiceNumber}</span>
+              </div>
+              <div>
+                <span className="font-medium">Amount Due:</span>
+                <span className="ml-2">${invoiceResponse.Invoices?.[0]?.AmountDue?.toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="font-medium">Reference:</span>
+                <span className="ml-2">{invoiceResponse.Invoices?.[0]?.Reference}</span>
+              </div>
+            </div>
+          </div>
+          
+          {pdfDebugData && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">PDF Debug Data</h4>
+              <div className="bg-white p-4 rounded border">
+                <textarea
+                  readOnly
+                  value={pdfDebugData}
+                  className="w-full h-32 font-mono text-xs p-2 border rounded"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <AlertDialog 
+        open={invoiceConfirmation.isOpen} 
+        onOpenChange={(open) => setInvoiceConfirmation(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate Xero Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="block mb-4">
+                This will create a new draft invoice in Xero for {invoiceConfirmation.project?.name}. The invoice will include all time entries for the current month.
+              </span>
+              <span className="block bg-gray-50 p-4 rounded-md text-sm">
+                <span className="block"><strong>Client:</strong> {invoiceConfirmation.project?.clientName}</span>
+                <span className="block"><strong>Total Hours:</strong> {invoiceConfirmation.project?.totalHours.toFixed(1)}</span>
+                {invoiceConfirmation.project?.purchaseOrderNumber && (
+                  <span className="block"><strong>PO Number:</strong> {invoiceConfirmation.project.purchaseOrderNumber}</span>
+                )}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmInvoice}>Generate Invoice</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

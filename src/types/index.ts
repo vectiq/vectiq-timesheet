@@ -240,6 +240,9 @@ export interface ProcessingProject {
     taskName: string;
     hours: number
   }>;
+  tasks?: ProjectTask[];
+  purchaseOrderNumber?: string;
+  xeroContactId?: string;
 }
 
 export interface ProcessingData {

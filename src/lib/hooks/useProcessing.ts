@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { getProcessingData, updateProjectStatus } from '@/lib/services/processing';
+import { getProcessingData, updateProjectStatus, generateInvoice } from '@/lib/services/processing';
 
 const QUERY_KEY = 'processing';
 
@@ -12,6 +12,15 @@ export function useProcessing(selectedDate: Date) {
   const query = useQuery({
     queryKey: [QUERY_KEY, month],
     queryFn: () => getProcessingData(month)
+  });
+
+  // Mutation for generating invoice
+  const invoiceMutation = useMutation({
+    mutationFn: generateInvoice,
+    onSuccess: () => {
+      // Optionally invalidate queries if needed
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, month] });
+    }
   });
 
   // Mutation for updating project status
@@ -28,6 +37,9 @@ export function useProcessing(selectedDate: Date) {
     data: query.data,
     isLoading: query.isLoading,
     error: query.error,
+    generateInvoice: invoiceMutation.mutateAsync,
+    isGeneratingInvoice: invoiceMutation.isPending,
+    invoiceError: invoiceMutation.error,
     updateStatus: statusMutation.mutateAsync,
     isUpdating: statusMutation.isPending
   };
