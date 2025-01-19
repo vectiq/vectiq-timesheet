@@ -140,8 +140,7 @@ export function ProcessingTable({
       setInvoiceResponse(response);
       if (response.pdfData) {
         // Convert Uint8Array to base64 string for display
-        const base64String = btoa(String.fromCharCode.apply(null, response.pdfData));
-        setPdfDebugData(base64String);
+        setPdfDebugData(response.pdfData);
       }
       setInvoiceConfirmation({ isOpen: false, project: null });
     } catch (error) {

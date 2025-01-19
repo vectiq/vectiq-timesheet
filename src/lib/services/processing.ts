@@ -3,12 +3,12 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { format, eachDayOfInterval, parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import type { 
-  ProcessingData, 
-  ProcessingProject, 
-  TimeEntry, 
+import type {
+  ProcessingData,
+  ProcessingProject,
+  TimeEntry,
   Approval,
-  XeroInvoiceResponse 
+  XeroInvoiceResponse
 } from '@/types';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -78,7 +78,7 @@ export async function updateProjectStatus(
 ): Promise<void> {
   const statusId = `${projectId}_${month}`;
   const statusRef = doc(db, 'projectStatuses', statusId);
-  
+
   await setDoc(statusRef, {
     projectId,
     month,
@@ -87,13 +87,13 @@ export async function updateProjectStatus(
   });
 }
 
-async function generateTimesheetPDF(project: ProcessingProject, month: string): Promise<Uint8Array> {
+async function generateTimesheetPDF(project: ProcessingProject, month: string): Promise<string> {
   // Fetch all time entries for the project in this month
   const timeEntries = await getProjectTimeEntries(project.id, month);
-  
+
   // Create new PDF document
   const doc = new jsPDF();
-  
+
   // Set title
   doc.setFontSize(16);
   doc.text(`${project.name} - Timesheet Report`, 14, 15);
@@ -101,18 +101,18 @@ async function generateTimesheetPDF(project: ProcessingProject, month: string): 
   doc.text(`${project.clientName}`, 14, 22);
   doc.text(`Month: ${format(new Date(month + '-01'), 'MMMM yyyy')}`, 14, 29);
   doc.text(`Purchase Order: ${project.purchaseOrderNumber || 'N/A'}`, 14, 36);
-  
+
   // Get all days in the month
   const startDate = parseISO(`${month}-01`);
   const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
   const days = eachDayOfInterval({ start: startDate, end: endDate });
-  
+
   let yOffset = 45;
-  
+
   // Group assignments by user
   const userEntries = new Map();
   timeEntries.forEach(entry => {
-    const assignment = project.assignments.find(a => 
+    const assignment = project.assignments.find(a =>
       a.userId === entry.userId && a.taskId === entry.taskId
     );
     if (!assignment) return;
@@ -129,14 +129,14 @@ async function generateTimesheetPDF(project: ProcessingProject, month: string): 
       hours: entry.hours
     });
   });
-  
+
   // For each user
   userEntries.forEach((userData, userId) => {
     // Add user name as section header
     doc.setFontSize(14);
     doc.text(userData.userName, 14, yOffset);
     yOffset += 10;
-    
+
     // Sort entries by date
     const sortedEntries = userData.entries.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -144,14 +144,14 @@ async function generateTimesheetPDF(project: ProcessingProject, month: string): 
     const headers = [
       ['Date', 'Task', 'Hours']
     ];
-    
+
     // Create table data
     const data = sortedEntries.map(entry => [
       format(parseISO(entry.date), 'MMM d, yyyy'),
       entry.taskName,
       entry.hours.toFixed(1)
     ]);
-    
+
     // Add user total row
     const userTotal = sortedEntries.reduce((sum, entry) => sum + entry.hours, 0);
     data.push([
@@ -159,7 +159,7 @@ async function generateTimesheetPDF(project: ProcessingProject, month: string): 
       'Total',
       userTotal.toFixed(1)
     ]);
-    
+
     // Add table
     (doc as any).autoTable({
       startY: yOffset,
@@ -172,23 +172,24 @@ async function generateTimesheetPDF(project: ProcessingProject, month: string): 
       foot: [['', 'Total', userTotal.toFixed(1)]],
       footStyles: { fontStyle: 'bold' }
     });
-    
+
     // Update yOffset for next section
     yOffset = (doc as any).lastAutoTable.finalY + 15;
-    
+
     // Add page if needed
     if (yOffset > 250) {
       doc.addPage();
       yOffset = 20;
     }
   });
-  
+
   // Add totals
   doc.setFontSize(12);
   doc.text(`Total Hours: ${project.totalHours.toFixed(1)}`, 14, yOffset);
-  
-  const pdfBytes = doc.output('arraybuffer');
-  return new Uint8Array(pdfBytes);
+
+  const base64 = doc.output('datauristring');
+  console.log('PDF generated:', base64);
+  return base64.split(",")[1];
 }
 
 /**
@@ -198,98 +199,98 @@ async function generateTimesheetPDF(project: ProcessingProject, month: string): 
 export async function generateInvoice(project: ProcessingProject): Promise<XeroInvoiceResponse> {
   const functions = getFunctions();
   const createInvoice = httpsCallable<{ invoiceData: XeroInvoice }, XeroInvoiceResponse>(
-    functions, 
+    functions,
     'createXeroInvoice'
   );
 
   try {
-  const functions = getFunctions();
-  const createXeroInvoice = httpsCallable<{ invoiceData: XeroInvoice }, XeroInvoiceResponse>(
-    functions, 
-    'createXeroInvoice'
-  );
+    const functions = getFunctions();
+    const createXeroInvoice = httpsCallable<{ invoiceData: XeroInvoice }, XeroInvoiceResponse>(
+      functions,
+      'createXeroInvoice'
+    );
 
-  // Create a map of task details for quick lookup
-  const taskMap = new Map(project.tasks?.map(task => [task.id, task]));
-  
-  // Group assignments by user and task
-  const userTaskHours = new Map<string, Map<string, {
-    hours: number;
-    taskName: string;
-    sellRate: number;
-  }>>();
+    // Create a map of task details for quick lookup
+    const taskMap = new Map(project.tasks?.map(task => [task.id, task]));
 
-  project.assignments.forEach(assignment => {
-    const task = taskMap.get(assignment.taskId);
-    if (!task) return;
+    // Group assignments by user and task
+    const userTaskHours = new Map<string, Map<string, {
+      hours: number;
+      taskName: string;
+      sellRate: number;
+    }>>();
 
-    if (!userTaskHours.has(assignment.userId)) {
-      userTaskHours.set(assignment.userId, new Map());
-    }
-    const userTasks = userTaskHours.get(assignment.userId)!;
-    
-    const key = assignment.taskId;
-    const existing = userTasks.get(key);
-    
-    if (existing) {
-      existing.hours += assignment.hours;
-    } else {
-      userTasks.set(key, {
-        hours: assignment.hours,
-        taskName: assignment.taskName,
-        sellRate: task.sellRate || 0
-      });
-    }
-  });
-  
-  // Create line items for each user's tasks
-  const lineItems: XeroInvoiceLineItem[] = [];
-  userTaskHours.forEach((tasks, userId) => {
-    const user = project.assignments.find(a => a.userId === userId);
-    if (!user) return;
-    
-    tasks.forEach((taskData, taskId) => {
-      lineItems.push({
-        Description: `${taskData.taskName} - ${user.userName} - ${project.purchaseOrderNumber || ''}`,
-        Quantity: taskData.hours,
-        UnitAmount: taskData.sellRate,
-        AccountCode: "200"
+    project.assignments.forEach(assignment => {
+      const task = taskMap.get(assignment.taskId);
+      if (!task) return;
+
+      if (!userTaskHours.has(assignment.userId)) {
+        userTaskHours.set(assignment.userId, new Map());
+      }
+      const userTasks = userTaskHours.get(assignment.userId)!;
+
+      const key = assignment.taskId;
+      const existing = userTasks.get(key);
+
+      if (existing) {
+        existing.hours += assignment.hours;
+      } else {
+        userTasks.set(key, {
+          hours: assignment.hours,
+          taskName: assignment.taskName,
+          sellRate: task.sellRate || 0
+        });
+      }
+    });
+
+    // Create line items for each user's tasks
+    const lineItems: XeroInvoiceLineItem[] = [];
+    userTaskHours.forEach((tasks, userId) => {
+      const user = project.assignments.find(a => a.userId === userId);
+      if (!user) return;
+
+      tasks.forEach((taskData, taskId) => {
+        lineItems.push({
+          Description: `${taskData.taskName} - ${user.userName} - ${project.purchaseOrderNumber || ''}`,
+          Quantity: taskData.hours,
+          UnitAmount: taskData.sellRate,
+          AccountCode: "200"
+        });
       });
     });
-  });
 
-  const invoice: XeroInvoice = {
-    Type: "ACCREC",
-    Reference: project.purchaseOrderNumber || '',
-    Contact: {
-      ContactID: project.xeroContactId || ''
-    },
-    LineItems: lineItems
-  };
+    const invoice: XeroInvoice = {
+      Type: "ACCREC",
+      Reference: project.purchaseOrderNumber || '',
+      Contact: {
+        ContactID: project.xeroContactId || ''
+      },
+      LineItems: lineItems
+    };
 
     // First create the invoice in Xero
     const response = await createInvoiceInXero(project);
     const invoiceId = response.Invoices?.[0]?.InvoiceID;
-    
+
     if (!invoiceId) {
       throw new Error('No invoice ID returned from Xero');
     }
 
     // Generate and attach the detailed timesheet PDF
-    const pdfBytes = await generateTimesheetPDF(project, format(new Date(), 'yyyy-MM'));
-    
+    const pdf = await generateTimesheetPDF(project, format(new Date(), 'yyyy-MM'));
+
     const addAttachment = httpsCallable(functions, 'addXeroInvoiceAttachment');
-    
+
     await addAttachment({
       invoiceId,
-      attachmentData: Array.from(pdfBytes), // Convert Uint8Array to regular array for function call
+      attachmentData: pdf, // Convert Uint8Array to regular array for function call
       attachmentName: `${project.name}-timesheet-${format(new Date(), 'yyyy-MM')}.pdf`
     });
 
     // Return both the invoice response and the PDF data for debugging
     return {
       ...response,
-      pdfData: Array.from(pdfBytes)
+      pdfData: pdf
     };
   } catch (error) {
     console.error('Error creating Xero invoice:', error);
@@ -304,7 +305,7 @@ export async function generateInvoice(project: ProcessingProject): Promise<XeroI
 async function createInvoiceInXero(project: ProcessingProject): Promise<XeroInvoiceResponse> {
   const functions = getFunctions();
   const createInvoice = httpsCallable<{ invoiceData: XeroInvoice }, XeroInvoiceResponse>(
-    functions, 
+    functions,
     'createXeroInvoice'
   );
 
@@ -345,10 +346,10 @@ function generateInvoiceLineItems(project: ProcessingProject): XeroInvoiceLineIt
       userTaskHours.set(assignment.userId, new Map());
     }
     const userTasks = userTaskHours.get(assignment.userId)!;
-    
+
     const key = assignment.taskId;
     const existing = userTasks.get(key);
-    
+
     if (existing) {
       existing.hours += assignment.hours;
     } else {
@@ -365,7 +366,7 @@ function generateInvoiceLineItems(project: ProcessingProject): XeroInvoiceLineIt
   userTaskHours.forEach((tasks, userId) => {
     const user = project.assignments.find(a => a.userId === userId);
     if (!user) return;
-    
+
     tasks.forEach((taskData) => {
       lineItems.push({
         Description: `${taskData.taskName} - ${user.userName} - ${project.purchaseOrderNumber || ''}`,
@@ -385,7 +386,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
   const endDate = `${month}-31`;
 
   // Fetch all required data in parallel
-  const [timeEntriesSnapshot, projectsSnapshot, clientsSnapshot, usersSnapshot, approvalsSnapshot, statusesSnapshot] = 
+  const [timeEntriesSnapshot, projectsSnapshot, clientsSnapshot, usersSnapshot, approvalsSnapshot, statusesSnapshot] =
     await Promise.all([
       // Get time entries for the month
       getDocs(query(
@@ -409,7 +410,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
   const clients = new Map(clientsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const users = new Map(usersSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const projects = new Map(projectsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
-  
+
   // Create map of project statuses for the month
   const statusMap = new Map();
   statusesSnapshot.docs.forEach(doc => {
@@ -462,19 +463,19 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
       projectEntries.forEach(entry => {
         const user = users.get(entry.userId);
         const task = project.tasks?.find(t => t.id === entry.taskId);
-        
+
         if (!user || !task) return;
 
         // Get approval status for this user's entries
         const approvalKey = `${project.id}_${user.id}`;
         const approval = approvalMap.get(approvalKey);
-        
+
         // Determine approval status based on project settings
         let approvalStatus = 'No Approval Required';
         if (projectData?.requiresApproval) {
           approvalStatus = approval ? approval.status : 'unsubmitted';
         }
-        
+
         const key = `${entry.userId}-${entry.taskId}`;
         const existing = assignmentMap.get(key);
 
@@ -520,15 +521,15 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
     approvedTimesheets: processedProjects.reduce((count, project) => {
       // Only count projects that require approval
       if (!project.requiresApproval) return count;
-      
+
       // Count total assignments requiring approval
       const totalAssignments = project.assignments.length;
-      
+
       // Count approved assignments
       const approvedAssignments = project.assignments.filter(
         a => a.approvalStatus === 'approved'
       ).length;
-      
+
       // Only increment if all assignments are approved
       return count + (totalAssignments === approvedAssignments ? 1 : 0);
     }, 0),
