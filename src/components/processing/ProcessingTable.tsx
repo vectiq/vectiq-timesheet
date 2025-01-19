@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, MessageCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, AlertCircle, StickyNote, MessageCircle, CircleDot, CircleDashed, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { NotesSlideout } from './NotesSlideout';
 import { useProcessingNotes } from '@/lib/hooks/useProcessingNotes';
@@ -22,8 +22,19 @@ export function ProcessingTable({
   month
 }: ProcessingTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [notesOpen, setNotesOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ProcessingProject | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'sent':
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case 'draft':
+        return <CircleDot className="h-4 w-4 text-amber-500" />;
+      default:
+        return <CircleDashed className="h-4 w-4 text-gray-400" />;
+    }
+  };
 
   // Get notes for selected project only
   const {
@@ -163,11 +174,12 @@ export function ProcessingTable({
                       <Button 
                         variant="secondary" 
                         size="sm"
+                        title={`Status: ${project.invoiceStatus}`}
                         disabled={isUpdating}
-                        title="Toggle processing status"
                         onClick={() => handleStatusChange(project.id, project.invoiceStatus)}
+                        className="p-2"
                       >
-                        Change Status
+                        {getStatusIcon(project.invoiceStatus)}
                       </Button>
                     </div>
                   </Td>

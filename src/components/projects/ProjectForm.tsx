@@ -28,6 +28,9 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
     defaultValues: project || {
       name: '',
       clientId: '',
+      xeroContactId: '',
+      purchaseOrderNumber: '',
+      xeroProjectId: '',
       approverEmail: '',
       budget: 0,
       startDate: '',
@@ -51,6 +54,9 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       id: projectId,
       name: data.name || '',
       clientId: data.clientId || '',
+      purchaseOrderNumber: data.purchaseOrderNumber || '',
+      xeroProjectId: data.xeroProjectId || '',
+      xeroContactId: data.xeroContactId || '',
       budget: data.budget || 0,
       startDate: data.startDate || '',
       endDate: data.endDate || '',
@@ -102,6 +108,36 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             </Select>
           </FormField>
         </div>
+
+        <FormField label="Xero Contact ID">
+          <Input
+            {...register('xeroContactId')}
+            placeholder="e.g., 00000000-0000-0000-0000-000000000000"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            The Xero contact ID for invoice generation
+          </p>
+        </FormField>
+
+        <FormField label="Purchase Order Number">
+          <Input
+            {...register('purchaseOrderNumber')}
+            placeholder="e.g., PO-2024-001"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            The purchase order number for this project
+          </p>
+        </FormField>
+
+        <FormField label="Xero Project ID">
+          <Input
+            {...register('xeroProjectId')}
+            placeholder="e.g., 00000000-0000-0000-0000-000000000000"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            The Xero project ID for timesheet synchronization
+          </p>
+        </FormField>
 
         <div className="grid grid-cols-3 gap-4">
           <FormField label="Budget">

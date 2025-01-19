@@ -37,8 +37,11 @@ export interface Project {
   name: string;
   clientId: string;
   budget: number;
+  purchaseOrderNumber?: string;
+  xeroProjectId?: string;
   startDate: string;
   endDate: string;
+  xeroContactId?: string;
   approverEmail: string;
   requiresApproval: boolean;
   tasks: ProjectTask[];
