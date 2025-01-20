@@ -108,28 +108,28 @@
 
 /* Apply font family to all elements */
 @layer base {
-  html {
-    font-family: 'Aeonik', system-ui, sans-serif !important;
-    letter-spacing: 0.05em;
+  * {
+    font-family: 'Aeonik', sans-serif !important;
+    letter-spacing: 0.025em;
     line-height: 1.5;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
     line-height: 1.25;
   }
 
   p {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
     line-height: 1.625;
   }
 
   .text-sm {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
   }
 
   .text-xs {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
   }
 }
 

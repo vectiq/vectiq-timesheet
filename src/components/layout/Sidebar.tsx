@@ -56,7 +56,7 @@ export function Sidebar() {
                           )}
                         />
                         <span className={cn(
-                          "font-medium tracking-wider",
+                          "font-medium tracking-wide",
                         )}>{item.name}</span>
                         {isActive && (
                           <>
