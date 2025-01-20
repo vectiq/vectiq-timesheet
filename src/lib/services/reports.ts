@@ -2,7 +2,7 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import { db } from '@/lib/firebase';
 import { format, parseISO } from 'date-fns';
 import { getWorkingDaysInPeriod } from '@/lib/utils/date';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFunctions, httpsCallable, HttpsCallableResult } from 'firebase/functions';
 import type { 
   ReportFilters, 
   ReportData, 
@@ -157,7 +157,13 @@ export async function checkOvertimeSubmission(month: string): Promise<boolean> {
   return submissionDoc.exists();
 }
 
-export async function submitOvertime(data: OvertimeReportData, startDate: string, endDate: string, month: string): Promise<void> {
+export async function submitOvertime(
+  data: OvertimeReportData, 
+  startDate: string, 
+  endDate: string, 
+  month: string,
+  payRunId: string
+): Promise<void> {
     // First check if already submitted
     const submissionRef = collection(db, 'overtimeSubmissions');
     const q = query(
@@ -176,13 +182,15 @@ export async function submitOvertime(data: OvertimeReportData, startDate: string
       ...entry,
       xeroEmployeeId: users.find(u => u.id === entry.userId)?.data().xeroEmployeeId,
     }));
+
     // Call Firebase function to process overtime
     const functions = getFunctions();
     const processOvertime = httpsCallable(functions, 'processOvertime');
     await processOvertime({ 
       overtimeEntries: overtimeEntries,
       startDate,
-      endDate
+      endDate,
+      payRunId
     });
 }
 
