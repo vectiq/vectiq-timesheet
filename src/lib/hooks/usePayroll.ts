@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { getPayRun, getPayRunHistory, getPayRunStats, getPayrollCalendars } from '@/lib/services/payroll';
-import type { PayRun, PayrollCalendar } from '@/types';
+import { getPayRun, getPayRunHistory, getPayRunStats, getPayrollCalendars, getPayItems } from '@/lib/services/payroll';
+import type { PayRun, PayrollCalendar, XeroPayItem } from '@/types';
 
 const QUERY_KEYS = {
   payRun: 'payRun',
   history: 'payRunHistory',
   stats: 'payRunStats',
-  calendars: 'payrollCalendars'
+  calendars: 'payrollCalendars',
+  payItems: 'payItems'
 } as const;
 
 interface UsePayrollOptions {
@@ -50,25 +51,23 @@ export function usePayroll({
     queryFn: getPayrollCalendars
   });
 
-  // Get the latest pay run for the month
-  const latestPayRun = payRunQuery.data?.length 
-    ? payRunQuery.data.reduce((latest, current) => {
-        const latestDate = new Date(latest.UpdatedDateUTC);
-        const currentDate = new Date(current.UpdatedDateUTC);
-        return currentDate > latestDate ? current : latest;
-      })
-    : null;
+  // Query for pay items
+  const payItemsQuery = useQuery({
+    queryKey: [QUERY_KEYS.payItems],
+    queryFn: getPayItems
+  });
 
   return {
-    payRun: latestPayRun,
-    payRuns: payRunQuery.data || [],
+    payRuns: payRunQuery.data ?? [],
     history: historyQuery.data,
     stats: statsQuery.data,
     calendars: calendarsQuery.data || [],
+    payItems: payItemsQuery.data || [],
     isLoading: payRunQuery.isLoading || 
       (includeHistory && historyQuery.isLoading) || 
       (includeStats && statsQuery.isLoading) ||
-      calendarsQuery.isLoading,
-    error: payRunQuery.error || historyQuery.error || statsQuery.error || calendarsQuery.error
+      calendarsQuery.isLoading ||
+      payItemsQuery.isLoading,
+    error: payRunQuery.error || historyQuery.error || statsQuery.error || calendarsQuery.error || payItemsQuery.error
   };
 }

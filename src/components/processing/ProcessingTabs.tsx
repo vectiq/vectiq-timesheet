@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils/styles';
-import { FileText, DollarSign } from 'lucide-react';
+import { FileText, DollarSign, Clock } from 'lucide-react';
 
 interface ProcessingTabsProps {
   activeTab: string;
@@ -9,7 +9,8 @@ interface ProcessingTabsProps {
 export function ProcessingTabs({ activeTab, onTabChange }: ProcessingTabsProps) {
   const tabs = [
     { id: 'invoicing', name: 'Invoicing', icon: FileText },
-    { id: 'payroll', name: 'Payroll', icon: DollarSign }
+    { id: 'payroll', name: 'Payroll', icon: DollarSign },
+    { id: 'overtime', name: 'Overtime', icon: Clock }
   ];
 
   return (

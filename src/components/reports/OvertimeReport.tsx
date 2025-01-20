@@ -2,9 +2,7 @@ import { Card } from '@/components/ui/Card';
 import { useReports } from '@/lib/hooks/useReports';
 import { submitOvertime, checkOvertimeSubmission } from '@/lib/services/reports';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { DateNavigation } from '@/components/timesheet/DateNavigation';
-import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { getWorkingDaysForMonth } from '@/lib/utils/workingDays';
 import type { OvertimeReportEntry } from '@/types';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
@@ -15,17 +13,20 @@ import { cn } from '@/lib/utils/styles';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-export function OvertimeReport() {
-  const dateNav = useDateNavigation({ type: 'month' });
+interface OvertimeReportProps {
+  selectedDate: Date;
+}
+
+export function OvertimeReport({ selectedDate }: OvertimeReportProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const currentMonth = format(dateNav.currentDate, 'MM/yyyy');
-  const workingDays = getWorkingDaysForMonth(format(dateNav.currentDate, 'yyyy-MM'));
+  const currentMonth = format(selectedDate, 'MM-yyyy');
+  const workingDays = getWorkingDaysForMonth(format(selectedDate, 'yyyy-MM'));
 
   const { data, isLoading } = useReports({ 
     type: 'overtime',
-    startDate: format(dateNav.dateRange.start, 'yyyy-MM-dd'),
-    endDate: format(dateNav.dateRange.end, 'yyyy-MM-dd')
+    startDate: format(startOfMonth(selectedDate), 'yyyy-MM-dd'),
+    endDate: format(endOfMonth(selectedDate), 'yyyy-MM-dd')
   });
 
   useEffect(() => {
@@ -39,8 +40,8 @@ export function OvertimeReport() {
   const handleSubmit = async () => {
     if (!data) return;
     
-    const startDate = format(dateNav.dateRange.start, 'yyyy-MM-dd');
-    const endDate = format(dateNav.dateRange.end, 'yyyy-MM-dd');
+    const startDate = format(startOfMonth(selectedDate), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
     
     try {
       setIsSubmitting(true);
@@ -68,13 +69,6 @@ export function OvertimeReport() {
           {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {isSubmitted ? 'Submitted' : 'Submit to Xero'}
         </Button>
-        <DateNavigation
-          currentDate={dateNav.currentDate}
-          onPrevious={dateNav.goToPrevious}
-          onNext={dateNav.goToNext}
-          onToday={dateNav.goToToday}
-          formatString="MMMM yyyy"
-        />
       </div>
 
       <Card>

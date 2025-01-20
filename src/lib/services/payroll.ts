@@ -1,9 +1,10 @@
-import { collection, getDocs, query, where, orderBy, startAt, endAt } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { PayRun, PayrollCalendar } from '@/types';
+import type { PayRun, PayrollCalendar, XeroPayItem } from '@/types';
 
 const COLLECTION = 'xeroPayRuns';
 const CALENDARS_COLLECTION = 'xeroPayCalendars';
+const PAY_ITEMS_COLLECTION = 'xeroPayItems';
 
 export async function getPayrollCalendars(): Promise<PayrollCalendar[]> {
   try {
@@ -19,6 +20,22 @@ export async function getPayrollCalendars(): Promise<PayrollCalendar[]> {
       .sort((a, b) => new Date(b.StartDate).getTime() - new Date(a.StartDate).getTime());
   } catch (error) {
     console.error('Error fetching payroll calendars:', error);
+    throw error;
+  }
+}
+
+export async function getPayItems(): Promise<XeroPayItem[]> {
+  try {
+    const payItemsRef = collection(db, PAY_ITEMS_COLLECTION);
+    const querySnapshot = await getDocs(payItemsRef);
+    
+    if (querySnapshot.empty) {
+      return [];
+    }
+
+    return querySnapshot.docs.map(doc => doc.data() as XeroPayItem);
+  } catch (error) {
+    console.error('Error fetching pay items:', error);
     throw error;
   }
 }
