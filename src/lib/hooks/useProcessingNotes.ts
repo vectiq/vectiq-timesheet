@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   getProjectNotes,
   getMonthlyNotes,
@@ -15,7 +15,7 @@ import type { Note } from '@/types';
 const QUERY_KEYS = {
   projectNotes: 'project-notes',
   monthlyNotes: 'monthly-notes'
-} as const;
+};
 
 interface UseProcessingNotesOptions {
   projectId?: string;
@@ -24,6 +24,7 @@ interface UseProcessingNotesOptions {
 
 export function useProcessingNotes({ projectId, month }: UseProcessingNotesOptions) {
   const queryClient = useQueryClient();
+  const [notesCache, setNotesCache] = useState<Record<string, Note[]>>({});
 
   // Query for project notes
   const projectNotesQuery = useQuery({
@@ -32,6 +33,28 @@ export function useProcessingNotes({ projectId, month }: UseProcessingNotesOptio
     enabled: !!projectId && !!month
   });
 
+  // Function to get notes for any project
+  const getProjectNotesForId = useCallback(async (id: string, monthStr: string) => {
+    // Check cache first
+    const cacheKey = `${id}_${monthStr}`;
+    if (notesCache[cacheKey]) {
+      return { notes: notesCache[cacheKey] };
+    }
+
+    try {
+      const notes = await getProjectNotes(id, monthStr);
+      if (notes) {
+        setNotesCache(prev => ({
+          ...prev,
+          [cacheKey]: notes.notes
+        }));
+      }
+      return notes;
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+      return { notes: [] };
+    }
+  }, [notesCache]);
   // Query for monthly notes
   const monthlyNotesQuery = useQuery({
     queryKey: [QUERY_KEYS.monthlyNotes, month],
@@ -133,6 +156,7 @@ export function useProcessingNotes({ projectId, month }: UseProcessingNotesOptio
   return {
     // Project notes
     projectNotes: projectNotesQuery.data?.notes || [],
+    getProjectNotes: getProjectNotesForId,
     isLoadingProjectNotes: projectNotesQuery.isLoading,
     addProjectNote: handleAddProjectNote,
     updateProjectNote: handleUpdateProjectNote,

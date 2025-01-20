@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +18,10 @@ import { NotesSlideout } from './NotesSlideout';
 import { useProcessingNotes } from '@/lib/hooks/useProcessingNotes';
 import { useProcessing } from '@/lib/hooks/useProcessing';
 import type { ProcessingProject } from '@/types';
+
+interface ProjectNotesMap {
+  [projectId: string]: number;
+}
 
 interface ProcessingTableProps {
   projects: ProcessingProject[];
@@ -52,6 +56,7 @@ export function ProcessingTable({
   const [selectedProject, setSelectedProject] = useState<ProcessingProject | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [invoiceResponse, setInvoiceResponse] = useState<any | null>(null);
+  const [projectNotesCounts, setProjectNotesCounts] = useState<ProjectNotesMap>({});
   const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   const [pdfDebugData, setPdfDebugData] = useState<string | null>(null);
   const [invoiceConfirmation, setInvoiceConfirmation] = useState<{ isOpen: boolean; project: ProcessingProject | null }>({
@@ -60,6 +65,32 @@ export function ProcessingTable({
   });
   
   const { generateInvoice, isGeneratingInvoice } = useProcessing(new Date(month + '-01'));
+
+  // Get notes for selected project only
+  const {
+    projectNotes,
+    getProjectNotes,
+    addProjectNote,
+    updateProjectNote,
+    deleteProjectNote,
+    isLoadingProjectNotes
+  } = useProcessingNotes({
+    projectId: selectedProject?.id,
+    month
+  });
+
+  // Load note counts for all projects when component mounts or projects change
+  useEffect(() => {
+    const loadNoteCounts = async () => {
+      const counts: ProjectNotesMap = {};
+      for (const project of projects) {
+        const notes = await getProjectNotes(project.id, month);
+        counts[project.id] = notes?.notes?.length || 0;
+      }
+      setProjectNotesCounts(counts);
+    };
+    loadNoteCounts();
+  }, [projects, month, getProjectNotes]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -71,18 +102,6 @@ export function ProcessingTable({
         return <CircleDashed className="h-4 w-4 text-gray-400" />;
     }
   };
-
-  // Get notes for selected project only
-  const {
-    projectNotes,
-    addProjectNote,
-    updateProjectNote,
-    deleteProjectNote,
-    isLoadingProjectNotes
-  } = useProcessingNotes({
-    projectId: selectedProject?.id,
-    month
-  });
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects(prev => {
@@ -224,12 +243,12 @@ export function ProcessingTable({
                         }}
                       >
                         <StickyNote className="h-4 w-4" />
-                        {project.id === selectedProject?.id && projectNotes.length > 0 && (
+                        {projectNotesCounts[project.id] > 0 && (
                           <Badge
                             variant="secondary"
                             className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 flex items-center justify-center text-xs"
                           >
-                            {projectNotes.length}
+                            {projectNotesCounts[project.id]}
                           </Badge>
                         )}
                       </Button>
