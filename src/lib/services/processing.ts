@@ -527,6 +527,7 @@ export async function getProcessingData(month: string): Promise<ProcessingData> 
         invoiceStatus: statusMap.get(project.id) || 'not started',
         priority: totalHours > 100 ? 'high' : 'normal',
         hasSpecialHandling: project.requiresApproval,
+        type: assignments.length === 1 ? 'labor_hire' : 'team',
         assignments
       } as ProcessingProject;
     });
