@@ -130,13 +130,16 @@ export function OvertimeReport({ selectedDate }: OvertimeReportProps) {
                                 {project.requiresApproval && (
                                   <Badge 
                                     variant={
+                                      project.approvalStatus === 'not required' ? 'secondary' :
                                       project.approvalStatus === 'approved' ? 'success' :
-                                     project.approvalStatus === 'unsubmitted' ? 'warning' :
-                                     project.approvalStatus === 'pending' ? 'warning' : 'destructive'
+                                      project.approvalStatus === 'pending' ? 'warning' :
+                                      project.approvalStatus === 'rejected' ? 'destructive' :
+                                      'default'
                                     }
                                     className="text-xs"
                                   >
-                                    {project.approvalStatus.charAt(0).toUpperCase() + project.approvalStatus.slice(1)}
+                                    {project.approvalStatus === 'not required' ? 'No Approval Required' :
+                                     project.approvalStatus.charAt(0).toUpperCase() + project.approvalStatus.slice(1)}
                                   </Badge>
                                 )}
                                 <span className="font-medium text-gray-900 min-w-[60px] text-right">

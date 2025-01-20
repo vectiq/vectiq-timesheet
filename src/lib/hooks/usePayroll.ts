@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { getPayRun, getPayRunHistory, getPayRunStats, getPayrollCalendars, getPayItems } from '@/lib/services/payroll';
+import { getPayRun, getPayRunHistory, getPayRunStats, getPayrollCalendars, getPayItems, createPayRun } from '@/lib/services/payroll';
 import type { PayRun, PayrollCalendar, XeroPayItem } from '@/types';
 
 const QUERY_KEYS = {
@@ -15,15 +15,18 @@ interface UsePayrollOptions {
   selectedDate: Date;
   includeHistory?: boolean;
   includeStats?: boolean;
+  onPayRunCreated?: () => void;
 }
 
 export function usePayroll({ 
   selectedDate,
   includeHistory = false,
-  includeStats = false
+  includeStats = false,
+  onPayRunCreated
 }: UsePayrollOptions) {
   // Format the month as YYYYMM for querying
   const month = format(selectedDate, 'yyyyMM');
+  const queryClient = useQueryClient();
 
   // Query for current month's pay runs
   const payRunQuery = useQuery({
@@ -56,6 +59,21 @@ export function usePayroll({
     queryKey: [QUERY_KEYS.payItems],
     queryFn: getPayItems
   });
+  
+  const handleCreatePayRun = async (calendarId: string) => {
+    try {
+      await createPayRun(calendarId);
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.payRun] });
+      await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.stats] });
+      if (onPayRunCreated) {
+        onPayRunCreated();
+      }
+    } catch (error) {
+      console.error('Error creating pay run:', error);
+      throw error;
+    }
+  };
 
   return {
     payRuns: payRunQuery.data ?? [],
@@ -63,6 +81,7 @@ export function usePayroll({
     stats: statsQuery.data,
     calendars: calendarsQuery.data || [],
     payItems: payItemsQuery.data || [],
+    createPayRun: handleCreatePayRun,
     isLoading: payRunQuery.isLoading || 
       (includeHistory && historyQuery.isLoading) || 
       (includeStats && statsQuery.isLoading) ||

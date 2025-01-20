@@ -39,27 +39,19 @@ export function PayRunCard({ payRun, calendarName, calendarType }: PayRunCardPro
                 {format(new Date(payRun.PayRunPeriodStartDate), 'MMM d')} - {format(new Date(payRun.PayRunPeriodEndDate), 'MMM d, yyyy')}
               </h4>
               <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
-                <span>{payRun.Payslips.length} Employees</span>
-                <span>•</span>
+              {calendarType && (
+                  <>
+                    <Badge variant="secondary">{calendarType}</Badge>
+                  </>
+                )}
+                <span>{payRun.Payslips.length} Employees,</span>
                 <span>Payment Date: {format(new Date(payRun.PaymentDate), 'MMM d, yyyy')}</span>
-                <span>•</span>
                 <Badge
                   variant={payRun.PayRunStatus === 'POSTED' ? 'success' : 'warning'}
                 >
                   {payRun.PayRunStatus}
                 </Badge>
-                {calendarType && (
-                  <>
-                    <span>•</span>
-                    <Badge variant="secondary">{calendarType}</Badge>
-                  </>
-                )}
-                {calendarName && (
-                  <>
-                    <span>•</span>
-                    <span>{calendarName}</span>
-                  </>
-                )}
+                
               </div>
             </div>
           </div>

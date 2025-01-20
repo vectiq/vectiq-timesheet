@@ -1,15 +1,35 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { PayRunCard } from '@/components/payroll/PayRunCard';
 import { usePayroll } from '@/lib/hooks/usePayroll';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Plus, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
+import { createPayRun } from '@/lib/services/payroll';
 
 export function PayrollTab() {
-  const { payRuns, calendars, isLoading } = usePayroll({
+  const [selectedCalendar, setSelectedCalendar] = useState<string>('');
+  const [isCreating, setIsCreating] = useState(false);
+  const { payRuns, calendars, isLoading, createPayRun } = usePayroll({
     selectedDate: new Date(),
-    includeStats: true
+    includeStats: true,
+    onPayRunCreated: () => {
+      // Reset the calendar selection after successful creation
+      setSelectedCalendar('');
+    }
   });
+
+  // Filter out calendars that already have draft pay runs
+  const availableCalendars = useMemo(() => {
+    const draftPayRunCalendarIds = new Set(
+      payRuns
+        .filter(payRun => payRun.PayRunStatus === 'DRAFT')
+        .map(payRun => payRun.PayrollCalendarID)
+    );
+    
+    return calendars.filter(calendar => !draftPayRunCalendarIds.has(calendar.PayrollCalendarID));
+  }, [calendars, payRuns]);
 
   // Helper function to get calendar info
   const getCalendarInfo = (payRun: any) => {
@@ -20,6 +40,19 @@ export function PayrollTab() {
     } : null;
   };
 
+  const handleCreatePayRun = async () => {
+    if (!selectedCalendar) return;
+    
+    try {
+      setIsCreating(true);
+      await createPayRun(selectedCalendar);
+    } catch (error) {
+      console.error('Failed to create pay run:', error);
+      alert('Failed to create pay run. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -29,9 +62,45 @@ export function PayrollTab() {
       {/* Draft Pay Runs */}
       <Card>
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <DollarSign className="h-5 w-5 text-amber-500" />
-            <h3 className="text-lg font-medium text-gray-900">Draft Pay Runs</h3>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-amber-500" />
+              <h3 className="text-lg font-medium text-gray-900">Draft Pay Runs</h3>
+            </div>
+            <div className="flex items-center gap-3 ml-auto">
+              <Select
+                value={selectedCalendar}
+                onValueChange={setSelectedCalendar}
+              >
+                <SelectTrigger className="w-[250px]">
+                  {selectedCalendar ? 
+                    calendars.find(c => c.PayrollCalendarID === selectedCalendar)?.Name :
+                    'Select Pay Calendar'
+                  }
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCalendars.map(calendar => (
+                    <SelectItem 
+                      key={calendar.PayrollCalendarID} 
+                      value={calendar.PayrollCalendarID}
+                    >
+                      {calendar.Name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleCreatePayRun}
+                disabled={!selectedCalendar || isCreating}
+              >
+                {isCreating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Create Pay Run
+              </Button>
+            </div>
           </div>
           
           <div className="space-y-4">

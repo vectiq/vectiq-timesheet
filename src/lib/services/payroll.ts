@@ -1,4 +1,5 @@
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import type { PayRun, PayrollCalendar, XeroPayItem } from '@/types';
 
@@ -36,6 +37,18 @@ export async function getPayItems(): Promise<XeroPayItem[]> {
     return querySnapshot.docs.map(doc => doc.data() as XeroPayItem);
   } catch (error) {
     console.error('Error fetching pay items:', error);
+    throw error;
+  }
+}
+
+export async function createPayRun(calendarId: string): Promise<PayRun> {
+  try {
+    const functions = getFunctions();
+    const createXeroPayRun = httpsCallable(functions, 'createXeroPayRun');
+    const response = await createXeroPayRun({ calendarId });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating pay run:', error);
     throw error;
   }
 }
