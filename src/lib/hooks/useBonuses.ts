@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import {
   getBonuses,
   createBonus,
+  deleteBonus,
   updateBonus,
   processBonus,
 } from '@/lib/services/bonuses';
@@ -20,6 +21,13 @@ export function useBonuses(month?: string) {
 
   const createMutation = useMutation({
     mutationFn: createBonus,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteBonus,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
@@ -48,6 +56,10 @@ export function useBonuses(month?: string) {
     return updateMutation.mutateAsync({ id, data });
   }, [updateMutation]);
 
+  const handleDeleteBonus = useCallback(async (id: string) => {
+    return deleteMutation.mutateAsync(id);
+  }, [deleteMutation]);
+
   const handleProcessBonuses = useCallback(async (bonuses: Bonus[], payRunId: string, payItemId: string) => {
     return processMutation.mutateAsync({ bonuses, payRunId, payItemId });
   }, [processMutation]);
@@ -58,9 +70,11 @@ export function useBonuses(month?: string) {
     error: query.error,
     createBonus: handleCreateBonus,
     updateBonus: handleUpdateBonus,
+    deleteBonus: handleDeleteBonus,
     processBonuses: handleProcessBonuses,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
     isProcessing: processMutation.isPending,
   };
 }

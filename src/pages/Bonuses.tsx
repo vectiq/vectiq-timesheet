@@ -15,7 +15,8 @@ import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { formatCurrency } from '@/lib/utils/currency';
-import { Plus, DollarSign, Calendar, Loader2 } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/AlertDialog';
 import type { Bonus } from '@/types';
 
 export default function Bonuses() {
@@ -25,6 +26,11 @@ export default function Bonuses() {
   const [selectedPayRun, setSelectedPayRun] = useState('');
   const [selectedPayItem, setSelectedPayItem] = useState<string>('');
   const [selectedBonuses, setSelectedBonuses] = useState<Set<string>>(new Set());
+  const [editingBonus, setEditingBonus] = useState<Bonus | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; bonusId: string | null }>({
+    isOpen: false,
+    bonusId: null
+  });
   const [newBonus, setNewBonus] = useState({
     employeeId: '',
     teamId: '',
@@ -35,7 +41,7 @@ export default function Bonuses() {
 
   const currentMonth = format(currentDate, 'yyyy-MM');
   const { currentUser } = useUsers();
-  const { bonuses, createBonus, processBonuses, isLoading, isCreating, isProcessing } = useBonuses(currentMonth);
+  const { bonuses, createBonus, processBonuses, isLoading, isCreating, isProcessing, updateBonus, deleteBonus } = useBonuses(currentMonth);
   const { users } = useUsers();
   const { teams } = useTeams();
   const { payRuns, payItems } = usePayroll({ selectedDate: currentDate });
@@ -75,10 +81,38 @@ export default function Bonuses() {
   const handleNext = () => setCurrentDate(addMonths(currentDate, 1));
   const handleToday = () => setCurrentDate(startOfMonth(new Date()));
 
+  const handleEditBonus = (bonus: Bonus) => {
+    setEditingBonus(bonus);
+    setNewBonus({
+      employeeId: bonus.employeeId,
+      teamId: bonus.teamId || '',
+      date: format(new Date(bonus.date), 'yyyy-MM-dd'),
+      kpis: bonus.kpis || '',
+      amount: bonus.amount.toString()
+    });
+    setIsScheduleDialogOpen(true);
+  };
+
+  const handleDeleteBonus = (id: string) => {
+    setDeleteConfirmation({ isOpen: true, bonusId: id });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmation.bonusId) {
+      try {
+        await deleteBonus(deleteConfirmation.bonusId);
+      } catch (error) {
+        console.error('Error deleting bonus:', error);
+        alert('Failed to delete bonus');
+      }
+    }
+    setDeleteConfirmation({ isOpen: false, bonusId: null });
+  };
+
   const handleCreateBonus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBonus.employeeId || !newBonus.date || !newBonus.amount) return;
-    
+
     // Set teamId based on user role
     let teamId = newBonus.teamId;
     if (isTeamManager) {
@@ -87,23 +121,39 @@ export default function Bonuses() {
       teamId = undefined;
     }
 
-    await createBonus({
-      employeeId: newBonus.employeeId,
-      teamId,
-      date: newBonus.date,
-      kpis: newBonus.kpis,
-      amount: parseFloat(newBonus.amount),
-      paid: false
-    });
+    try {
+      if (editingBonus) {
+        await updateBonus(editingBonus.id, {
+          employeeId: newBonus.employeeId,
+          teamId,
+          date: newBonus.date,
+          kpis: newBonus.kpis,
+          amount: parseFloat(newBonus.amount)
+        });
+      } else {
+        await createBonus({
+          employeeId: newBonus.employeeId,
+          teamId,
+          date: newBonus.date,
+          kpis: newBonus.kpis,
+          amount: parseFloat(newBonus.amount),
+          paid: false
+        });
+      }
 
-    setNewBonus({
-      employeeId: '',
-      teamId: '',
-      date: format(new Date(), 'yyyy-MM-dd'),
-      kpis: '',
-      amount: ''
-    });
-    setIsScheduleDialogOpen(false);
+      setNewBonus({
+        employeeId: '',
+        teamId: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        kpis: '',
+        amount: ''
+      });
+      setEditingBonus(null);
+      setIsScheduleDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving bonus:', error);
+      alert('Failed to save bonus');
+    }
   };
 
   const handleProcessBonuses = async () => {
@@ -235,11 +285,33 @@ export default function Bonuses() {
                   <Td>{bonus.kpis || '-'}</Td>
                   <Td className="text-right font-medium">{formatCurrency(bonus.amount)}</Td>
                   <Td>
-                    <Badge
-                      variant={bonus.paid ? 'success' : 'warning'}
-                    >
-                      {bonus.paid ? 'Included in pay run' : 'Pending'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={bonus.paid ? 'success' : 'warning'}
+                      >
+                        {bonus.paid ? 'Included in pay run' : 'Pending'}
+                      </Badge>
+                      {!bonus.paid && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleEditBonus(bonus)}
+                            className="p-1.5"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleDeleteBonus(bonus.id)}
+                            className="p-1.5 text-red-500 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </Td>
                 </tr>
               );
@@ -259,7 +331,7 @@ export default function Bonuses() {
       <SlidePanel
         open={isScheduleDialogOpen}
         onClose={() => setIsScheduleDialogOpen(false)}
-        title="Schedule Bonus"
+        title={editingBonus ? 'Edit Bonus' : 'Schedule Bonus'}
         icon={<Calendar className="h-5 w-5 text-indigo-500" />}
       >
         <div className="p-6">
@@ -339,7 +411,10 @@ export default function Bonuses() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setIsScheduleDialogOpen(false)}
+                onClick={() => {
+                  setEditingBonus(null);
+                  setIsScheduleDialogOpen(false);
+                }}
               >
                 Cancel
               </Button>
@@ -348,7 +423,7 @@ export default function Bonuses() {
                 disabled={isCreating || !newBonus.employeeId || !newBonus.date || !newBonus.amount}
               >
                 {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Schedule Bonus
+                {editingBonus ? 'Update Bonus' : 'Schedule Bonus'}
               </Button>
             </div>
           </form>
@@ -460,6 +535,24 @@ export default function Bonuses() {
           </div>
         </div>
       </SlidePanel>
+
+      <AlertDialog 
+        open={deleteConfirmation.isOpen} 
+        onOpenChange={(open) => setDeleteConfirmation(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Bonus</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this bonus? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

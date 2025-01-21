@@ -1,6 +1,7 @@
 import { 
   collection,
   doc,
+  deleteDoc,
   getDocs,
   getDoc,
   setDoc,
@@ -63,6 +64,11 @@ export async function updateBonus(id: string, data: Partial<Bonus>): Promise<voi
     ...data,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function deleteBonus(id: string): Promise<void> {
+  const bonusRef = doc(db, COLLECTION, id);
+  await deleteDoc(bonusRef);
 }
 
 export async function processBonus(bonuses: Bonus[], payRunId: string, payItemId: string): Promise<void> {
