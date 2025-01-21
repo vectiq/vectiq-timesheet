@@ -58,11 +58,6 @@ export function Sidebar() {
                         <span className={cn(
                           "font-medium tracking-wide",
                         )}>{item.name}</span>
-                        {isActive && (
-                          <>
-                            <span className="absolute left-0 inset-y-2 w-1 bg-indigo-600 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.5)] animate-slide-in" />
-                          </>
-                        )}
                       </Link>
                     </li>
                   );
