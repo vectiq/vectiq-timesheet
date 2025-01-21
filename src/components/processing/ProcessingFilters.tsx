@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { FormField } from '@/components/ui/FormField';
 import { Card } from '@/components/ui/Card';
 import { useClients } from '@/lib/hooks/useClients';
@@ -121,29 +121,37 @@ export function ProcessingFilters({ onFilterChange }: ProcessingFiltersProps) {
           <div className="relative min-w-[180px]">
             <Select
               value={clientId}
-              onChange={(e) => handleClientChange(e.target.value)}
+              onValueChange={handleClientChange}
             >
-              <option value="">All Clients</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
+              <SelectTrigger>
+                {clientId ? clients.find(c => c.id === clientId)?.name : 'All Clients'}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {clients.map(client => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
-            <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-500 pointer-events-none" />
           </div>
 
           <div className="relative min-w-[160px]">
             <Select
               value={status}
-              onChange={(e) => handleStatusChange(e.target.value)}
+              onValueChange={handleStatusChange}
             >
-              <option value="">All Statuses</option>
-              <option value="not started">Not Started</option>
-              <option value="draft">Draft</option>
-              <option value="sent">Sent</option>
+              <SelectTrigger>
+                {status ? status.charAt(0).toUpperCase() + status.slice(1) : 'All Statuses'}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="not started">Not Started</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+              </SelectContent>
             </Select>
-            <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-500 pointer-events-none" />
           </div>
 
           <Button
@@ -179,11 +187,16 @@ export function ProcessingFilters({ onFilterChange }: ProcessingFiltersProps) {
               <FormField label="Priority">
                 <Select
                   value={priority}
-                  onChange={(e) => handlePriorityChange(e.target.value)}
+                  onValueChange={handlePriorityChange}
                 >
-                  <option value="">All Priorities</option>
-                  <option value="high">High</option>
-                  <option value="normal">Normal</option>
+                  <SelectTrigger>
+                    {priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : 'All Priorities'}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                  </SelectContent>
                 </Select>
               </FormField>
             </div>
@@ -192,11 +205,16 @@ export function ProcessingFilters({ onFilterChange }: ProcessingFiltersProps) {
               <FormField label="Project Type">
                 <Select
                   value={type}
-                  onChange={(e) => handleTypeChange(e.target.value)}
+                  onValueChange={handleTypeChange}
                 >
-                  <option value="">All Types</option>
-                  <option value="labor_hire">Labor Hire</option>
-                  <option value="team">Team Project</option>
+                  <SelectTrigger>
+                    {type ? (type === 'labor_hire' ? 'Labor Hire' : 'Team Project') : 'All Types'}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="labor_hire">Labor Hire</SelectItem>
+                    <SelectItem value="team">Team Project</SelectItem>
+                  </SelectContent>
                 </Select>
               </FormField>
             </div>

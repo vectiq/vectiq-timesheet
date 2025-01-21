@@ -5,7 +5,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/u
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Card } from '@/components/ui/Card';
 import { ExternalLink } from 'lucide-react';
-import type { XeroConfig } from '@/types';
+import type { XeroConfig, XeroPayItem } from '@/types';
 
 interface IntegrationsTabProps {
   xeroConfig: XeroConfig;
@@ -54,6 +54,8 @@ export function IntegrationsTab({
   isUpdatingXero,
   onUpdateXeroConfig
 }: IntegrationsTabProps) {
+  const payItems = xeroConfig?.payItems || [];
+
   const handleAuthorize = () => {
     if (!xeroConfig?.clientId || !xeroConfig?.redirectUri) return;
 
@@ -131,28 +133,50 @@ export function IntegrationsTab({
             </FormField>
 
             <FormField label="Ordinary Hours Earnings ID">
-              <Input
+              <Select
                 value={xeroConfig?.ordinaryHoursEarningsId || ''}
-                onChange={(e) => onUpdateXeroConfig({
+                onValueChange={(value) => onUpdateXeroConfig({
                   ...xeroConfig,
-                  ordinaryHoursEarningsId: e.target.value
+                  ordinaryHoursEarningsId: value
                 })}
-                placeholder="e.g., 87654321-4321-4321-4321-432187654321"
-              />
+              >
+                <SelectTrigger>
+                  {payItems.find(item => item.EarningsRateID === xeroConfig?.ordinaryHoursEarningsId)?.Name || 'Select Ordinary Hours Rate'}
+                </SelectTrigger>
+                <SelectContent>
+                  {payItems
+                    .map(item => (
+                      <SelectItem key={item.EarningsRateID} value={item.EarningsRateID}>
+                        {item.Name} ({item.EarningsType})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
               <p className="mt-1 text-xs text-gray-500">
                 The Xero earnings rate ID to use for ordinary hours
               </p>
             </FormField>
 
             <FormField label="Overtime Pay Item Code">
-              <Input
+              <Select
                 value={xeroConfig?.overtimePayItemCode || ''}
-                onChange={(e) => onUpdateXeroConfig({
+                onValueChange={(value) => onUpdateXeroConfig({
                   ...xeroConfig,
-                  overtimePayItemCode: e.target.value
+                  overtimePayItemCode: value
                 })}
-                placeholder="e.g., OT001"
-              />
+              >
+                <SelectTrigger>
+                  {payItems.find(item => item.EarningsRateID === xeroConfig?.overtimePayItemCode)?.Name || 'Select Overtime Rate'}
+                </SelectTrigger>
+                <SelectContent>
+                  {payItems
+                    .map(item => (
+                      <SelectItem key={item.EarningsRateID} value={item.EarningsRateID}>
+                        {item.Name} ({item.EarningsType})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
               <p className="mt-1 text-xs text-gray-500">
                 The Xero pay item code to use when submitting overtime entries
               </p>

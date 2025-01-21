@@ -87,7 +87,7 @@ const AlertDialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Description
     ref={ref}
-    className={cn('text-sm text-gray-500', className)}
+    className={cn('text-sm text-gray-500 leading-normal', className)}
     {...props}
   />
 ));
@@ -98,7 +98,7 @@ const AlertDialogAction = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
 >(({ className, children, ...props }, ref) => (
   <AlertDialogPrimitive.Action ref={ref} asChild {...props}>
-    <Button>{children}</Button>
+    <Button className={className}>{children}</Button>
   </AlertDialogPrimitive.Action>
 ));
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName;

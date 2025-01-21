@@ -1,31 +1,42 @@
 import { Card } from '@/components/ui/Card';
 import { useReports } from '@/lib/hooks/useReports';
+import { usePayroll } from '@/lib/hooks/usePayroll';
 import { submitOvertime, checkOvertimeSubmission } from '@/lib/services/reports';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { DateNavigation } from '@/components/timesheet/DateNavigation';
-import { useDateNavigation } from '@/lib/hooks/useDateNavigation';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { getWorkingDaysForMonth } from '@/lib/utils/workingDays';
 import type { OvertimeReportEntry } from '@/types';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Badge, BadgeVariant } from '@/components/ui/Badge';
 import { useClients } from '@/lib/hooks/useClients';
 import { cn } from '@/lib/utils/styles';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 
-export function OvertimeReport() {
-  const dateNav = useDateNavigation({ type: 'month' });
+interface OvertimeReportProps {
+  selectedDate: Date;
+}
+
+export function OvertimeReport({ selectedDate }: OvertimeReportProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const currentMonth = format(dateNav.currentDate, 'MM/yyyy');
-  const workingDays = getWorkingDaysForMonth(format(dateNav.currentDate, 'yyyy-MM'));
+  const [selectedPayRun, setSelectedPayRun] = useState<string>('');
+  const currentMonth = format(selectedDate, 'MM-yyyy');
+  const workingDays = getWorkingDaysForMonth(format(selectedDate, 'yyyy-MM'));
+  const { payRuns } = usePayroll({ selectedDate });
+  
+  // Filter to only show draft pay runs
+  const draftPayRuns = useMemo(() => 
+    payRuns.filter(run => run.PayRunStatus === 'DRAFT'),
+    [payRuns]
+  );
 
   const { data, isLoading } = useReports({ 
     type: 'overtime',
-    startDate: format(dateNav.dateRange.start, 'yyyy-MM-dd'),
-    endDate: format(dateNav.dateRange.end, 'yyyy-MM-dd')
+    startDate: format(startOfMonth(selectedDate), 'yyyy-MM-dd'),
+    endDate: format(endOfMonth(selectedDate), 'yyyy-MM-dd')
   });
 
   useEffect(() => {
@@ -38,13 +49,14 @@ export function OvertimeReport() {
 
   const handleSubmit = async () => {
     if (!data) return;
+    if (!selectedPayRun) return;
     
-    const startDate = format(dateNav.dateRange.start, 'yyyy-MM-dd');
-    const endDate = format(dateNav.dateRange.end, 'yyyy-MM-dd');
+    const startDate = format(startOfMonth(selectedDate), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
     
     try {
       setIsSubmitting(true);
-      await submitOvertime(data, startDate, endDate, currentMonth);
+      await submitOvertime(data, startDate, endDate, currentMonth, selectedPayRun);
       setIsSubmitted(true);
     } catch (error) {
       console.error('Failed to submit overtime:', error);
@@ -61,20 +73,35 @@ export function OvertimeReport() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting || isSubmitted || !data?.entries.length}
-        >
-          {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {isSubmitted ? 'Submitted' : 'Submit to Xero'}
-        </Button>
-        <DateNavigation
-          currentDate={dateNav.currentDate}
-          onPrevious={dateNav.goToPrevious}
-          onNext={dateNav.goToNext}
-          onToday={dateNav.goToToday}
-          formatString="MMMM yyyy"
-        />
+        <div className="flex items-center gap-3">
+          <Select
+            value={selectedPayRun}
+            onValueChange={setSelectedPayRun}
+          >
+            <SelectTrigger className="w-[300px]">
+              {selectedPayRun ? 
+                draftPayRuns.find(run => run.PayRunID === selectedPayRun)
+                  ? `${format(new Date(draftPayRuns.find(run => run.PayRunID === selectedPayRun)?.PayRunPeriodStartDate), 'MMM d')} - ${format(new Date(draftPayRuns.find(run => run.PayRunID === selectedPayRun)?.PayRunPeriodEndDate), 'MMM d, yyyy')}`
+                  : 'Select Pay Run'
+                : 'Select Pay Run'}
+            </SelectTrigger>
+            <SelectContent>
+              {draftPayRuns.map(run => (
+                <SelectItem key={run.PayRunID} value={run.PayRunID}>
+                  {format(new Date(run.PayRunPeriodStartDate), 'MMM d')} - {format(new Date(run.PayRunPeriodEndDate), 'MMM d, yyyy')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || isSubmitted || !data?.entries.length || !selectedPayRun}
+          >
+            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isSubmitted ? 'Submitted' : 'Submit to Xero'}
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -136,13 +163,16 @@ export function OvertimeReport() {
                                 {project.requiresApproval && (
                                   <Badge 
                                     variant={
+                                      project.approvalStatus === 'not required' ? 'secondary' :
                                       project.approvalStatus === 'approved' ? 'success' :
-                                     project.approvalStatus === 'unsubmitted' ? 'warning' :
-                                     project.approvalStatus === 'pending' ? 'warning' : 'destructive'
+                                      project.approvalStatus === 'pending' ? 'warning' :
+                                      project.approvalStatus === 'rejected' ? 'destructive' :
+                                      'default'
                                     }
                                     className="text-xs"
                                   >
-                                    {project.approvalStatus.charAt(0).toUpperCase() + project.approvalStatus.slice(1)}
+                                    {project.approvalStatus === 'not required' ? 'No Approval Required' :
+                                     project.approvalStatus.charAt(0).toUpperCase() + project.approvalStatus.slice(1)}
                                   </Badge>
                                 )}
                                 <span className="font-medium text-gray-900 min-w-[60px] text-right">

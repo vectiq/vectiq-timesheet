@@ -1,28 +1,25 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { 
-  FileCheck, 
-  FileText, 
-  DollarSign, 
-  AlertCircle, 
-  Filter, 
-  StickyNote,
-  Bell
-} from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { ProcessingTable } from '@/components/processing/ProcessingTable';
-import { ProcessingFilters } from '@/components/processing/ProcessingFilters';
+import { StickyNote } from 'lucide-react';
 import { ProcessingSummary } from '@/components/processing/ProcessingSummary';
+import { ProcessingTabs } from '@/components/processing/ProcessingTabs';
+import { InvoicingTab } from '@/components/processing/InvoicingTab';
+import { PayrollTab } from '@/components/processing/PayrollTab';
+import { OvertimeReport } from '@/components/reports/OvertimeReport';
+import { NotesSlideout } from '@/components/processing/NotesSlideout';
 import { useProcessing } from '@/lib/hooks/useProcessing';
+import { useProcessingNotes } from '@/lib/hooks/useProcessingNotes';
 import { useMemo } from 'react';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { Badge } from '@/components/ui/Badge';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 
-export default function MonthlyProcessing() {
+export default function Processing() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [activeTab, setActiveTab] = useState('invoicing');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     clientId: '',
@@ -32,6 +29,15 @@ export default function MonthlyProcessing() {
   });
 
   const { data, isLoading, updateStatus, isUpdating } = useProcessing(selectedMonth);
+  const month = format(selectedMonth, 'yyyy-MM');
+  
+  const {
+    monthlyNotes,
+    addMonthlyNote,
+    updateMonthlyNote,
+    deleteMonthlyNote,
+    isLoadingMonthlyNotes
+  } = useProcessingNotes({ month });
 
   // Filter projects based on current filters
   const filteredProjects = useMemo(() => {
@@ -97,12 +103,29 @@ export default function MonthlyProcessing() {
   
   return (
     <div className="space-y-6 max-w-[1800px] mx-auto">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Monthly Processing</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Processing</h1>
         </div>
         
-        <div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="relative"
+            title="View monthly notes"
+            onClick={() => setIsNotesOpen(true)}
+          >
+            <StickyNote className="h-4 w-4" />
+            {monthlyNotes.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 flex items-center justify-center text-xs"
+              >
+                {monthlyNotes.length}
+              </Badge>
+            )}
+          </Button>
           <DateNavigation
             currentDate={selectedMonth}
             onPrevious={handlePrevious}
@@ -113,23 +136,33 @@ export default function MonthlyProcessing() {
         </div>
       </div>
 
-      <ProcessingSummary data={data} />
-      
-      <Card>
-        {data && (
-          <>
-            <div className="p-6 border-b border-gray-200">
-              <ProcessingFilters onFilterChange={setFilters} />
-            </div>
-            <ProcessingTable 
-              projects={filteredProjects}
-              onUpdateStatus={updateStatus}
-              isUpdating={isUpdating}
-            />
-          </>
-        )}
-      </Card>
+      <ProcessingTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
+      {activeTab === 'invoicing' && (
+        <InvoicingTab
+          projects={filteredProjects}
+          data={data}
+          onUpdateStatus={updateStatus}
+          onFilterChange={setFilters}
+          isUpdating={isUpdating}
+          month={month}
+        />
+      )}
+      
+      {activeTab === 'payroll' && <PayrollTab />}
+
+      {activeTab === 'overtime' && <OvertimeReport selectedDate={selectedMonth} />}
+      
+      <NotesSlideout
+        open={isNotesOpen}
+        onClose={() => setIsNotesOpen(false)}
+        title="Monthly Processing Notes"
+        notes={monthlyNotes}
+        onAddNote={addMonthlyNote}
+        onUpdateNote={updateMonthlyNote}
+        onDeleteNote={deleteMonthlyNote}
+        isLoading={isLoadingMonthlyNotes}
+      />
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { ReportTabs } from '@/components/reports/ReportTabs';
 import { TimeReport } from '@/components/reports/TimeReport';
 import { ForecastReportContent } from '@/components/reports/ForecastReportContent';
-import { OvertimeReport } from '@/components/reports/OvertimeReport';
 import type { ReportFilters as ReportFiltersType } from '@/types';
 
 export default function Reports() {
@@ -39,10 +38,8 @@ export default function Reports() {
 
       {activeTab === 'time' ? (
         <TimeReport filters={filters} onFiltersChange={setFilters} />
-      ) : activeTab === 'forecast' ? (
-        <ForecastReportContent filters={filters} onFiltersChange={setFilters} />
       ) : (
-        <OvertimeReport filters={filters} onFiltersChange={setFilters} />
+        <ForecastReportContent filters={filters} onFiltersChange={setFilters} />
       )}
     </div>
   );
