@@ -238,7 +238,7 @@ export default function Bonuses() {
                     <Badge
                       variant={bonus.paid ? 'success' : 'warning'}
                     >
-                      {bonus.paid ? 'Paid' : 'Pending'}
+                      {bonus.paid ? 'Included in pay run' : 'Pending'}
                     </Badge>
                   </Td>
                 </tr>
