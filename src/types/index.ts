@@ -1,3 +1,43 @@
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
+  teamId?: string;
+  employeeType: 'employee' | 'contractor' | 'company';
+  hoursPerWeek: number;
+  overtime: 'no' | 'eligible' | 'all';
+  xeroEmployeeId?: string;
+  salary?: SalaryItem[];
+  costRate?: CostRate[];
+  projectAssignments?: ProjectAssignment[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  managerId: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface Bonus {
+  id: string;
+  employeeId: string;
+  teamId?: string;
+  date: string;
+  kpis?: string;
+  amount: number;
+  paid: boolean;
+  xeroPayRunId?: string;
+  xeroPayItemId?: string;
+  paidAt?: any;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 // Add XeroPayItem type if not already present
 export interface XeroPayItem {
   id: string;

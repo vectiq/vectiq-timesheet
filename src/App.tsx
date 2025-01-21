@@ -10,9 +10,9 @@ import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
 import Leave from '@/pages/Leave';
 import Processing from '@/pages/Processing';
-import Reports from '@/pages/Reports';
 import Forecast from '@/pages/Forecast';
-import ForecastReport from '@/pages/ForecastReport';
+import Reports from '@/pages/Reports';
+import Bonuses from '@/pages/Bonuses';
 import Projects from '@/pages/Projects';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
@@ -78,6 +78,14 @@ export default function App() {
               } />
             <Route path="profile" element={<Profile />} />
             <Route path="leave" element={<Leave />} />
+            <Route
+              path="bonuses"
+              element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <Bonuses />
+                </RoleProtectedRoute>
+              }
+            />
             <Route
               path="processing"
               element={

@@ -27,14 +27,17 @@ export async function getPayrollCalendars(): Promise<PayrollCalendar[]> {
 
 export async function getPayItems(): Promise<XeroPayItem[]> {
   try {
-    const payItemsRef = collection(db, PAY_ITEMS_COLLECTION);
+    const payItemsRef = collection(db, 'xeroPayItems');
     const querySnapshot = await getDocs(payItemsRef);
     
     if (querySnapshot.empty) {
       return [];
     }
 
-    return querySnapshot.docs.map(doc => doc.data() as XeroPayItem);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as XeroPayItem[];
   } catch (error) {
     console.error('Error fetching pay items:', error);
     throw error;
