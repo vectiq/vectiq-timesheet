@@ -316,9 +316,6 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     );
 
     if (rowEntries.length > 0) {
-      if (!window.confirm('This will delete all time entries for this row. Are you sure?')) {
-        return;
-      }
       // Delete all entries for this row
       Promise.all(rowEntries.map(entry => handleDeleteEntry(entry.id)))
         .then(() => {

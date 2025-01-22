@@ -53,6 +53,20 @@ export async function getApprovals(
   return approvals;
 }
 
+export async function getApprovalDetails(approvalId: string) {
+  const approvalRef = doc(db, 'approvals', approvalId);
+  const approvalDoc = await getDoc(approvalRef);
+  
+  if (!approvalDoc.exists()) {
+    throw new Error('Approval not found');
+  }
+  
+  return {
+    ...approvalDoc.data(),
+    id: approvalDoc.id
+  };
+}
+
 export async function withdrawApproval(approvalId: string) {
   const approvalRef = doc(db, 'approvals', approvalId);
   await updateDoc(approvalRef, {

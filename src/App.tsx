@@ -60,8 +60,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/reject" element={<RejectTimesheet />} />
-
+          <Route path="/reject" element={<EffectiveTimesheetUserProvider><RejectTimesheet /></EffectiveTimesheetUserProvider>} />
           {/* Protected Routes */}
           <Route
             path="/"
@@ -71,11 +70,12 @@ export default function App() {
               </ProtectedRoute>
             }
           >
+
             <Route index element={
               <EffectiveTimesheetUserProvider>
                 <TimeEntries />
               </EffectiveTimesheetUserProvider>
-              } />
+            } />
             <Route path="profile" element={<Profile />} />
             <Route path="leave" element={<Leave />} />
             <Route
