@@ -47,7 +47,7 @@ export function MonthlyView({ dateRange, userId }: MonthlyViewProps) {
   const { timeEntries } = useTimeEntries({ userId, dateRange });
   const { clients } = useClients();
   const { projects } = useProjects();
-  const { approvals, submitApproval, withdrawApproval, isSubmitting } = useApprovals(); 
+  const { approvals, submitApproval, withdrawApproval, isSubmitting } = useApprovals();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [confirmationDialog, setConfirmationDialog] = useState<{
     isOpen: boolean;
@@ -83,18 +83,27 @@ export function MonthlyView({ dateRange, userId }: MonthlyViewProps) {
     // Initialize project group if it doesn't exist
     const clientGroup = groups.get(clientKey);
     if (!clientGroup.projects.has(projectKey)) {
-      const approval = approvals?.find(a => 
-        a.project?.id === project.id && 
-        a.startDate === startDate && 
-        a.endDate === endDate
-      );
+      // Get latest approval for this project
+      const projectApprovals = approvals
+        .filter(a => 
+          a.project?.id === project.id && 
+          a.startDate === startDate && 
+          a.endDate === endDate
+        )
+        .sort((a, b) => {
+          const aTime = a.submittedAt?.seconds || 0;
+          const bTime = b.submittedAt?.seconds || 0;
+          return bTime - aTime;
+        });
+      
+      const latestApproval = projectApprovals[0];
       
       clientGroup.projects.set(projectKey, {
         project,
         approvalStatus: {
-          status: approval?.status || 'unsubmitted',
-          approvalId: approval?.id || '',
-          rejectionReason: approval?.rejectionReason
+          status: latestApproval?.status || 'unsubmitted',
+          approvalId: latestApproval?.id || '',
+          rejectionReason: latestApproval?.rejectionReason
         },
         totalHours: 0,
         entries: [],

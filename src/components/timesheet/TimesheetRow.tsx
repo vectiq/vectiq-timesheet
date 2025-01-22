@@ -99,13 +99,19 @@ export const TimesheetRow = memo(function TimesheetRow({
   // Calculate row total
   const rowTotal = rowEntries.reduce((sum, entry) => sum + entry.hours, 0);
 
-  // Query approvals for each date in the week
+  // Get all approvals for this project
+  const projectApprovals = approvals.filter(approval => 
+    approval.project?.id === row.projectId &&
+    (approval.status === 'pending' || approval.status === 'approved')
+  );
+
+  // Check if each date is locked by an approval
   const weekApprovals = weekDays.map(date => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return approvals.find((approval) => 
-      approval.project.id === row.projectId &&
-      dateStr >= approval.startDate &&
-      dateStr <= approval.endDate);
+    return projectApprovals.find(approval => 
+      dateStr >= approval.startDate && 
+      dateStr <= approval.endDate
+    );
   });
 
   // Check if the entire row is locked

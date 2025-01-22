@@ -1,120 +1,82 @@
 import { format } from 'date-fns';
 import type { TimeEntry } from '@/types';
 
-interface GroupedEntry {
-  date: string;
-  tasks: {
-    [taskId: string]: {
-      hours: number;
-      taskName: string;
-    };
-  };
-}
-
 export function formatTimesheetBreakdown(
   entries: TimeEntry[],
   tasks: { id: string; name: string }[]
 ): string {
-  // Group entries by date
-  const groupedEntries = entries.reduce<Record<string, GroupedEntry>>((acc, entry) => {
-    if (!acc[entry.date]) {
-      acc[entry.date] = {
-        date: entry.date,
-        tasks: {},
-      };
-    }
-    
-    if (!acc[entry.date].tasks[entry.taskId]) {
-      const task = tasks.find(r => r.id === entry.taskId);
-      acc[entry.date].tasks[entry.taskId] = {
-        hours: 0,
-        taskName: task?.name || 'Unknown Task',
-      };
-    }
-    
-    acc[entry.date].tasks[entry.taskId].hours += entry.hours;
-    return acc;
-  }, {});
+  // Sort entries chronologically
+  const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
 
-  // Sort dates
-  const sortedDates = Object.values(groupedEntries).sort((a, b) => 
-    a.date.localeCompare(b.date)
-  );
+  // Calculate task totals
+  const taskTotals = sortedEntries.reduce((totals, entry) => {
+    const taskId = entry.taskId;
+    if (!totals[taskId]) {
+      totals[taskId] = 0;
+    }
+    totals[taskId] += entry.hours;
+    return totals;
+  }, {} as Record<string, number>);
 
-  // Generate HTML table
-  const tableRows = sortedDates.map(day => {
-    const date = format(new Date(day.date), 'EEE, MMM d');
-    const taskColumns = Object.entries(day.tasks)
-      .map(([_, data]) => 
-        `<td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">
-          ${data.hours.toFixed(2)} (${data.taskName})
-        </td>`
-      )
-      .join('');
-    
-    const totalHours = Object.values(day.tasks)
-      .reduce((sum, data) => sum + data.hours, 0);
+  // Generate table rows
+  const tableRows = sortedEntries.map(entry => {
+    const task = tasks.find(t => t.id === entry.taskId);
+    const date = format(new Date(entry.date), 'EEE, MMM d');
 
     return `
       <tr>
         <td style="padding: 8px; border: 1px solid #e5e7eb;">${date}</td>
-        ${taskColumns}
-        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right; font-weight: 500;">
-          ${totalHours.toFixed(2)}
+        <td style="padding: 8px; border: 1px solid #e5e7eb;">${task?.name || 'Unknown Task'}</td>
+        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">
+          ${entry.hours.toFixed(2)}
         </td>
       </tr>
     `;
   });
 
-  // Calculate task totals
-  const taskTotals = sortedDates.reduce((totals, day) => {
-    Object.entries(day.tasks).forEach(([taskId, data]) => {
-      if (!totals[taskId]) {
-        totals[taskId] = {
-          hours: 0,
-          taskName: data.taskName,
-        };
-      }
-      totals[taskId].hours += data.hours;
-    });
-    return totals;
-  }, {} as Record<string, { hours: number; taskName: string }>);
-
+  // Calculate total hours
+  const totalHours = sortedEntries.reduce((sum, entry) => sum + entry.hours, 0);
+  
+  // Generate task summary rows
+  const taskSummaryRows = Object.entries(taskTotals).map(([taskId, hours]) => {
+    const task = tasks.find(t => t.id === taskId);
+    return `
+      <tr style="background-color: #f9fafb;">
+        <td style="padding: 8px; border: 1px solid #e5e7eb;" colspan="2">
+          <strong>${task?.name || 'Unknown Task'} Total</strong>
+        </td>
+        <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">
+          <strong>${hours.toFixed(2)}</strong>
+        </td>
+      </tr>
+    `;
+  });
+  
+  // Add grand total row
   const totalRow = `
-    <tr style="font-weight: 600; background-color: #f9fafb;">
-      <td style="padding: 8px; border: 1px solid #e5e7eb;">Total</td>
-      ${Object.values(taskTotals)
-        .map(data => 
-          `<td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">
-            ${data.hours.toFixed(2)} (${data.taskName})
-          </td>`
-        )
-        .join('')}
+    <tr style="font-weight: 600; background-color: #f3f4f6;">
+      <td style="padding: 8px; border: 1px solid #e5e7eb;" colspan="2">
+        <strong>Grand Total</strong>
+      </td>
       <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">
-        ${Object.values(taskTotals)
-          .reduce((sum, data) => sum + data.hours, 0)
-          .toFixed(2)}
+        <strong>${totalHours.toFixed(2)}</strong>
       </td>
     </tr>
   `;
 
   return `
-    <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; background-color: white;">
       <thead style="background-color: #f3f4f6;">
         <tr>
           <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">Date</th>
-          ${Object.values(taskTotals)
-            .map(data => 
-              `<th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">
-                ${data.taskName}
-              </th>`
-            )
-            .join('')}
-          <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">Total</th>
+          <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left;">Task</th>
+          <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: right;">Hours</th>
         </tr>
       </thead>
       <tbody>
         ${tableRows.join('')}
+        <tr><td colspan="3" style="padding: 12px 0; border: none;"></td></tr>
+        ${taskSummaryRows.join('')}
         ${totalRow}
       </tbody>
     </table>

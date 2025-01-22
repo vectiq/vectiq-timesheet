@@ -44,10 +44,10 @@ export async function getApprovals(
   let approvals = snapshot.docs.map(doc => ({
     ...doc.data(),
     id: doc.id,
-    submittedAt: doc.data().submittedAt?.toDate(),
-    approvedAt: doc.data().approvedAt?.toDate(),
-    rejectedAt: doc.data().rejectedAt?.toDate(),
-    withdrawnAt: doc.data().withdrawnAt?.toDate(),
+    submittedAt: doc.data().submittedAt,
+    approvedAt: doc.data().approvedAt,
+    rejectedAt: doc.data().rejectedAt,
+    withdrawnAt: doc.data().withdrawnAt,
   })) as Approval[];
 
   return approvals;

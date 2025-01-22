@@ -239,12 +239,36 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     const monthStart = format(startOfMonth(dateRange.start), 'yyyy-MM-dd');
     const monthEnd = format(endOfMonth(dateRange.start), 'yyyy-MM-dd');
     
-    return approvals.some(approval => 
-      approval.userId === effectiveUserId &&
-      (approval.status === 'pending' || approval.status === 'approved') &&
-      approval.startDate === monthStart &&
-      approval.endDate === monthEnd
-    );
+    // Group approvals by project
+    const projectApprovals = new Map();
+    approvals.forEach(approval => {
+      if (approval.userId !== effectiveUserId) return;
+      if (approval.startDate !== monthStart || approval.endDate !== monthEnd) return;
+      
+      const key = approval.project?.id;
+      if (!projectApprovals.has(key)) {
+        projectApprovals.set(key, []);
+      }
+      projectApprovals.get(key).push(approval);
+    });
+    
+    // Check if any project has a pending or approved status in its most recent approval
+    return Array.from(projectApprovals.values()).some(projectApprovalList => {
+      // Sort by submittedAt timestamp, handling Firestore timestamp format
+      const sortedApprovals = projectApprovalList.sort((a, b) => {
+        // Handle both Firestore timestamp and ISO string formats
+        const getTime = (timestamp: any) => {
+          if (timestamp?.seconds) {
+            return timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000;
+          }
+          return new Date(timestamp).getTime();
+        };
+        return getTime(b.submittedAt) - getTime(a.submittedAt);
+      });
+      
+      const latestApproval = sortedApprovals[0];
+      return latestApproval?.status === 'pending' || latestApproval?.status === 'approved';
+    });
   }, [approvals, dateRange, effectiveUserId]);
   const copyFromPreviousWeek = useCallback(async () => {
     if (!effectiveUserId || !dateRange) return;
@@ -318,11 +342,46 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   }, [timeEntries, manualRows, weekKey]);
 
   const addRow = useCallback(() => {
+    // Check if there are any empty rows that need to be filled first
+    const currentWeekManualRows = manualRows[weekKey] || [];
+    const hasEmptyRow = currentWeekManualRows.some(row => 
+      !row.clientId || !row.projectId || !row.taskId
+    );
+    if (hasEmptyRow) return;
+
+    // Get all existing combinations from both time entries and manual rows
+    const existingCombinations = new Set();
+
+    // Add combinations from time entries
+    timeEntries.forEach(entry => {
+      const combination = `${entry.clientId}-${entry.projectId}-${entry.taskId}`;
+      existingCombinations.add(combination);
+    });
+
+    // Add combinations from manual rows
+    currentWeekManualRows.forEach(row => {
+      if (row.clientId && row.projectId && row.taskId) {
+        const combination = `${row.clientId}-${row.projectId}-${row.taskId}`;
+        existingCombinations.add(combination);
+      }
+    });
+
+    // Only add a new row if there are available combinations
+    const availableCombinations = availableAssignments.filter(assignment => {
+      const combination = `${assignment.clientId}-${assignment.projectId}-${assignment.taskId}`;
+      return !existingCombinations.has(combination);
+    });
+
+    if (availableCombinations.length === 0) {
+      console.warn('All available client/project/task combinations are already in use');
+      return;
+    }
+
     setManualRows(current => ({
       ...current,
       [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', taskId: '' }]
     }));
-  }, [weekKey]);
+  }, [weekKey, timeEntries, manualRows, availableAssignments]);
   
   const removeRow = useCallback((index: number) => {
     const row = rows[index];
@@ -359,6 +418,39 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     const currentWeekManualRows = manualRows[weekKey] || [];
     const uniqueRowCount = rows.length - currentWeekManualRows.length;
     if (index >= uniqueRowCount) {
+      // Check if this update would create a duplicate combination
+      const manualIndex = index - uniqueRowCount;
+      const currentRow = currentWeekManualRows[manualIndex];
+      const updatedRow = {
+        ...currentRow,
+        ...updates
+      };
+
+      // Only check for duplicates if we have a complete row
+      if (updatedRow.clientId && updatedRow.projectId && updatedRow.taskId) {
+        const combination = `${updatedRow.clientId}-${updatedRow.projectId}-${updatedRow.taskId}`;
+        
+        // Check time entries for duplicates
+        const existsInTimeEntries = timeEntries.some(entry =>
+          entry.clientId === updatedRow.clientId &&
+          entry.projectId === updatedRow.projectId &&
+          entry.taskId === updatedRow.taskId
+        );
+
+        // Check other manual rows for duplicates
+        const existsInManualRows = currentWeekManualRows.some((row, idx) =>
+          idx !== manualIndex &&
+          row.clientId === updatedRow.clientId &&
+          row.projectId === updatedRow.projectId &&
+          row.taskId === updatedRow.taskId
+        );
+
+        if (existsInTimeEntries || existsInManualRows) {
+          console.warn('This client/project/task combination already exists');
+          return;
+        }
+      }
+
       setManualRows(current => {
         const currentRows = current[weekKey] || [];
         const manualIndex = index - uniqueRowCount;
@@ -384,7 +476,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         };
       });
     }
-  }, [rows.length, manualRows, weekKey]);
+  }, [rows.length, manualRows, weekKey, timeEntries]);
 
   return {
     timeEntries,
