@@ -38,6 +38,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     rows,
     isLoading,
     isCopying,
+    hasMonthlyApprovals,
     hasEntriesForCurrentWeek,
     copyFromPreviousWeek,
     editingCell,
@@ -152,7 +153,8 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
             {!hasEntriesForCurrentWeek && (
               <Button
                 variant="secondary"
-                disabled={isCopying}
+                disabled={isCopying || hasMonthlyApprovals}
+                title={hasMonthlyApprovals ? "Cannot copy entries when approvals exist for this month" : undefined}
                 onClick={copyFromPreviousWeek}
                 className="mr-4"
               >

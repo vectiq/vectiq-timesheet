@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState, useMemo, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import {
   getTimeEntries,
   createTimeEntry,
@@ -8,6 +8,7 @@ import {
   deleteTimeEntry,
 } from '@/lib/services/timeEntries';
 import { useProjects } from './useProjects';
+import { useApprovals } from './useApprovals';
 import { useEffectiveTimesheetUser } from '@/lib/contexts/EffectiveTimesheetUserContext';
 import type { TimeEntry } from '@/types';
 
@@ -37,6 +38,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
   const [isCopying, setIsCopying] = useState(false);
   const { projects } = useProjects();
+  const { approvals } = useApprovals();
   const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
   const effectiveUserId = effectiveTimesheetUser?.id;
 
@@ -230,9 +232,24 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     });
   }, [timeEntries, dateRange]);
 
+  // Check if there are any pending or approved approvals for the month
+  const hasMonthlyApprovals = useMemo(() => {
+    if (!dateRange || !effectiveUserId) return false;
+    
+    const monthStart = format(startOfMonth(dateRange.start), 'yyyy-MM-dd');
+    const monthEnd = format(endOfMonth(dateRange.start), 'yyyy-MM-dd');
+    
+    return approvals.some(approval => 
+      approval.userId === effectiveUserId &&
+      (approval.status === 'pending' || approval.status === 'approved') &&
+      approval.startDate === monthStart &&
+      approval.endDate === monthEnd
+    );
+  }, [approvals, dateRange, effectiveUserId]);
   const copyFromPreviousWeek = useCallback(async () => {
     if (!effectiveUserId || !dateRange) return;
     if (isCopying) return; // Prevent multiple simultaneous copies
+    if (hasMonthlyApprovals) return; // Prevent copying if approvals exist
     
     setIsCopying(true);
 
@@ -374,6 +391,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     rows,
     editingCell,
     isCopying,
+    hasMonthlyApprovals,
     isLoading: query.isLoading,
     error: query.error,
     addRow,
