@@ -29,6 +29,7 @@ export function ProjectsTable({
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">End Date</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approver Email</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Approval Required</th>
+          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tasks</th>
           <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
         </tr>
@@ -44,6 +45,11 @@ export function ProjectsTable({
             <Td>
               <Badge variant={project.requiresApproval ? 'warning' : 'success'}>
                 {project.requiresApproval ? 'Yes' : 'No'}
+              </Badge>
+            </Td>
+            <Td>
+              <Badge variant={project.isActive ? 'success' : 'secondary'}>
+                {project.isActive ? 'Active' : 'Inactive'}
               </Badge>
             </Td>
             <Td>

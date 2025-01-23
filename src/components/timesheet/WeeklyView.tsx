@@ -36,6 +36,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
   const { 
     timeEntries,
     rows,
+    availableAssignments,
     isLoading,
     isCopying,
     hasMonthlyApprovals,
@@ -95,6 +96,10 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     setDeleteConfirmation({ isOpen: false, index: null });
   };
 
+  // Ensure availableAssignments is defined before rendering rows
+  if (!availableAssignments) {
+    return <LoadingScreen />;
+  }
   return (
     <Card>
       {isLoading && (
@@ -134,6 +139,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 timeEntries={timeEntries}
                 getProjectsForClient={getProjectsForClient}
                 getTasksForProject={getTasksForProject}
+                availableAssignments={availableAssignments}
                 editingCell={editingCell}
                 onUpdateRow={updateRow}
                 onRemoveRow={handleDeleteRow}

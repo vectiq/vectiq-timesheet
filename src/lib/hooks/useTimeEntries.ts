@@ -58,8 +58,19 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const availableAssignments = useMemo(() => {
     if (!effectiveUserId || !projects) return [];
     
-    return projects.flatMap(project => 
-      project.tasks.flatMap(task => {
+    return projects
+      // Filter for active projects with valid dates
+      .filter(project => {
+        const isActive = project.isActive;
+        const hasEndDate = project.endDate && project.endDate.trim().length === 10; // YYYY-MM-DD format
+        const endDate = hasEndDate ? new Date(project.endDate + 'T23:59:59') : null; // Set to end of day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day for fair comparison
+        const isEndDateInFuture = endDate ? endDate >= today : true;
+        
+        return isActive && (!hasEndDate || isEndDateInFuture);
+      })
+      .flatMap(project => project.tasks.flatMap(task => {
         const assignment = task.userAssignments?.find(a => a.userId === effectiveUserId);
         if (!assignment) return [];
         
@@ -71,7 +82,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
           taskName: task.name
         }];
       })
-    );
+               )
   }, [effectiveUserId, projects]);
 
   const createMutation = useMutation({
@@ -481,6 +492,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   return {
     timeEntries,
     rows,
+    availableAssignments,
     editingCell,
     isCopying,
     hasMonthlyApprovals,

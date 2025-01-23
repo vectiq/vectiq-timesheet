@@ -53,3 +53,20 @@ export interface XeroPayItem {
   UpdatedDateUTC: string;
   CurrentRecord: boolean;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  clientId: string;
+  xeroContactId?: string;
+  purchaseOrderNumber?: string;
+  xeroProjectId?: string;
+  budget: number;
+  startDate: string;
+  endDate: string;
+  approverEmail: string;
+  requiresApproval: boolean;
+  overtimeInclusive: boolean;
+  isActive: boolean;
+  tasks: ProjectTask[];
+}
