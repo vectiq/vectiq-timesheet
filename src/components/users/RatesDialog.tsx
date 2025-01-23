@@ -46,6 +46,7 @@ export function RatesDialog({
   const [newSalary, setNewSalary] = useState('');
   const [newCostRate, setNewCostRate] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
+  const [estimatedBillablePercentage, setEstimatedBillablePercentage] = useState(user?.estimatedBillablePercentage || 0);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -184,7 +185,8 @@ export function RatesDialog({
     try {
       await onSave({
         salary: salaryHistory,
-        costRate: costRateHistory
+        costRate: costRateHistory,
+        estimatedBillablePercentage
       });
       onOpenChange(false);
     } catch (error) {
@@ -209,6 +211,15 @@ export function RatesDialog({
       <div className="p-6 space-y-8">
         {/* Current Rates Summary */}
         <div className="grid grid-cols-2 gap-6">
+          <div className="bg-gradient-to-br from-blue-50 to-white rounded-lg p-6 shadow-sm ring-1 ring-blue-100">
+            <div className="text-sm font-medium text-blue-600 mb-2">Target Billable Utilization</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-bold text-gray-900">
+                {estimatedBillablePercentage || 0}
+              </span>
+              <span className="text-sm text-gray-500">%</span>
+            </div>
+          </div>
           {user.employeeType === 'employee' && (
             <div className="bg-gradient-to-br from-indigo-50 to-white rounded-lg p-6 shadow-sm ring-1 ring-indigo-100">
               <div className="text-sm font-medium text-indigo-600 mb-2">Current Annual Salary</div>
@@ -234,6 +245,30 @@ export function RatesDialog({
             <div className="text-sm text-gray-500 mt-2">
               Last updated: {formatDate(costRateHistory[0]?.date)}
             </div>
+          </div>
+        </div>
+
+        {/* Billable Percentage */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Target Billable Utilization</h3>
+          </div>
+
+          <div className="space-y-4">
+            <FormField label="Estimated Billable Percentage">
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={estimatedBillablePercentage || ''}
+                onChange={(e) => setEstimatedBillablePercentage(parseInt(e.target.value) || 0)}
+                placeholder="e.g., 80"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Target percentage of billable hours for this user
+              </p>
+            </FormField>
           </div>
         </div>
 

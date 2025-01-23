@@ -43,6 +43,7 @@ export function UsersTable({
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Name</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Hours/Week</th>
+          <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Target Billable %</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Overtime</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Role</th>
           <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project Assignments</th>
@@ -58,6 +59,15 @@ export function UsersTable({
               <Td className="font-medium text-gray-900">{user.name}</Td>
               <Td>{user.email}</Td>
               <Td>{user.hoursPerWeek}</Td>
+              <Td>
+                {user.estimatedBillablePercentage ? (
+                  <Badge variant="secondary">
+                    {user.estimatedBillablePercentage}%
+                  </Badge>
+                ) : (
+                  <span className="text-gray-500">-</span>
+                )}
+              </Td>
               <Td>
                 <Badge variant="secondary">
                   {user.overtime === 'no' ? 'No Overtime' : 

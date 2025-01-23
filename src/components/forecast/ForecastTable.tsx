@@ -3,6 +3,7 @@ import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { calculateDefaultHours } from '@/lib/utils/workingDays';
 import { ForecastInput } from './ForecastInput';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useLeaveForecasts } from '@/lib/hooks/useLeaveForecasts';
 import type { User, Project, Client, ForecastEntry } from '@/types';
 
 interface ProjectGroup {
@@ -33,12 +34,29 @@ export function ForecastTable({
   onUpdateForecast,
 }: ForecastTableProps) {
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+  const { leaveData } = useLeaveForecasts(month);
+
+  // Filter available projects to only show active ones
+  const activeProjects = useMemo(() => {
+    return projects.filter(project => {
+      // Get first day of selected month
+      const selectedDate = new Date(month + '-01');
+      selectedDate.setHours(0, 0, 0, 0);
+
+      const isActive = project.isActive;
+      const hasEndDate = project.endDate && project.endDate.trim().length === 10;
+      const endDate = hasEndDate ? new Date(project.endDate + 'T23:59:59') : null;
+      const isEndDateValid = endDate ? endDate >= selectedDate : true;
+      
+      return isActive && (!hasEndDate || isEndDateValid);
+    });
+  }, [projects, month]);
 
   // Group projects by client for better organization
   const groupedProjects = useMemo((): ProjectGroup[] => {
     const groups = new Map<string, { name: string; projects: Project[] }>();
     
-    projects.forEach(project => {
+    activeProjects.forEach(project => {
       if (!groups.has(project.clientId)) {
         const client = clients.find(c => c.id === project.clientId);
         groups.set(project.clientId, {
@@ -54,7 +72,7 @@ export function ForecastTable({
       clientName: name,
       projects: projects.sort((a, b) => a.name.localeCompare(b.name))
     }));
-  }, [projects, clients]);
+  }, [activeProjects, clients]);
 
   // Create a map of existing forecasts for quick lookup
   const forecastMap = useMemo(() => {
@@ -161,6 +179,18 @@ export function ForecastTable({
                         assignment.user.hoursPerWeek || 40
                       );
 
+                      // Handle leave project differently
+                      let hours = defaultHours;
+                      if (project.name === 'Leave' && leaveData?.leave) {
+                        // Find leave entries for this user and leave type
+                        const userLeave = leaveData.leave.filter(leave => 
+                          leave.employeeId === assignment.user.id &&
+                          leave.leaveTypeId === assignment.task.xeroLeaveTypeId
+                        );
+                        
+                        // Sum up leave hours for this month
+                        hours = userLeave.reduce((sum, leave) => sum + leave.numberOfUnits, 0);
+                      }
                       return (
                         <tr key={key}>
                           <td></td>
@@ -169,7 +199,7 @@ export function ForecastTable({
                           <Td>{assignment.user.name}</Td>
                           <Td className="text-right">
                             <ForecastInput
-                              value={existingForecast?.hours ?? defaultHours}
+                              value={existingForecast?.hours ?? hours}
                               isDefault={!existingForecast}
                               onChange={(hours) => handleHoursChange(
                                 assignment.user.id,

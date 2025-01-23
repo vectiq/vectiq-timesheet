@@ -68,25 +68,27 @@ export function calculateForecastHours({
   return { hours, isDefault: true };
 }
 
+import { getSellRateForDate } from '@/lib/utils/rates';
+
 export function calculateForecastFinancials({
   hours,
-  taskRate,
+  task,
   date,
   user
 }: {
   hours: number;
-  taskRate?: number;
+  task?: ProjectTask;
   date?: string;
   user?: User;
 }): { revenue: number; cost: number } {
-  // Only use task rate for revenue
-  const sellRate = taskRate || 0;
+  // Get sell rate for the date
+  const effectiveSellRate = task?.sellRates ? getSellRateForDate(task.sellRates, date) : 0;
   
   // For cost rate, use task's cost rate if available
   let costRate = user?.costRate ? getCostRateForDate(user, date) : 0;
 
   return {
-    revenue: hours * sellRate,
+    revenue: hours * effectiveSellRate,
     cost: hours * costRate
   };
 }

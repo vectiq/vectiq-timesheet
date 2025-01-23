@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { SlidePanel } from '@/components/ui/SlidePanel';
 import { Button } from '@/components/ui/Button';
@@ -35,8 +36,10 @@ export function ProjectTasks({
   const [selectedTask, setSelectedTask] = useState('');
   const [editingTaskId, setEditingTaskId] = useState('');
   const [editingTaskData, setEditingTaskData] = useState<{
-    costRate: string;
-    sellRate: string;
+    sellRates: Array<{
+      sellRate: number;
+      date: string;
+    }>;
     billable: boolean;
     teamId?: string;
     xeroLeaveTypeId?: string;
@@ -45,8 +48,10 @@ export function ProjectTasks({
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskData, setNewTaskData] = useState({
     name: '',
-    costRate: '',
-    sellRate: '',
+    sellRates: [{
+      sellRate: 0,
+      date: format(new Date(), 'yyyy-MM-dd')
+    }],
     billable: false,
     teamId: null,
     xeroLeaveTypeId: ''
@@ -102,8 +107,10 @@ export function ProjectTasks({
       id: crypto.randomUUID(),
       name: newTaskData.name,
       projectId: localProject.id,
-      costRate: parseFloat(newTaskData.costRate) || 0,
-      sellRate: parseFloat(newTaskData.sellRate) || 0,
+      sellRates: [{
+        sellRate: parseFloat(newTaskData.sellRates[0].sellRate.toString()) || 0,
+        date: newTaskData.sellRates[0].date
+      }],
       billable: newTaskData.billable,
       teamId: newTaskData.teamId || undefined,
       xeroLeaveTypeId: localProject.name === 'Leave' ? newTaskData.xeroLeaveTypeId : '',
@@ -120,8 +127,10 @@ export function ProjectTasks({
     setIsAddingTask(false);
     setNewTaskData({
       name: '',
-      costRate: '',
-      sellRate: '',
+      sellRates: [{
+        sellRate: 0,
+        date: format(new Date(), 'yyyy-MM-dd')
+      }],
       billable: false,
       teamId: '',
       xeroLeaveTypeId: ''
@@ -167,8 +176,10 @@ export function ProjectTasks({
     // Clean and standardize updates
     const parsedUpdates = {
       ...updates,
-      costRate: typeof updates.costRate === 'string' ? parseFloat(updates.costRate) || 0 : updates.costRate,
-      sellRate: typeof updates.sellRate === 'string' ? parseFloat(updates.sellRate) || 0 : updates.sellRate,
+      sellRates: updates.sellRates?.map(rate => ({
+        sellRate: typeof rate.sellRate === 'string' ? parseFloat(rate.sellRate) || 0 : rate.sellRate,
+        date: rate.date
+      })),
       teamId: updates.teamId === 'none' || updates.teamId === '' ? null : updates.teamId
     };
 
@@ -188,8 +199,10 @@ export function ProjectTasks({
   const handleStartEditing = (task: ProjectTask) => {
     setEditingTaskId(task.id);
     setEditingTaskData({
-      costRate: task.costRate.toString(),
-      sellRate: task.sellRate.toString(),
+      sellRates: task.sellRates.map(rate => ({
+        sellRate: rate.sellRate,
+        date: rate.date
+      })),
       billable: task.billable,
       teamId: task.teamId,
       xeroLeaveTypeId: task.xeroLeaveTypeId
@@ -253,21 +266,12 @@ export function ProjectTasks({
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Cost Rate">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={newTaskData.costRate}
-                    onChange={(e) => setNewTaskData(prev => ({ ...prev, costRate: e.target.value }))}
-                  />
-                </FormField>
-
                 <FormField label="Sell Rate">
                   <Input
                     type="number"
                     step="0.01"
-                    value={newTaskData.sellRate}
-                    onChange={(e) => setNewTaskData(prev => ({ ...prev, sellRate: e.target.value }))}
+                    value={newTaskData.sellRates[0].sellRate}
+                    onChange={(e) => setNewTaskData(prev => ({ ...prev, sellRates: [{ ...prev.sellRates[0], sellRate: parseFloat(e.target.value) || 0 }] }))}
                   />
                 </FormField>
               </div>
@@ -323,14 +327,26 @@ export function ProjectTasks({
                 key={task.id} 
                 className={`p-4 rounded-lg border ${
                   selectedTask === task.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
-                } relative`}
+                }`}
               >
-                <div className="flex flex-col gap-3">
-                  <div className="flex justify-between">
+                <div className="flex flex-col gap-3 relative">
+                  <div className="flex justify-between items-start">
                     <div>
                       <span className="font-medium text-gray-900">{task.name}</span>
                       <div className="text-sm text-gray-500 mt-1">
-                        Cost: ${task.costRate}/hr • Sell: ${task.sellRate}/hr
+                        Current Sell Rate: ${task.sellRates?.[0]?.sellRate || 0}/hr
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        {task.billable && (
+                          <div className="px-2 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-md border border-green-100">
+                            Billable
+                          </div>
+                        )}
+                        {task.teamId && (
+                          <div className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-100">
+                            {teams.find(t => t.id === task.teamId)?.name}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -371,195 +387,241 @@ export function ProjectTasks({
                       </Button>
                     </div>
                   </div>
-                  
-                  {/* Task Badges */}
-                  <div className="absolute bottom-4 right-4 flex gap-2">
-                    {task.billable && (
-                      <div className="px-2 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-md border border-green-100">
-                        Billable
-                      </div>
-                    )}
-                    {task.teamId && (
-                      <div className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md border border-blue-100">
-                        {teams.find(t => t.id === task.teamId)?.name}
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Edit Task Form */}
-                {editingTaskId === task.id && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-4 mb-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField label="Cost Rate">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editingTaskData?.costRate}
-                          onChange={(e) => {
-                            setEditingTaskData(prev => ({
-                              ...prev!,
-                              costRate: e.target.value
-                            }));
-                          }}
-                        />
-                      </FormField>
-
-                      <FormField label="Sell Rate">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editingTaskData?.sellRate}
-                          onChange={(e) => {
-                            setEditingTaskData(prev => ({
-                              ...prev!,
-                              sellRate: e.target.value
-                            }));
-                          }}
-                        />
-                      </FormField>
-                    </div>
-
-                    <FormField label="Team">
-                      <Select
-                        value={editingTaskData?.teamId || ''}
-                        onValueChange={(value) => {
-                          setEditingTaskData(prev => ({
-                            ...prev!,
-                            teamId: value || undefined
-                          }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          {editingTaskData?.teamId ? 
-                            teams.find(t => t.id === editingTaskData.teamId)?.name : 
-                            'Select Team'}
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No Team</SelectItem>
-                          {teams.map(team => (
-                            <SelectItem key={team.id} value={team.id}>
-                              {team.name}
-                            </SelectItem>
+                  {/* Edit Task Form */}
+                  {editingTaskId === task.id && (
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-4 mb-3">
+                      <FormField label="Sell Rates">
+                        <div className="space-y-4 relative">
+                          <div className="text-sm text-gray-500 mb-2">
+                            Rates are shown in chronological order, with oldest rates first
+                          </div>
+                          {editingTaskData?.sellRates
+                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                            .map((rate, index) => (
+                            <div key={index} className="grid grid-cols-12 gap-4 items-start">
+                              <div className="col-span-5">
+                                <FormField label="Rate">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={rate.sellRate || ''}
+                                    placeholder="Enter sell rate"
+                                    onChange={(e) => {
+                                      const newRates = [...editingTaskData.sellRates];
+                                      newRates[index] = {
+                                        ...rate,
+                                        sellRate: parseFloat(e.target.value) || 0
+                                      };
+                                      setEditingTaskData(prev => ({
+                                        ...prev!,
+                                        sellRates: newRates
+                                      }));
+                                    }}
+                                  />
+                                </FormField>
+                              </div>
+                              <div className="col-span-5">
+                                <FormField label="Effective Date">
+                                  <Input
+                                    type="date"
+                                    value={rate.date}
+                                    onChange={(e) => {
+                                      const newRates = [...editingTaskData.sellRates];
+                                      newRates[index] = {
+                                        ...rate,
+                                        date: e.target.value
+                                      };
+                                      setEditingTaskData(prev => ({
+                                        ...prev!,
+                                        sellRates: newRates
+                                      }));
+                                    }}
+                                  />
+                                </FormField>
+                              </div>
+                              <div className="col-span-2 pt-8">
+                                {index > 0 && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newRates = editingTaskData.sellRates.filter((_, i) => i !== index);
+                                      setEditingTaskData(prev => ({
+                                        ...prev!,
+                                        sellRates: newRates
+                                      }));
+                                    }}
+                                    className="w-full"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                           ))}
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-
-                    {localProject.name === 'Leave' && (
-                      <FormField label="Xero Leave Type ID">
-                        <Input
-                          type="text"
-                          value={editingTaskData?.xeroLeaveTypeId}
-                          onChange={(e) => {
-                            setEditingTaskData(prev => ({
-                              ...prev!,
-                              xeroLeaveTypeId: e.target.value
-                            }));
-                          }}
-                          placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">
-                          The Xero Leave Type ID is used to sync leave requests with Xero
-                        </p>
-                      </FormField>
-                    )}
-
-                    <Checkbox
-                      checked={editingTaskData?.billable}
-                      onChange={(e) => setEditingTaskData(prev => ({
-                        ...prev!,
-                        billable: e.target.checked
-                      }))}
-                      label="Billable"
-                    />
-                    
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleCancelEditing}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleUpdateTask(task.id, editingTaskData!)}
-                      >
-                        Save Changes
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {selectedTask === task.id && (
-                  <div className="flex items-center gap-2 mb-3 relative">
-                    <Select value={selectedUser} onValueChange={setSelectedUser}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select user..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users
-                          .filter(user => !task.userAssignments?.some(a => a.userId === user.id))
-                          .map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name}
-                            </SelectItem>
-                          ))
-                        }
-                      </SelectContent>
-                    </Select>
-                    <Button 
-                      size="sm"
-                      disabled={!selectedUser}
-                      onClick={handleSubmit}
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                )}
-
-                {/* User Assignments */}
-                {task.userAssignments && task.userAssignments.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedTask === task.id ? (
-                      // Editable mode with remove buttons
-                      task.userAssignments.map(assignment => (
-                        <div 
-                          key={assignment.id}
-                          className="flex items-center justify-between bg-white p-2 rounded-md text-sm border border-gray-100"
-                        >
-                          <span>{assignment.userName}</span>
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => handleRemoveUserFromTask(localProject.id, task.id, assignment.id)}
-                            className="p-1 hover:text-red-500"
+                            onClick={() => {
+                              setEditingTaskData(prev => ({
+                                ...prev!,
+                                sellRates: [
+                                  ...prev!.sellRates,
+                                  {
+                                    sellRate: 0,
+                                    date: format(new Date(), 'yyyy-MM-dd')
+                                  }
+                                ]
+                              }));
+                            }}
                           >
-                            <X className="h-4 w-4" />
+                            Add Rate
                           </Button>
                         </div>
-                      ))
-                    ) : (
-                      // Read-only mode - just list the assignments
-                      <div className="flex flex-wrap gap-2">
-                        {task.userAssignments.map(assignment => (
+                      </FormField>
+
+                      <FormField label="Team">
+                        <Select
+                          value={editingTaskData?.teamId || ''}
+                          onValueChange={(value) => {
+                            setEditingTaskData(prev => ({
+                              ...prev!,
+                              teamId: value || undefined
+                            }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            {editingTaskData?.teamId ? 
+                              teams.find(t => t.id === editingTaskData.teamId)?.name : 
+                              'Select Team'}
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Team</SelectItem>
+                            {teams.map(team => (
+                              <SelectItem key={team.id} value={team.id}>
+                                {team.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+
+                      {localProject.name === 'Leave' && (
+                        <FormField label="Xero Leave Type ID">
+                          <Input
+                            type="text"
+                            value={editingTaskData?.xeroLeaveTypeId}
+                            onChange={(e) => {
+                              setEditingTaskData(prev => ({
+                                ...prev!,
+                                xeroLeaveTypeId: e.target.value
+                              }));
+                            }}
+                            placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            The Xero Leave Type ID is used to sync leave requests with Xero
+                          </p>
+                        </FormField>
+                      )}
+
+                      <Checkbox
+                        checked={editingTaskData?.billable}
+                        onChange={(e) => setEditingTaskData(prev => ({
+                          ...prev!,
+                          billable: e.target.checked
+                        }))}
+                        label="Billable"
+                      />
+                      
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleCancelEditing}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleUpdateTask(task.id, editingTaskData!)}
+                        >
+                          Save Changes
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTask === task.id && (
+                    <div className="flex items-center gap-2 mb-3 relative">
+                      <Select value={selectedUser} onValueChange={setSelectedUser}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Select user..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users
+                            .filter(user => !task.userAssignments?.some(a => a.userId === user.id))
+                            .map(user => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name}
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        size="sm"
+                        disabled={!selectedUser}
+                        onClick={handleSubmit}
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* User Assignments */}
+                  {task.userAssignments && task.userAssignments.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedTask === task.id ? (
+                        // Editable mode with remove buttons
+                        task.userAssignments.map(assignment => (
                           <div 
                             key={assignment.id}
-                            className="bg-gray-50 px-2 py-1 rounded text-sm text-gray-700"
+                            className="flex items-center justify-between bg-white p-2 rounded-md text-sm border border-gray-100"
                           >
-                            {assignment.userName}
+                            <span>{assignment.userName}</span>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleRemoveUserFromTask(localProject.id, task.id, assignment.id)}
+                              className="p-1 hover:text-red-500"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 italic">
-                    No users assigned
-                  </div>
-                )}
+                        ))
+                      ) : (
+                        // Read-only mode - just list the assignments
+                        <div className="flex flex-wrap gap-2">
+                          {task.userAssignments.map(assignment => (
+                            <div 
+                              key={assignment.id}
+                              className="bg-gray-50 px-2 py-1 rounded text-sm text-gray-700"
+                            >
+                              {assignment.userName}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      No users assigned
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

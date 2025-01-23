@@ -65,6 +65,22 @@ export function ForecastReportTable({
 }: ForecastReportTableProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
+  // Filter for active projects only
+  const activeProjects = useMemo(() => {
+    return projects.filter(project => {
+      // Get first day of selected month
+      const selectedDate = new Date(startDate);
+      selectedDate.setHours(0, 0, 0, 0);
+
+      const isActive = project.isActive;
+      const hasEndDate = project.endDate && project.endDate.trim().length === 10;
+      const endDate = hasEndDate ? new Date(project.endDate + 'T23:59:59') : null;
+      const isEndDateValid = endDate ? endDate >= selectedDate : true;
+      
+      return isActive && (!hasEndDate || isEndDateValid);
+    });
+  }, [projects, startDate]);
+
   // Calculate project summaries with forecasts and actuals
   const projectSummaries = useMemo((): ProjectSummary[] => {
     const summaries = new Map<string, ProjectSummary>();
@@ -72,7 +88,7 @@ export function ForecastReportTable({
     if (!actuals?.entries) return [];
 
     // Process each project
-    projects.forEach(project => {
+    activeProjects.forEach(project => {
       const client = clients.find(c => c.id === project.clientId);
       if (!client) return;
 
@@ -109,7 +125,7 @@ export function ForecastReportTable({
           // Calculate forecast financials
           const { revenue: forecastRevenue, cost: forecastCost } = calculateForecastFinancials({
             hours: forecastHours,
-            taskRate: task.sellRate,
+            sellRate: task.sellRate,
             date: format(new Date(startDate), 'yyyy-MM-dd'),
             user
           });
@@ -160,7 +176,7 @@ export function ForecastReportTable({
     });
 
     return Array.from(summaries.values());
-  }, [forecasts, actuals, projects, clients, users, workingDays]);
+  }, [activeProjects, clients, forecasts, actuals, workingDays, isYearlyView]);
 
   // Early return if no data
   if (projectSummaries.length === 0) {
