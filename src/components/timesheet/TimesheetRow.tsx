@@ -30,6 +30,13 @@ interface TimesheetRowProps {
   onStartEdit: (key: string) => void;
   onEndEdit: () => void;
   userId: string;
+  availableAssignments: Array<{
+    clientId: string;
+    projectId: string;
+    taskId: string;
+    projectName: string;
+    taskName: string;
+  }>;
 }
 
 export const TimesheetRow = memo(function TimesheetRow({
@@ -46,7 +53,8 @@ export const TimesheetRow = memo(function TimesheetRow({
   onCellChange,
   onStartEdit,
   onEndEdit,
-  userId
+  userId,
+  availableAssignments
 }: TimesheetRowProps) {
   const { projects } = useProjects();
   const { clients } = useClients();
@@ -55,37 +63,36 @@ export const TimesheetRow = memo(function TimesheetRow({
   // Get available projects for selected client
   const availableProjects = useMemo(() => {
     if (!row.clientId) return [];
-    // Only return projects where user has task assignments
-    return getProjectsForClient(row.clientId).filter(project =>
-      project.tasks.some(task => 
-        task.userAssignments?.some(a => a.userId === userId)
-      )
+    // Filter using availableAssignments
+    const projectIds = new Set(
+      availableAssignments
+        .filter(a => a.clientId === row.clientId)
+        .map(a => a.projectId)
     );
-  }, [row.clientId, getProjectsForClient, userId]);
+    return getProjectsForClient(row.clientId).filter(p => projectIds.has(p.id));
+  }, [row.clientId, getProjectsForClient, availableAssignments]);
 
   // Get available tasks for selected project
   const availableTasks = useMemo(() => {
     if (!row.projectId) return [];
-    return getTasksForProject(row.projectId);
-  }, [row.projectId, getTasksForProject]);
+    // Filter using availableAssignments
+    const taskIds = new Set(
+      availableAssignments
+        .filter(a => a.projectId === row.projectId)
+        .map(a => a.taskId)
+    );
+    return getTasksForProject(row.projectId).filter(t => taskIds.has(t.id));
+  }, [row.projectId, getTasksForProject, availableAssignments]);
 
   // Get available clients and projects based on user assignments
   const availableClients = useMemo(() => {
     if (!userId || !projects) return [];
     
-    // Get unique client IDs from projects where user has task assignments
-    const clientIds = new Set(
-      projects
-        .filter(project => 
-          project.tasks.some(task => 
-            task.userAssignments?.some(a => a.userId === userId)
-          )
-        )
-        .map(p => p.clientId)
-    );
+    // Get unique client IDs from availableAssignments
+    const clientIds = new Set(availableAssignments.map(a => a.clientId));
     
     return clients.filter(client => clientIds.has(client.id));
-  }, [userId, projects, clients]);
+  }, [availableAssignments, clients]);
 
   // Get row entries
   const rowEntries = !row.clientId || !row.projectId || !row.taskId 
@@ -99,13 +106,19 @@ export const TimesheetRow = memo(function TimesheetRow({
   // Calculate row total
   const rowTotal = rowEntries.reduce((sum, entry) => sum + entry.hours, 0);
 
-  // Query approvals for each date in the week
+  // Get all approvals for this project
+  const projectApprovals = approvals.filter(approval => 
+    approval.project?.id === row.projectId &&
+    (approval.status === 'pending' || approval.status === 'approved')
+  );
+
+  // Check if each date is locked by an approval
   const weekApprovals = weekDays.map(date => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return approvals.find((approval) => 
-      approval.project.id === row.projectId &&
-      dateStr >= approval.startDate &&
-      dateStr <= approval.endDate);
+    return projectApprovals.find(approval => 
+      dateStr >= approval.startDate && 
+      dateStr <= approval.endDate
+    );
   });
 
   // Check if the entire row is locked

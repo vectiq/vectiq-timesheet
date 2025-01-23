@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { 
   submitTimesheetApproval, 
   withdrawApproval,
+  getApprovalDetails,
   rejectTimesheet,
   getApprovals,
 } from '@/lib/services/approvals';
@@ -20,7 +21,20 @@ export function useApprovals() {
 
   const approvalsQuery = useQuery({
     queryKey: [QUERY_KEYS.approvals],
-    queryFn: ()=>getApprovals(effectiveTimesheetUser?.id)
+    queryFn: async () => {
+      const approvals = await getApprovals(effectiveTimesheetUser?.id);
+      // Fetch full details for any rejected approvals
+      const detailedApprovals = await Promise.all(
+        approvals.map(async (approval) => {
+          if (approval.status === 'rejected') {
+            const details = await getApprovalDetails(approval.id);
+            return { ...approval, rejectionReason: details.rejectionReason };
+          }
+          return approval;
+        })
+      );
+      return detailedApprovals;
+    }
   });
 
   const submitMutation = useMutation({

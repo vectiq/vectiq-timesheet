@@ -5,6 +5,7 @@ import { ProjectDialog } from '@/components/projects/ProjectDialog';
 import { ProjectTasks } from '@/components/projects/ProjectTasks';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { Plus } from 'lucide-react';
 import { useConfirm } from '@/lib/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -23,10 +24,24 @@ export default function Projects() {
     isUpdating,
     isDeleting 
   } = useProjects();
+  const [includeInactive, setIncludeInactive] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
   const { confirm, dialog, handleClose } = useConfirm();
+
+  // Filter projects based on active status and end date
+  const filteredProjects = projects.filter(project => {
+    if (includeInactive) return true;
+    
+    const isActive = project.isActive;
+    const hasEndDate = project.endDate && project.endDate.trim() !== '';
+    const endDate = hasEndDate ? new Date(project.endDate) : null;
+    const isEndDateInFuture = endDate ? endDate > new Date() : true;
+    
+    return isActive && (!hasEndDate || isEndDateInFuture);
+  }
+  );
 
   const handleOpenCreateDialog = useCallback(() => {
     setSelectedProject(null);
@@ -77,17 +92,26 @@ export default function Projects() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
-        <Button onClick={handleOpenCreateDialog} disabled={isProcessing}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Project
-        </Button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
+        </div>
+        <div className="flex items-center gap-6">
+          <Checkbox
+            checked={includeInactive}
+            onCheckedChange={(checked) => setIncludeInactive(checked)}
+            label="Show inactive projects"
+          />
+          <Button onClick={handleOpenCreateDialog} disabled={isProcessing}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg">
         <ProjectsTable 
-          projects={projects} 
+          projects={filteredProjects}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onManageAssignments={handleManageAssignments}

@@ -43,6 +43,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
       userAssignments: []
     })),
     approverEmail: projectData.approverEmail || '',
+    isActive: projectData.isActive ?? true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -89,6 +90,7 @@ export async function updateProject(projectData: Project): Promise<void> {
   const projectRef = doc(db, COLLECTION, id);
   const projectUpdate = cleanObject({
     ...projectFields, 
+    isActive: projectData.isActive ?? true, // Ensure isActive is always included
     tasks: cleanedTasks,
     updatedAt: serverTimestamp(),
   });

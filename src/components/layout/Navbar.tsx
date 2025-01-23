@@ -4,7 +4,6 @@ import { CommandPalette } from '@/components/ui/CommandPalette';
 import { UserMenu } from './UserMenu';
 import { Command } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 
 export function Navbar() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -37,7 +36,6 @@ export function Navbar() {
           </div>
           
           <div className="flex items-center gap-x-4">
-            <NotificationDropdown />
             <Button
               variant="secondary"
               onClick={() => setIsCommandPaletteOpen(true)}

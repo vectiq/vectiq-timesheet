@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { FormField } from '@/components/ui/FormField';
+import { format, parse } from 'date-fns';
 import { useClients } from '@/lib/hooks/useClients';
 import type { Project, ProjectTask } from '@/types';
 
@@ -27,7 +28,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
   } = useForm({
     defaultValues: project || {
       name: '',
-      clientId: '',
+      clientId: '', 
       xeroContactId: '',
       purchaseOrderNumber: '',
       xeroProjectId: '',
@@ -37,6 +38,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       endDate: '',
       requiresApproval: false,
       overtimeInclusive: true,
+      isActive: true,
       xeroLeaveTypeId: '',
     },
     shouldUnregister: false, // Prevent fields from being unregistered when removed
@@ -47,6 +49,18 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       reset(project);
     }
   }, [project, reset]);
+
+  // Format dates when loading project data
+  useEffect(() => {
+    if (project) {
+      if (project.startDate) {
+        setValue('startDate', format(new Date(project.startDate), 'yyyy-MM-dd'));
+      }
+      if (project.endDate) {
+        setValue('endDate', format(new Date(project.endDate), 'yyyy-MM-dd'));
+      }
+    }
+  }, [project, setValue]);
 
   const handleFormSubmit = async (data: any) => {
     const projectId = project?.id || crypto.randomUUID();
@@ -151,6 +165,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           <FormField label="Start Date">
             <Input
               type="date"
+              className="[&::-webkit-calendar-picker-indicator]:opacity-100"
               {...register('startDate')}
             />
           </FormField>
@@ -158,6 +173,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           <FormField label="End Date">
             <Input
               type="date"
+              className="[&::-webkit-calendar-picker-indicator]:opacity-100"
               {...register('endDate')}
             />
           </FormField>
@@ -183,6 +199,13 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
             />
           </div>
         </div>
+        <div className="flex gap-6 items-center">
+          <Checkbox
+            {...register('isActive')}
+            label="Project is active"
+          />
+        </div>
+
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">

@@ -36,8 +36,10 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
   const { 
     timeEntries,
     rows,
+    availableAssignments,
     isLoading,
     isCopying,
+    hasMonthlyApprovals,
     hasEntriesForCurrentWeek,
     copyFromPreviousWeek,
     editingCell,
@@ -94,6 +96,10 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     setDeleteConfirmation({ isOpen: false, index: null });
   };
 
+  // Ensure availableAssignments is defined before rendering rows
+  if (!availableAssignments) {
+    return <LoadingScreen />;
+  }
   return (
     <Card>
       {isLoading && (
@@ -133,6 +139,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 timeEntries={timeEntries}
                 getProjectsForClient={getProjectsForClient}
                 getTasksForProject={getTasksForProject}
+                availableAssignments={availableAssignments}
                 editingCell={editingCell}
                 onUpdateRow={updateRow}
                 onRemoveRow={handleDeleteRow}
@@ -152,7 +159,8 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
             {!hasEntriesForCurrentWeek && (
               <Button
                 variant="secondary"
-                disabled={isCopying}
+                disabled={isCopying || hasMonthlyApprovals}
+                title={hasMonthlyApprovals ? "Cannot copy entries when approvals exist for this month" : undefined}
                 onClick={copyFromPreviousWeek}
                 className="mr-4"
               >

@@ -100,6 +100,9 @@ export function MonthlyViewRow({ clientGroup, dateRange, userId }: MonthlyViewRo
     approvalId?: string;
   }>({ isOpen: false, type: 'submit' });
   const { withdrawApproval, isWithdrawing, submitApproval } = useApprovals();
+  const startDate = format(dateRange.start, 'yyyy-MM-dd');
+  const endDate = format(dateRange.end, 'yyyy-MM-dd');
+
 
   const handleSubmitApproval = async (projectGroup) => {
     setConfirmationDialog({

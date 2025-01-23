@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState, useMemo, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import {
   getTimeEntries,
   createTimeEntry,
@@ -8,6 +8,7 @@ import {
   deleteTimeEntry,
 } from '@/lib/services/timeEntries';
 import { useProjects } from './useProjects';
+import { useApprovals } from './useApprovals';
 import { useEffectiveTimesheetUser } from '@/lib/contexts/EffectiveTimesheetUserContext';
 import type { TimeEntry } from '@/types';
 
@@ -37,6 +38,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
   const [isCopying, setIsCopying] = useState(false);
   const { projects } = useProjects();
+  const { approvals } = useApprovals();
   const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
   const effectiveUserId = effectiveTimesheetUser?.id;
 
@@ -56,8 +58,19 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const availableAssignments = useMemo(() => {
     if (!effectiveUserId || !projects) return [];
     
-    return projects.flatMap(project => 
-      project.tasks.flatMap(task => {
+    return projects
+      // Filter for active projects with valid dates
+      .filter(project => {
+        const isActive = project.isActive;
+        const hasEndDate = project.endDate && project.endDate.trim().length === 10; // YYYY-MM-DD format
+        const endDate = hasEndDate ? new Date(project.endDate + 'T23:59:59') : null; // Set to end of day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day for fair comparison
+        const isEndDateInFuture = endDate ? endDate >= today : true;
+        
+        return isActive && (!hasEndDate || isEndDateInFuture);
+      })
+      .flatMap(project => project.tasks.flatMap(task => {
         const assignment = task.userAssignments?.find(a => a.userId === effectiveUserId);
         if (!assignment) return [];
         
@@ -69,7 +82,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
           taskName: task.name
         }];
       })
-    );
+               )
   }, [effectiveUserId, projects]);
 
   const createMutation = useMutation({
@@ -230,9 +243,48 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     });
   }, [timeEntries, dateRange]);
 
+  // Check if there are any pending or approved approvals for the month
+  const hasMonthlyApprovals = useMemo(() => {
+    if (!dateRange || !effectiveUserId) return false;
+    
+    const monthStart = format(startOfMonth(dateRange.start), 'yyyy-MM-dd');
+    const monthEnd = format(endOfMonth(dateRange.start), 'yyyy-MM-dd');
+    
+    // Group approvals by project
+    const projectApprovals = new Map();
+    approvals.forEach(approval => {
+      if (approval.userId !== effectiveUserId) return;
+      if (approval.startDate !== monthStart || approval.endDate !== monthEnd) return;
+      
+      const key = approval.project?.id;
+      if (!projectApprovals.has(key)) {
+        projectApprovals.set(key, []);
+      }
+      projectApprovals.get(key).push(approval);
+    });
+    
+    // Check if any project has a pending or approved status in its most recent approval
+    return Array.from(projectApprovals.values()).some(projectApprovalList => {
+      // Sort by submittedAt timestamp, handling Firestore timestamp format
+      const sortedApprovals = projectApprovalList.sort((a, b) => {
+        // Handle both Firestore timestamp and ISO string formats
+        const getTime = (timestamp: any) => {
+          if (timestamp?.seconds) {
+            return timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000;
+          }
+          return new Date(timestamp).getTime();
+        };
+        return getTime(b.submittedAt) - getTime(a.submittedAt);
+      });
+      
+      const latestApproval = sortedApprovals[0];
+      return latestApproval?.status === 'pending' || latestApproval?.status === 'approved';
+    });
+  }, [approvals, dateRange, effectiveUserId]);
   const copyFromPreviousWeek = useCallback(async () => {
     if (!effectiveUserId || !dateRange) return;
     if (isCopying) return; // Prevent multiple simultaneous copies
+    if (hasMonthlyApprovals) return; // Prevent copying if approvals exist
     
     setIsCopying(true);
 
@@ -301,11 +353,46 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   }, [timeEntries, manualRows, weekKey]);
 
   const addRow = useCallback(() => {
+    // Check if there are any empty rows that need to be filled first
+    const currentWeekManualRows = manualRows[weekKey] || [];
+    const hasEmptyRow = currentWeekManualRows.some(row => 
+      !row.clientId || !row.projectId || !row.taskId
+    );
+    if (hasEmptyRow) return;
+
+    // Get all existing combinations from both time entries and manual rows
+    const existingCombinations = new Set();
+
+    // Add combinations from time entries
+    timeEntries.forEach(entry => {
+      const combination = `${entry.clientId}-${entry.projectId}-${entry.taskId}`;
+      existingCombinations.add(combination);
+    });
+
+    // Add combinations from manual rows
+    currentWeekManualRows.forEach(row => {
+      if (row.clientId && row.projectId && row.taskId) {
+        const combination = `${row.clientId}-${row.projectId}-${row.taskId}`;
+        existingCombinations.add(combination);
+      }
+    });
+
+    // Only add a new row if there are available combinations
+    const availableCombinations = availableAssignments.filter(assignment => {
+      const combination = `${assignment.clientId}-${assignment.projectId}-${assignment.taskId}`;
+      return !existingCombinations.has(combination);
+    });
+
+    if (availableCombinations.length === 0) {
+      console.warn('All available client/project/task combinations are already in use');
+      return;
+    }
+
     setManualRows(current => ({
       ...current,
       [weekKey]: [...(current[weekKey] || []), { clientId: '', projectId: '', taskId: '' }]
     }));
-  }, [weekKey]);
+  }, [weekKey, timeEntries, manualRows, availableAssignments]);
   
   const removeRow = useCallback((index: number) => {
     const row = rows[index];
@@ -316,9 +403,6 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     );
 
     if (rowEntries.length > 0) {
-      if (!window.confirm('This will delete all time entries for this row. Are you sure?')) {
-        return;
-      }
       // Delete all entries for this row
       Promise.all(rowEntries.map(entry => handleDeleteEntry(entry.id)))
         .then(() => {
@@ -345,6 +429,39 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     const currentWeekManualRows = manualRows[weekKey] || [];
     const uniqueRowCount = rows.length - currentWeekManualRows.length;
     if (index >= uniqueRowCount) {
+      // Check if this update would create a duplicate combination
+      const manualIndex = index - uniqueRowCount;
+      const currentRow = currentWeekManualRows[manualIndex];
+      const updatedRow = {
+        ...currentRow,
+        ...updates
+      };
+
+      // Only check for duplicates if we have a complete row
+      if (updatedRow.clientId && updatedRow.projectId && updatedRow.taskId) {
+        const combination = `${updatedRow.clientId}-${updatedRow.projectId}-${updatedRow.taskId}`;
+        
+        // Check time entries for duplicates
+        const existsInTimeEntries = timeEntries.some(entry =>
+          entry.clientId === updatedRow.clientId &&
+          entry.projectId === updatedRow.projectId &&
+          entry.taskId === updatedRow.taskId
+        );
+
+        // Check other manual rows for duplicates
+        const existsInManualRows = currentWeekManualRows.some((row, idx) =>
+          idx !== manualIndex &&
+          row.clientId === updatedRow.clientId &&
+          row.projectId === updatedRow.projectId &&
+          row.taskId === updatedRow.taskId
+        );
+
+        if (existsInTimeEntries || existsInManualRows) {
+          console.warn('This client/project/task combination already exists');
+          return;
+        }
+      }
+
       setManualRows(current => {
         const currentRows = current[weekKey] || [];
         const manualIndex = index - uniqueRowCount;
@@ -370,13 +487,15 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         };
       });
     }
-  }, [rows.length, manualRows, weekKey]);
+  }, [rows.length, manualRows, weekKey, timeEntries]);
 
   return {
     timeEntries,
     rows,
+    availableAssignments,
     editingCell,
     isCopying,
+    hasMonthlyApprovals,
     isLoading: query.isLoading,
     error: query.error,
     addRow,
