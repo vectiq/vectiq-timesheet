@@ -1,12 +1,16 @@
 import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, addYears, subYears } from 'date-fns';
+import { useForecasts } from '@/lib/hooks/useForecasts';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils/styles';
+import { UserForecastTable } from '@/components/forecast/UserForecastTable';
+import { WorkingDaysPanel } from '@/components/forecast/WorkingDaysPanel';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
+import { getWorkingDaysForMonth } from '@/lib/utils/workingDays';
 
 const VIEW_OPTIONS = [
   { id: 'monthly', label: 'Monthly View' },
@@ -17,6 +21,7 @@ export default function Forecast() {
   const [view, setView] = useState<'monthly' | 'yearly'>('monthly');
   const [currentDate, setCurrentDate] = useState(startOfMonth(new Date()));
   const currentMonth = format(currentDate, 'yyyy-MM');
+  const workingDays = getWorkingDaysForMonth(currentMonth);
 
   // Get financial year dates
   const financialYearStart = useMemo(() => {
@@ -34,6 +39,12 @@ export default function Forecast() {
   const { users, isLoading: isLoadingUsers } = useUsers();
   const { projects: allProjects, isLoading: isLoadingProjects } = useProjects();
   const { clients, isLoading: isLoadingClients } = useClients();
+  const { 
+    forecasts,
+    isLoading: isLoadingForecasts,
+    createForecast,
+    updateForecast
+  } = useForecasts(currentMonth);
 
   // Filter for active projects only
   const projects = useMemo(() => {
@@ -69,7 +80,7 @@ export default function Forecast() {
 
   const handleToday = () => setCurrentDate(startOfMonth(new Date()));
 
-  if (isLoadingUsers || isLoadingProjects || isLoadingClients) {
+  if (isLoadingUsers || isLoadingProjects || isLoadingClients || isLoadingForecasts) {
     return <LoadingScreen />;
   }
 
@@ -105,8 +116,18 @@ export default function Forecast() {
         </div>
       </div>
 
-      <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6">
-        <p className="text-gray-500 text-center">Forecast functionality coming soon...</p>
+      <WorkingDaysPanel selectedDate={currentDate} />
+
+      <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg">
+        <UserForecastTable
+          users={users}
+          projects={projects}
+          forecasts={forecasts}
+          month={currentMonth}
+          workingDays={workingDays}
+          onCreateForecast={createForecast}
+          onUpdateForecast={updateForecast} 
+        />
       </div>
     </div>
   );

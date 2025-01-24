@@ -1,61 +1,97 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils/styles';
+import { Input } from '@/components/ui/Input';
 
 interface ForecastInputProps {
-  value: number;
-  isDefault: boolean;
-  onChange: (value: number) => void;
+  value: number | null;
+  onChange: (value: number | null) => void;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onEndEdit: () => void;
+  isDefault?: boolean;
 }
 
-export function ForecastInput({ value, isDefault, onChange }: ForecastInputProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [localValue, setLocalValue] = useState(value.toString());
+export function ForecastInput({ 
+  value, 
+  onChange,
+  isEditing,
+  onStartEdit,
+  onEndEdit,
+  isDefault = false
+}: ForecastInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [localValue, setLocalValue] = useState('');
 
   useEffect(() => {
-    setLocalValue(value.toString());
-  }, [value]);
+    if (isEditing) {
+      setLocalValue(value?.toString() || '');
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      });
+    }
+  }, [isEditing, value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    if (newValue === '' || /^\d*\.?\d*$/.test(newValue)) {
+      setLocalValue(newValue);
+    }
+  };
 
   const handleBlur = () => {
-    const numValue = parseFloat(localValue);
-    if (!isNaN(numValue) && numValue !== value) {
+    const numValue = localValue === '' ? null : parseFloat(localValue);
+    if (numValue !== value) {
       onChange(numValue);
     }
-    setIsEditing(false);
+    onEndEdit();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      const numValue = parseFloat(localValue);
-      if (!isNaN(numValue) && numValue !== value) {
+      const numValue = localValue === '' ? null : parseFloat(localValue);
+      if (numValue !== value) {
         onChange(numValue);
       }
-      setIsEditing(false);
+      onEndEdit();
     } else if (e.key === 'Escape') {
-      setLocalValue(value.toString());
-      setIsEditing(false);
+      setLocalValue(value?.toString() || '');
+      onEndEdit();
     }
   };
 
   return isEditing ? (
-    <input
-      type="number"
+    <Input
+      ref={inputRef}
+      type="text"
       value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
+      onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-24 text-right rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-      autoFocus
+      className="text-center"
     />
   ) : (
     <div
-      onClick={() => setIsEditing(true)}
+      onClick={onStartEdit}
+      role="button"
+      tabIndex={0}
       className={cn(
-        "w-24 py-2 text-right cursor-pointer rounded hover:bg-gray-50 inline-block",
+        "py-2 text-center cursor-pointer rounded hover:bg-gray-50",
+        value === null && "text-gray-400",
         isDefault && "text-gray-400 italic"
       )}
       title={isDefault ? "Default value based on working days" : undefined}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onStartEdit();
+        }
+      }}
     >
-      {value.toFixed(1)}
+      {value?.toFixed(2) || '-'}
     </div>
   );
 }

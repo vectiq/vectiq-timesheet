@@ -39,18 +39,3 @@ export async function deletePublicHoliday(id: string): Promise<void> {
   const holidayRef = doc(db, COLLECTION, id);
   await deleteDoc(holidayRef);
 }
-
-export async function importXeroHolidays(
-  holidays: Array<{ holidayName: string; holidayDate: string }>,
-  groupId: number
-): Promise<void> {
-  // Filter holidays for the specified group and create them
-  for (const holiday of holidays) {
-    if (holiday.holidayGroups?.includes(groupId) && !holiday.isDeleted) {
-      await addPublicHoliday({
-        name: holiday.holidayName,
-        date: holiday.holidayDate
-      });
-    }
-  }
-}

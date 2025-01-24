@@ -1,66 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
-import {
-  getPublicHolidays,
-  addPublicHoliday,
-  deletePublicHoliday,
-  importXeroHolidays
-} from '@/lib/services/publicHolidays';
-import type { PublicHoliday } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { getPublicHolidays } from '@/lib/services/publicHolidays';
+import { format } from 'date-fns';
 
 const QUERY_KEY = 'public-holidays';
 
-export function usePublicHolidays() {
-  const queryClient = useQueryClient();
-
+export function usePublicHolidays(month?: string) {
   const query = useQuery({
-    queryKey: [QUERY_KEY],
-    queryFn: getPublicHolidays
-  });
-
-  const addMutation = useMutation({
-    mutationFn: addPublicHoliday,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    queryKey: [QUERY_KEY, month],
+    queryFn: async () => {
+      const holidays = await getPublicHolidays();
+      if (month) {
+        // Filter holidays for the specified month
+        return holidays.filter(holiday => 
+          holiday.date.startsWith(month)
+        );
+      }
+      return holidays;
     }
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: deletePublicHoliday,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-    }
-  });
-
-  const importMutation = useMutation({
-    mutationFn: ({ holidays, groupId }: { holidays: any[]; groupId: number }) => 
-      importXeroHolidays(holidays, groupId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-    }
-  });
-
-  const handleAddHoliday = useCallback(async (data: Omit<PublicHoliday, 'id'>) => {
-    return addMutation.mutateAsync(data);
-  }, [addMutation]);
-
-  const handleDeleteHoliday = useCallback(async (id: string) => {
-    return deleteMutation.mutateAsync(id);
-  }, [deleteMutation]);
-
-  const handleImportHolidays = useCallback(async (holidays: any[], groupId: number) => {
-    return importMutation.mutateAsync({ holidays, groupId });
-  }, [importMutation]);
 
   return {
     holidays: query.data || [],
     isLoading: query.isLoading,
-    error: query.error,
-    addHoliday: handleAddHoliday,
-    deleteHoliday: handleDeleteHoliday,
-    importHolidays: handleImportHolidays,
-    isAdding: addMutation.isPending,
-    isDeleting: deleteMutation.isPending,
-    isImporting: importMutation.isPending
+    error: query.error
   };
 }
