@@ -45,6 +45,7 @@ export function RatesDialog({
   // Form state
   const [newSalary, setNewSalary] = useState('');
   const [newCostRate, setNewCostRate] = useState('');
+  const [hoursPerWeek, setHoursPerWeek] = useState(user?.hoursPerWeek || 40);
   const [effectiveDate, setEffectiveDate] = useState('');
   const [estimatedBillablePercentage, setEstimatedBillablePercentage] = useState(user?.estimatedBillablePercentage || 0);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -53,6 +54,10 @@ export function RatesDialog({
   // Initialize history when user changes
   useEffect(() => {
     if (user) {
+      // Initialize billable percentage
+      setHoursPerWeek(user.hoursPerWeek || 40);
+      setEstimatedBillablePercentage(user?.estimatedBillablePercentage || 0);
+      
       // Initialize salary history
       const initialSalaryHistory = Array.isArray(user.salary) ? user.salary : [];
       setSalaryHistory(initialSalaryHistory.sort((a, b) => 
@@ -186,7 +191,8 @@ export function RatesDialog({
       await onSave({
         salary: salaryHistory,
         costRate: costRateHistory,
-        estimatedBillablePercentage
+        hoursPerWeek,
+        estimatedBillablePercentage: estimatedBillablePercentage
       });
       onOpenChange(false);
     } catch (error) {
@@ -248,6 +254,29 @@ export function RatesDialog({
           </div>
         </div>
 
+        {/* Hours Per Week */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Working Hours</h3>
+          </div>
+
+          <div className="space-y-4">
+            <FormField label="Hours Per Week">
+              <Input
+                type="number"
+                min="0"
+                max="168"
+                value={hoursPerWeek}
+                onChange={(e) => setHoursPerWeek(parseInt(e.target.value) || 40)}
+                placeholder="e.g., 40"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Standard working hours per week for this user
+              </p>
+            </FormField>
+          </div>
+        </div>
+
         {/* Billable Percentage */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -261,7 +290,7 @@ export function RatesDialog({
                 min="0"
                 max="100"
                 step="1"
-                value={estimatedBillablePercentage || ''}
+                value={estimatedBillablePercentage}
                 onChange={(e) => setEstimatedBillablePercentage(parseInt(e.target.value) || 0)}
                 placeholder="e.g., 80"
               />

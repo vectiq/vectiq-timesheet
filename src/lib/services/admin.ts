@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, startOfWeek } from 'date-fns';
-import type { SystemConfig, AdminStats, TestDataOptions, XeroConfig, FirestoreCollection, XeroPayItem } from '@/types';
+import type { SystemConfig, AdminStats, TestDataOptions, XeroConfig, FirestoreCollection, XeroPayItem, PublicHoliday } from '@/types';
 
 const CONFIG_DOC = 'system_config';
 const XERO_CONFIG_DOC = 'xero_config';
@@ -51,6 +51,29 @@ export async function getSystemConfig(): Promise<SystemConfig> {
   }
   
   return configDoc.data() as SystemConfig;
+}
+
+// Public Holidays
+export async function getPublicHolidays(): Promise<PublicHoliday[]> {
+  const snapshot = await getDocs(collection(db, 'publicHolidays'));
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as PublicHoliday[];
+}
+
+export async function addPublicHoliday(holiday: Omit<PublicHoliday, 'id'>): Promise<void> {
+  const holidayRef = doc(collection(db, 'publicHolidays'));
+  await setDoc(holidayRef, {
+    id: holidayRef.id,
+    ...holiday,
+    createdAt: serverTimestamp()
+  });
+}
+
+export async function deletePublicHoliday(id: string): Promise<void> {
+  const holidayRef = doc(db, 'publicHolidays', id);
+  await deleteDoc(holidayRef);
 }
 
 export async function updateSystemConfig(config: SystemConfig): Promise<void> {

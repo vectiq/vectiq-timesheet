@@ -4,15 +4,17 @@ import { ConfigurationTab } from '@/components/admin/ConfigurationTab';
 import { UtilitiesTab } from '@/components/admin/UtilitiesTab';
 import { CalculationsTab } from '@/components/admin/CalculationsTab';
 import { IntegrationsTab } from '@/components/admin/IntegrationsTab';
+import { PublicHolidaysTab } from '@/components/admin/PublicHolidaysTab';
 import { Card } from '@/components/ui/Card';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { Settings, Wrench, Calculator, Link2 } from 'lucide-react';
+import { Settings, Wrench, Calculator, Link2, Calendar } from 'lucide-react';
 
 const tabs = [
   { id: 'configuration', name: 'Configuration', icon: Settings },
   { id: 'integrations', name: 'Integrations', icon: Link2 },
   { id: 'utilities', name: 'Utilities', icon: Wrench },
-  { id: 'calculations', name: 'Calculations', icon: Calculator }
+  { id: 'calculations', name: 'Calculations', icon: Calculator },
+  { id: 'holidays', name: 'Public Holidays', icon: Calendar }
 ] as const;
 
 export default function Admin() {
@@ -20,12 +22,15 @@ export default function Admin() {
   const {
     config,
     stats,
+    holidays,
     xeroConfig,
     isLoading,
     generateTestData,
     clearTestData,
     updateConfig,
     updateXeroConfig,
+    addHoliday,
+    deleteHoliday,
     recalculateProjectTotals,
     cleanupOrphanedData,
     validateTimeEntries,
@@ -33,6 +38,8 @@ export default function Admin() {
     exportedData,
     isUpdating,
     isUpdatingXero,
+    isAddingHoliday,
+    isDeletingHoliday,
     isGenerating,
     isClearing,
     isRecalculating,
@@ -143,6 +150,15 @@ export default function Admin() {
             onRecalculateProjectTotals={recalculateProjectTotals}
             isRecalculating={isRecalculating}
             onUpdateConfig={updateConfig}
+          />
+        )}
+
+        {activeTab === 'holidays' && (
+          <PublicHolidaysTab
+            holidays={holidays}
+            isLoading={isLoading}
+            onAddHoliday={addHoliday}
+            onDeleteHoliday={deleteHoliday}
           />
         )}
       </div>

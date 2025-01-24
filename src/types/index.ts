@@ -28,3 +28,12 @@ export interface User {
   hoursPerWeek: number;
   overtime: 'no' | 'eligible' | 'all';
 }
+
+export interface PublicHoliday {
+  id: string;
+  name: string;
+  date: string;
+  createdAt?: any;
+}
+
+export interface SystemConfig {

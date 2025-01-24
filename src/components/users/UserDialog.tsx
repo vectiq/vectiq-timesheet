@@ -39,7 +39,6 @@ export function UserDialog({
       employeeType: 'employee',
       role: 'user',
       projectAssignments: [],
-      hoursPerWeek: 40,
       overtime: 'no',
     },
     shouldUnregister: false, // Prevent fields from being unregistered when removed
@@ -150,38 +149,23 @@ export function UserDialog({
                 </Select>
               </FormField>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="Hours Per Week">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="168"
-                    {...register('hoursPerWeek', { 
-                      valueAsNumber: true,
-                      min: 0,
-                      max: 168
-                    })}
-                  />
-                </FormField>
-
-                <FormField label="Overtime">
-                  <Select 
-                    value={watch('overtime')} 
-                    onValueChange={(value) => setValue('overtime', value)}
-                  >
-                    <SelectTrigger>
-                      {watch('overtime') === 'no' ? 'No Overtime' :
-                       watch('overtime') === 'eligible' ? 'Eligible Projects Only' :
-                       watch('overtime') === 'all' ? 'All Projects' : 'Select Overtime Type'}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no">No Overtime</SelectItem>
-                      <SelectItem value="eligible">Eligible Projects Only</SelectItem>
-                      <SelectItem value="all">All Projects</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormField>
-              </div>
+              <FormField label="Overtime">
+                <Select 
+                  value={watch('overtime')} 
+                  onValueChange={(value) => setValue('overtime', value)}
+                >
+                  <SelectTrigger>
+                    {watch('overtime') === 'no' ? 'No Overtime' :
+                     watch('overtime') === 'eligible' ? 'Eligible Projects Only' :
+                     watch('overtime') === 'all' ? 'All Projects' : 'Select Overtime Type'}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no">No Overtime</SelectItem>
+                    <SelectItem value="eligible">Eligible Projects Only</SelectItem>
+                    <SelectItem value="all">All Projects</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
             </div>
           </div>
 
