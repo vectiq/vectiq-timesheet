@@ -86,7 +86,7 @@ export function RatesDialog({
       alert('Salary must be greater than zero');
       return;
     }
-    
+
     try {
       setIsCalculating(true);
 
@@ -99,43 +99,6 @@ export function RatesDialog({
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setSalaryHistory(newHistory);
-
-      // Auto-calculate cost rate for employees
-      if (user.employeeType === 'employee') {
-        try {
-          // Get system config to calculate cost rate
-          const configRef = doc(db, 'config', 'system_config');
-          const configDoc = await getDoc(configRef);
-          
-          if (!configDoc.exists()) {
-            throw new Error('System configuration not found');
-          }
-          
-          const config = configDoc.data() as SystemConfig;
-
-          // Validate config
-          if (!config.costRateFormula) {
-            throw new Error('Cost rate formula not configured');
-          }
-
-          if (!config.payrollTaxPercentage || !config.insurancePercentage || !config.superannuationPercentage) {
-            throw new Error('Required configuration values are missing');
-          }
-
-          const costRate = calculateCostRate(salary, config);
-
-          const newCostRateHistory = [
-            { costRate, date: isoDate },
-            ...costRateHistory
-          ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-          setCostRateHistory(newCostRateHistory);
-        } catch (error) {
-          console.error('Error calculating cost rate:', error);
-          alert('Failed to calculate cost rate: ' + (error instanceof Error ? error.message : 'Unknown error'));
-          return;
-        }
-      }
 
       // Clear form only on success
       setNewSalary('');
@@ -188,9 +151,17 @@ export function RatesDialog({
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
+      // Sort histories by date descending to ensure latest entries are first
+      const sortedSalaryHistory = [...salaryHistory].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      const sortedCostRateHistory = [...costRateHistory].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
       await onSave({
-        salary: salaryHistory,
-        costRate: costRateHistory,
+        salary: sortedSalaryHistory,
+        costRate: sortedCostRateHistory,
         hoursPerWeek,
         estimatedBillablePercentage: estimatedBillablePercentage
       });

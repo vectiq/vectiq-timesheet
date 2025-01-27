@@ -36,4 +36,12 @@ export interface PublicHoliday {
   createdAt?: any;
 }
 
+export interface TestDataOptions {
+  startDate: string;
+  endDate: string;
+  maxDailyHours: number;
+  minDailyHours: number;
+  includeWeekends: boolean;
+}
+
 export interface SystemConfig {

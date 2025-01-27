@@ -127,29 +127,41 @@ export async function updateUser(id: string, data: Partial<User>): Promise<void>
   if (!userDoc.exists()) {
     throw new Error('User not found');
   }
-
+  
   const user = userDoc.data() as User;
   
   // If this is an employee and salary is being updated, recalculate cost rate
   if (user.employeeType === 'employee' && data.salary) {
     try {
       const config = await getSystemConfig();
-      const latestSalary = data.salary.sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      )[0];
       
-      if (latestSalary) {
-        const costRate = calculateCostRate(latestSalary.salary, config);
-        
-        // Add new cost rate entry
-        const now = new Date();
-        data.costRate = [
-          {
-            costRate,
-            date: now.toISOString()
-          },
-          ...(user.costRate || [])
-        ];
+      // Sort salary entries by date
+      const sortedSalary = data.salary.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      // Calculate cost rates for each salary entry
+      const newCostRates = sortedSalary.map(salaryEntry => {
+        const costRate = calculateCostRate(salaryEntry.salary, config);
+        return {
+          costRate,
+          date: salaryEntry.date // Use the same date as the salary entry
+        };
+      });
+      
+      // Merge with existing cost rates, keeping only the ones without matching dates
+      const existingCostRates = user.costRate || [];
+      const newDates = new Set(newCostRates.map(rate => rate.date));
+      const filteredExistingRates = existingCostRates.filter(rate => !newDates.has(rate.date));
+      
+      // Combine and sort all cost rates
+      data.costRate = [
+        ...newCostRates,
+        ...filteredExistingRates
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      if (newCostRates.length === 0) {
+        throw new Error('No valid salary entries to calculate cost rates');
       }
     } catch (error) {
       console.error('Error calculating cost rate:', error);

@@ -33,13 +33,16 @@ export async function getProjects(): Promise<Project[]> {
 export async function createProject(projectData: Omit<Project, 'id'>): Promise<Project> {
   // Create project document
   const projectRef = doc(collection(db, COLLECTION));
+  const projectId = projectRef.id;
+
   const { tasks, ...projectFields } = projectData;
   const project = {
     ...projectFields,
+    id: projectId,
     tasks: (tasks || []).map(task => ({
       ...task,
       id: crypto.randomUUID(),
-      projectId: projectRef.id,
+      projectId,
       userAssignments: []
     })),
     approverEmail: projectData.approverEmail || '',
@@ -52,7 +55,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
 
   return {
     ...projectFields,
-    id: projectRef.id,
+    id: projectId,
     tasks: project.tasks,
   } as Project;
 }

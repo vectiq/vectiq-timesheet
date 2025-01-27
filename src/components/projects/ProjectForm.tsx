@@ -143,16 +143,6 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           </p>
         </FormField>
 
-        <FormField label="Xero Project ID">
-          <Input
-            {...register('xeroProjectId')}
-            placeholder="e.g., 00000000-0000-0000-0000-000000000000"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            The Xero project ID for timesheet synchronization
-          </p>
-        </FormField>
-
         <div className="grid grid-cols-3 gap-4">
           <FormField label="Budget">
             <Input

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils/styles';
 import { Input } from '@/components/ui/Input';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format, subMonths, parseISO } from 'date-fns';
-import { getSellRateForDate } from '@/lib/utils/rates';
+import { getSellRateForDate, getCostRateForMonth } from '@/lib/utils/rates';
 import { usePublicHolidays } from '@/lib/hooks/usePublicHolidays';
 import { useLeaveForecasts } from '@/lib/hooks/useLeaveForecasts';
 import { useBonuses } from '@/lib/hooks/useBonuses';
@@ -98,22 +98,9 @@ export function UserForecastTable({
     const rates = new Map<string, number>();
     
     users.forEach(user => {
-      if (!user.costRate || user.costRate.length === 0) {
-        rates.set(user.id, 0);
-        return;
-      }
-
-      // Sort cost rates by date descending
-      const sortedRates = [...user.costRate].sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-
-      // Find the first rate that is less than or equal to the forecast month
-      const applicableRate = sortedRates.find(rate => 
-        new Date(rate.date) <= new Date(month + '-01')
-      );
-
-      rates.set(user.id, applicableRate?.costRate || 0);
+      // Get cost rate for the first day of the month using the utility function
+      const costRate = getCostRateForMonth(user.costRate || [], month);
+      rates.set(user.id, costRate);
     });
 
     return rates;

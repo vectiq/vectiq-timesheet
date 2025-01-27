@@ -7,8 +7,6 @@ import {
   getSystemConfig,
   updateSystemConfig,
   getAdminStats,
-  generateTestData,
-  clearTestData,
   recalculateProjectTotals,
   cleanupOrphanedData,
   validateTimeEntries,
@@ -16,6 +14,7 @@ import {
   addPublicHoliday,
   deletePublicHoliday
 } from '@/lib/services/admin';
+import { generateTestTimeEntries, clearTestData } from '@/lib/services/testData';
 import type { SystemConfig, TestDataOptions } from '@/types';
 
 const QUERY_KEYS = {
@@ -77,7 +76,10 @@ export function useAdmin() {
   });
 
   const generateDataMutation = useMutation({
-    mutationFn: generateTestData
+    mutationFn: generateTestTimeEntries,
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    }
   });
 
   const clearDataMutation = useMutation({
