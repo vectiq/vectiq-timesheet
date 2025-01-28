@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils/styles';
 import { Input } from '@/components/ui/Input';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format, subMonths, parseISO } from 'date-fns';
-import { getSellRateForDate, getCostRateForMonth, getAverageSellRate } from '@/lib/utils/rates';
+import { getSellRateForDate, getCostRateForMonth } from '@/lib/utils/rates';
 import { usePublicHolidays } from '@/lib/hooks/usePublicHolidays';
 import { useLeaveForecasts } from '@/lib/hooks/useLeaveForecasts';
 import { useBonuses } from '@/lib/hooks/useBonuses';
@@ -36,7 +36,6 @@ export function UserForecastTable({
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const { leaveData } = useLeaveForecasts(month);
-  const [showDebug, setShowDebug] = useState(true);
   const { holidays } = usePublicHolidays(month);
   const { bonuses } = useBonuses(month);
   const [editData, setEditData] = useState<Record<string, {
@@ -339,66 +338,6 @@ export function UserForecastTable({
 
   return (
     <div className="space-y-8">
-      {/* Debug Panel */}
-      {showDebug && (
-        <Card className="p-4 bg-gray-50 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-900">Sell Rate Calculations</h3>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowDebug(false)}
-            >
-              Hide Debug
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {Array.from(averageSellRates.entries()).map(([userId, data]) => {
-              const user = users.find(u => u.id === userId);
-              if (!user) return null;
-              
-              return (
-                <div key={userId} className="bg-white p-4 rounded-lg shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{user.name}</h4>
-                    <span className="text-sm font-medium text-indigo-600">
-                      Average: ${data.average.toFixed(2)}/hr
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    {data.assignments.map((assignment, i) => (
-                      <div key={i} className="text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">
-                            {assignment.projectName} - {assignment.taskName}
-                          </span>
-                          <span className="text-gray-900">
-                            ${assignment.effectiveRate.toFixed(2)}/hr
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 ml-4">
-                          Historical rates: {assignment.sellRates.length === 0 ? 'None' : 
-                            assignment.sellRates
-                              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                              .map(rate => `$${rate.sellRate} (${format(new Date(rate.date), 'MMM d, yyyy')})`)
-                              .join(', ')
-                          }
-                        </div>
-                      </div>
-                    ))}
-                    {data.assignments.length === 0 && (
-                      <div className="text-sm text-gray-500 italic">
-                        No billable assignments
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
       {renderUserTable(employees, "Employees", true)}
       {renderUserTable(contractors, "Contractors", false)}
     </div>

@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils/styles';
 import { UserForecastTable } from '@/components/forecast/UserForecastTable';
 import { WorkingDaysPanel } from '@/components/forecast/WorkingDaysPanel';
 import { DateNavigation } from '@/components/timesheet/DateNavigation';
+import { ForecastSummaryCard } from '@/components/forecast/ForecastSummaryCard';
+import { usePublicHolidays } from '@/lib/hooks/usePublicHolidays';
+import { useBonuses } from '@/lib/hooks/useBonuses';
 import { getWorkingDaysForMonth } from '@/lib/utils/workingDays';
 
 const VIEW_OPTIONS = [
@@ -39,6 +42,8 @@ export default function Forecast() {
   const { users, isLoading: isLoadingUsers } = useUsers();
   const { projects: allProjects, isLoading: isLoadingProjects } = useProjects();
   const { clients, isLoading: isLoadingClients } = useClients();
+  const { holidays } = usePublicHolidays(currentMonth);
+  const { bonuses } = useBonuses(currentMonth);
   const { 
     forecasts,
     isLoading: isLoadingForecasts,
@@ -115,6 +120,16 @@ export default function Forecast() {
           />
         </div>
       </div>
+
+      <ForecastSummaryCard
+        users={users}
+        projects={projects}
+        forecasts={forecasts}
+        month={currentMonth}
+        workingDays={workingDays}
+        holidays={holidays}
+        bonuses={bonuses}
+      />
 
       <WorkingDaysPanel selectedDate={currentDate} />
 
