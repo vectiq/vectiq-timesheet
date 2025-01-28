@@ -12,16 +12,14 @@ import { usePublicHolidays } from '@/lib/hooks/usePublicHolidays';
 import { useLeaveForecasts } from '@/lib/hooks/useLeaveForecasts';
 import { useBonuses } from '@/lib/hooks/useBonuses';
 import { Save, Edit2 } from 'lucide-react';
-import type { User, Project, ForecastEntry } from '@/types';
+import type { User, Project } from '@/types';
 
 interface UserForecastTableProps {
   users: User[];
   projects: Project[];
-  forecasts: ForecastEntry[];
+  forecasts: any[];
   month: string;
   workingDays: number;
-  onCreateForecast: (data: Omit<ForecastEntry, 'id'>) => Promise<void>;
-  onUpdateForecast: (id: string, hours: number) => Promise<void>;
 }
 
 export function UserForecastTable({
@@ -30,8 +28,6 @@ export function UserForecastTable({
   forecasts,
   month,
   workingDays,
-  onCreateForecast,
-  onUpdateForecast
 }: UserForecastTableProps) {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -111,34 +107,10 @@ export function UserForecastTable({
   };
 
   const handleCancelEdit = () => {
-    setEditingUserId(null);
   };
 
   const handleSaveEdit = async (userId: string) => {
-    const userData = editData[userId];
-    if (!userData) return;
-
-    const existingForecast = forecasts.find(f => f.userId === userId);
-
-    try {
-      if (existingForecast) {
-        await onUpdateForecast(existingForecast.id, userData.forecastHours);
-      } else {
-        await onCreateForecast({
-          month,
-          userId,
-          hours: userData.forecastHours,
-          isDefault: false
-        });
-      }
-      
-      // TODO: Update user data (hoursPerWeek and billable %) via user service
-      
-      setHasChanges(true);
-      setEditingUserId(null);
-    } catch (error) {
-      console.error('Error updating forecast:', error);
-    }
+    
   };
 
   const renderUserTable = (users: User[], title: string, isEmployee: boolean) => {

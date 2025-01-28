@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, addYears, subYears } from 'date-fns';
-import { useForecasts } from '@/lib/hooks/useForecasts';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useProjects } from '@/lib/hooks/useProjects';
 import { useClients } from '@/lib/hooks/useClients';
@@ -44,12 +43,7 @@ export default function Forecast() {
   const { clients, isLoading: isLoadingClients } = useClients();
   const { holidays } = usePublicHolidays(currentMonth);
   const { bonuses } = useBonuses(currentMonth);
-  const { 
-    forecasts,
-    isLoading: isLoadingForecasts,
-    createForecast,
-    updateForecast
-  } = useForecasts(currentMonth);
+
 
   // Filter for active projects only
   const projects = useMemo(() => {
@@ -85,9 +79,11 @@ export default function Forecast() {
 
   const handleToday = () => setCurrentDate(startOfMonth(new Date()));
 
-  if (isLoadingUsers || isLoadingProjects || isLoadingClients || isLoadingForecasts) {
+  if (isLoadingUsers || isLoadingProjects || isLoadingClients) {
     return <LoadingScreen />;
   }
+
+  const forecasts = [];
 
   return (
     <div className="space-y-6">
@@ -140,8 +136,6 @@ export default function Forecast() {
           forecasts={forecasts}
           month={currentMonth}
           workingDays={workingDays}
-          onCreateForecast={createForecast}
-          onUpdateForecast={updateForecast} 
         />
       </div>
     </div>

@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { ReportTabs } from '@/components/reports/ReportTabs';
 import { TimeReport } from '@/components/reports/TimeReport';
-import { ForecastReportContent } from '@/components/reports/ForecastReportContent';
 import type { ReportFilters as ReportFiltersType } from '@/types';
 
 export default function Reports() {
@@ -36,11 +35,7 @@ export default function Reports() {
 
       <ReportTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {activeTab === 'time' ? (
         <TimeReport filters={filters} onFiltersChange={setFilters} />
-      ) : (
-        <ForecastReportContent filters={filters} onFiltersChange={setFilters} />
-      )}
     </div>
   );
 }
