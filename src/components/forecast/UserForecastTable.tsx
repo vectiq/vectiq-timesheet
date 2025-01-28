@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Card } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -6,7 +7,7 @@ import { cn } from '@/lib/utils/styles';
 import { Input } from '@/components/ui/Input';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format, subMonths, parseISO } from 'date-fns';
-import { getSellRateForDate, getCostRateForMonth } from '@/lib/utils/rates';
+import { getSellRateForDate, getCostRateForMonth, getAverageSellRate } from '@/lib/utils/rates';
 import { usePublicHolidays } from '@/lib/hooks/usePublicHolidays';
 import { useLeaveForecasts } from '@/lib/hooks/useLeaveForecasts';
 import { useBonuses } from '@/lib/hooks/useBonuses';
@@ -35,6 +36,7 @@ export function UserForecastTable({
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const { leaveData } = useLeaveForecasts(month);
+  const [showDebug, setShowDebug] = useState(true);
   const { holidays } = usePublicHolidays(month);
   const { bonuses } = useBonuses(month);
   const [editData, setEditData] = useState<Record<string, {
@@ -55,42 +57,32 @@ export function UserForecastTable({
     }, { employees: [] as User[], contractors: [] as User[] });
   }, [users]);
 
-  // Calculate historical sell rates for each user
-  const historicalRates = useMemo(() => {
-    const rates = new Map<string, number>();
-    
-    users.forEach(user => {
-      let totalRate = 0;
-      let totalAssignments = 0;
-
-      // Look at last 3 months of assignments
-      const date = new Date(month + '-01');
-      for (let i = 0; i < 3; i++) {
-        const monthDate = subMonths(date, i);
-        const monthStr = format(monthDate, 'yyyy-MM-dd');
-
+  // Calculate average sell rates for each user based on current assignments
+  const averageSellRates = useMemo(() => {
+    const monthStart = format(new Date(month + '-01'), 'yyyy-MM-dd');
+    return new Map(
+      users.map(user => {
         // Get all billable assignments for this user
-        projects.forEach(project => {
+        const assignments = projects.flatMap(project =>
           project.tasks
-            .filter(task => task.billable)
-            .forEach(task => {
-              const hasAssignment = task.userAssignments?.some(a => a.userId === user.id);
-              if (hasAssignment) {
-                const sellRate = getSellRateForDate(task.sellRates, monthStr);
-                if (sellRate > 0) {
-                  totalRate += sellRate;
-                  totalAssignments++;
-                }
-              }
-            });
-        });
-      }
+            .filter(task => task.billable && task.userAssignments?.some(a => a.userId === user.id))
+            .map(task => ({
+              projectName: project.name,
+              taskName: task.name,
+              sellRates: task.sellRates || [],
+              effectiveRate: getSellRateForDate(task.sellRates, monthStart)
+            }))
+        );
 
-      // Calculate average rate
-      rates.set(user.id, totalAssignments > 0 ? totalRate / totalAssignments : 0);
-    });
+        const totalRate = assignments.reduce((sum, a) => sum + a.effectiveRate, 0);
+        const avgRate = assignments.length > 0 ? totalRate / assignments.length : 0;
 
-    return rates;
+        return [user.id, {
+          average: avgRate,
+          assignments: assignments
+        }];
+      })
+    );
   }, [users, projects, month]);
 
   // Calculate cost rates for the forecast month
@@ -180,7 +172,7 @@ export function UserForecastTable({
           </TableHeader>
           <TableBody>
             {users.map(user => {
-              const avgSellRate = historicalRates.get(user.id) || 0;
+              const avgSellRate = averageSellRates.get(user.id)?.average || 0;
               const costRate = costRates.get(user.id) || 0;
               const forecast = forecasts.find(f => f.userId === user.id);
               const isEditing = editingUserId === user.id;
@@ -347,6 +339,66 @@ export function UserForecastTable({
 
   return (
     <div className="space-y-8">
+      {/* Debug Panel */}
+      {showDebug && (
+        <Card className="p-4 bg-gray-50 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-gray-900">Sell Rate Calculations</h3>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowDebug(false)}
+            >
+              Hide Debug
+            </Button>
+          </div>
+          <div className="space-y-4">
+            {Array.from(averageSellRates.entries()).map(([userId, data]) => {
+              const user = users.find(u => u.id === userId);
+              if (!user) return null;
+              
+              return (
+                <div key={userId} className="bg-white p-4 rounded-lg shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-900">{user.name}</h4>
+                    <span className="text-sm font-medium text-indigo-600">
+                      Average: ${data.average.toFixed(2)}/hr
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {data.assignments.map((assignment, i) => (
+                      <div key={i} className="text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">
+                            {assignment.projectName} - {assignment.taskName}
+                          </span>
+                          <span className="text-gray-900">
+                            ${assignment.effectiveRate.toFixed(2)}/hr
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 ml-4">
+                          Historical rates: {assignment.sellRates.length === 0 ? 'None' : 
+                            assignment.sellRates
+                              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                              .map(rate => `$${rate.sellRate} (${format(new Date(rate.date), 'MMM d, yyyy')})`)
+                              .join(', ')
+                          }
+                        </div>
+                      </div>
+                    ))}
+                    {data.assignments.length === 0 && (
+                      <div className="text-sm text-gray-500 italic">
+                        No billable assignments
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {renderUserTable(employees, "Employees", true)}
       {renderUserTable(contractors, "Contractors", false)}
     </div>
