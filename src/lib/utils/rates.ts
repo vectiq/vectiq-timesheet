@@ -1,4 +1,4 @@
-import type { SellRate, CostRate } from '@/types';
+import type { SellRate, CostRate, Project } from '@/types';
 
 // Helper function to get sell rate for a specific date
 export function getSellRateForDate(sellRates: SellRate[] | undefined, date: string): number {
@@ -59,23 +59,16 @@ export function getAverageSellRate(
   projects: Project[],
   userId: string,
   date: string
-): { average: number; assignments: Array<{ projectName: string; taskName: string; sellRate: number }> } {
+): number {
   // Get all billable assignments for this user
   const assignments = projects.flatMap(project =>
     project.tasks
       .filter(task => task.billable && task.userAssignments?.some(a => a.userId === userId))
       .map(task => ({
-        projectName: project.name,
-        taskName: task.name,
         sellRate: getSellRateForDate(task.sellRates, date)
       }))
   );
 
   const totalRate = assignments.reduce((sum, a) => sum + a.sellRate, 0);
-  const average = assignments.length > 0 ? totalRate / assignments.length : 0;
-
-  return {
-    average,
-    assignments
-  };
+  return assignments.length > 0 ? totalRate / assignments.length : 0;
 }
