@@ -9,10 +9,6 @@ import { Layout } from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries';
 import Leave from '@/pages/Leave';
-import Processing from '@/pages/Processing';
-import Forecast from '@/pages/Forecast';
-import Reports from '@/pages/Reports';
-import Bonuses from '@/pages/Bonuses';
 import Projects from '@/pages/Projects';
 import Clients from '@/pages/Clients';
 import Users from '@/pages/Users';
@@ -20,6 +16,7 @@ import Teams from '@/pages/Teams';
 import Help from '@/pages/Help';
 import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
+import Reports from '@/pages/Reports';
 import RejectTimesheet from '@/pages/RejectTimesheet';
 import { EffectiveTimesheetUserProvider } from './lib/contexts/EffectiveTimesheetUserContext';
 
@@ -78,30 +75,7 @@ export default function App() {
             } />
             <Route path="profile" element={<Profile />} />
             <Route path="leave" element={<Leave />} />
-            <Route
-              path="bonuses"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Bonuses />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="processing"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Processing />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="forecast"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Forecast />
-                </RoleProtectedRoute>
-              }
-            />
+           
             <Route
               path="reports"
               element={
