@@ -18,8 +18,8 @@ env:
   VITE_APP_URL: "http://timesheet.vectiq.digital"
   VITE_EMAIL_SECRET: ${{ secrets.VITE_EMAIL_SECRET}}
 jobs:
-  environment: Prod
   build_and_preview:
+    environment: Prod
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
