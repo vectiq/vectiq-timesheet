@@ -1,4 +1,4 @@
-import { Clock, Building2, FolderKanban, BarChart2, TrendingUp, UserCircle, Settings, FileCheck, CalendarDays, HelpCircle, Users, DollarSign } from 'lucide-react';
+import { Clock, CalendarDays, HelpCircle } from 'lucide-react';
 
 export const navigationItems = [
   { name: 'Timesheet', href: '/', icon: Clock, roles: ['user', 'admin'] },
