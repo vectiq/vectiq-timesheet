@@ -75,55 +75,6 @@ export default function App() {
             } />
             <Route path="profile" element={<Profile />} />
             <Route path="leave" element={<Leave />} />
-           
-            <Route
-              path="reports"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Reports />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="projects"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Projects />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="clients"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Clients />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="users"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Users />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="teams"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Teams />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="admin"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Admin />
-                </RoleProtectedRoute>
-              }
-            />
             <Route path="help" element={<Help />} />
           </Route>
 
