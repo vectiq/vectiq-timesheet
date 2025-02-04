@@ -52,11 +52,9 @@ const SheetContent = React.forwardRef<
       )}
       {...props}
     >
-      {title && (
-        <SheetTitle className="sr-only">
-          {title}
-        </SheetTitle>
-      )}
+      <SheetTitle className="sr-only">
+        {title || 'Sheet Dialog'}
+      </SheetTitle>
       {children}
       <SheetPrimitive.Close className="absolute right-6 top-6 rounded-full p-2 text-gray-400 opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-gray-100">
         <X className="h-4 w-4" />

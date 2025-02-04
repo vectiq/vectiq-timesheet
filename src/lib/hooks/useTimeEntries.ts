@@ -247,14 +247,16 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const hasMonthlyApprovals = useMemo(() => {
     if (!dateRange || !effectiveUserId) return false;
     
-    const monthStart = format(startOfMonth(dateRange.start), 'yyyy-MM-dd');
-    const monthEnd = format(endOfMonth(dateRange.start), 'yyyy-MM-dd');
+    const currentStart = format(dateRange.start, 'yyyy-MM-dd');
+    const currentEnd = format(dateRange.end, 'yyyy-MM-dd');
     
     // Group approvals by project
     const projectApprovals = new Map();
     approvals.forEach(approval => {
       if (approval.userId !== effectiveUserId) return;
-      if (approval.startDate !== monthStart || approval.endDate !== monthEnd) return;
+      
+      // Check if approval period overlaps with current week
+      if (approval.startDate > currentEnd || approval.endDate < currentStart) return;
       
       const key = approval.project?.id;
       if (!projectApprovals.has(key)) {

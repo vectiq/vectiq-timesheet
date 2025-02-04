@@ -16,7 +16,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
 import { formatTimesheetBreakdown } from '@/lib/utils/timesheet';
-import type { TimeEntry, Project, Client, Approval, ApprovalStatus } from '@/types';
+import type { TimeEntry, Project, Client, Approval } from '@/types';
 import CryptoJS from 'crypto-js';
 
 interface ApprovalRequest {
@@ -69,10 +69,54 @@ export async function getApprovalDetails(approvalId: string) {
 
 export async function withdrawApproval(approvalId: string) {
   const approvalRef = doc(db, 'approvals', approvalId);
+  const approvalDoc = await getDoc(approvalRef);
+  
+  if (!approvalDoc.exists()) {
+    throw new Error('Approval not found');
+  }
+  
+  const approval = approvalDoc.data() as Approval;
+
+  // Get user details
+  const userRef = doc(db, 'users', approval.userId);
+  const userDoc = await getDoc(userRef);
+
+  if (!userDoc.exists()) {
+    throw new Error('User not found');
+  }
+
+  const user = userDoc.data();
+  
   await updateDoc(approvalRef, {
     status: 'withdrawn',
     withdrawnAt: serverTimestamp(),
     updatedAt: serverTimestamp()
+  });
+
+  // Send email notification
+  const functions = getFunctions();
+  const sendEmail = httpsCallable(functions, 'sendEmail');
+  
+  const emailHtml = `
+    <h2>Timesheet Approval Withdrawn</h2>
+    <p>A timesheet approval request from ${user.name} has been withdrawn:</p>
+    
+    <ul>
+      <li><strong>Client:</strong> ${approval.client.name}</li>
+      <li><strong>Project:</strong> ${approval.project.name}</li>
+      <li><strong>Period:</strong> ${format(new Date(approval.startDate), 'MMM d, yyyy')} - ${format(new Date(approval.endDate), 'MMM d, yyyy')}</li>
+      <li><strong>Total Hours:</strong> ${approval.totalHours.toFixed(2)}</li>
+    </ul>
+
+    <p>Please disregard the previous approval request email. A new approval request may be submitted.</p>
+  `;
+
+  await sendEmail({
+    recipient: approval.approverEmail,
+    subject: `Timesheet Approval Withdrawn: ${approval.client.name} - ${approval.project.name} (Withdrawn by ${user.name})`,
+    body: emailHtml,
+    type: 'Timesheet withdrawal',
+    token: generateToken(import.meta.env.VITE_EMAIL_SECRET)
   });
 }
 
