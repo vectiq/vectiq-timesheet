@@ -11,6 +11,7 @@ interface EditableTimeCellProps {
   onEndEdit: () => void;
   isDisabled?: boolean;
   isLocked?: boolean;
+  tooltip?: string;
 }
 
 export function EditableTimeCell({ 
@@ -20,7 +21,8 @@ export function EditableTimeCell({
   onStartEdit,
   onEndEdit,
   isDisabled = false,
-  isLocked
+  isLocked,
+  tooltip
 }: EditableTimeCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState('');
@@ -84,13 +86,15 @@ export function EditableTimeCell({
         role="button"
         tabIndex={0}
         aria-label={`${value?.toFixed(2) || '-'} hours`}
+        title={tooltip}
         className={cn(
           "py-2 text-center cursor-pointer rounded hover:bg-gray-50",
           value === null && "text-gray-400",
-          (isDisabled || isLocked) && "cursor-not-allowed opacity-50 hover:bg-transparent",
-          isLocked && "bg-gray-50"
+          (isDisabled || isLocked) && "cursor-not-allowed hover:bg-transparent",
+          isLocked && "bg-gray-50",
+          isDisabled && tooltip && "bg-red-50/30"
         )}
-        title={isLocked ? `Time entries are locked` : undefined}
+        title={isLocked ? `Time entries are locked` : tooltip}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();

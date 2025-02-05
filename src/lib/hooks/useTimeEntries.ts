@@ -58,7 +58,8 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const availableAssignments = useMemo(() => {
     if (!effectiveUserId || !projects) return [];
     
-    return projects
+    // Include all assignments but mark inactive ones
+    const assignments = projects
       // Filter for active projects with valid dates
       .filter(project => {
         const isActive = project.isActive;
@@ -73,16 +74,19 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
       .flatMap(project => project.tasks.flatMap(task => {
         const assignment = task.userAssignments?.find(a => a.userId === effectiveUserId);
         if (!assignment) return [];
-        
+
         return [{
           clientId: project.clientId,
           projectId: project.id,
           taskId: task.id,
           projectName: project.name,
-          taskName: task.name
+          taskName: task.name,
+          isActive: assignment.isActive !== false // treat undefined as active for backward compatibility
         }];
       })
                )
+
+    return assignments;
   }, [effectiveUserId, projects]);
 
   const createMutation = useMutation({
@@ -302,8 +306,23 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         end: previousWeekEnd
       });
 
+      // Filter out entries for inactive projects or task assignments
+      const activeEntries = previousEntries.filter(entry => {
+        // Check if project is active
+        const project = projects.find(p => p.id === entry.projectId);
+        if (!project?.isActive) return false;
+
+        // Check if task assignment is active
+        const assignment = availableAssignments.find(a =>
+          a.clientId === entry.clientId &&
+          a.projectId === entry.projectId &&
+          a.taskId === entry.taskId
+        );
+        return assignment?.isActive !== false;
+      });
+
       // Create new entries for current week
-      const promises = previousEntries.map(entry => {
+      const promises = activeEntries.map(entry => {
         const entryDate = new Date(entry.date);
         const newDate = new Date(entryDate);
         newDate.setDate(newDate.getDate() + 7);
@@ -325,7 +344,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     } finally {
       setIsCopying(false);
     }
-  }, [effectiveUserId, dateRange, handleCreateEntry, isCopying]);
+  }, [effectiveUserId, dateRange, handleCreateEntry, isCopying, projects, availableAssignments]);
 
   // Combine automatic and manual rows
   const rows = useMemo(() => {

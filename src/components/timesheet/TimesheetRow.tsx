@@ -69,6 +69,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         .filter(a => a.clientId === row.clientId)
         .map(a => a.projectId)
     );
+    
     return getProjectsForClient(row.clientId).filter(p => projectIds.has(p.id));
   }, [row.clientId, getProjectsForClient, availableAssignments]);
 
@@ -81,8 +82,30 @@ export const TimesheetRow = memo(function TimesheetRow({
         .filter(a => a.projectId === row.projectId)
         .map(a => a.taskId)
     );
-    return getTasksForProject(row.projectId).filter(t => taskIds.has(t.id));
+    
+    return getTasksForProject(row.projectId)
+      .filter(t => taskIds.has(t.id))
+      .map(t => ({
+        ...t,
+        isActive: availableAssignments.find(a => 
+          a.projectId === row.projectId && 
+          a.taskId === t.id
+        )?.isActive ?? true
+      }));
   }, [row.projectId, getTasksForProject, availableAssignments]);
+
+  // Check if current row combination is inactive
+  const isInactiveAssignment = useMemo(() => {
+    if (!row.clientId || !row.projectId || !row.taskId) return false;
+    
+    const assignment = availableAssignments.find(a => 
+      a.clientId === row.clientId && 
+      a.projectId === row.projectId && 
+      a.taskId === row.taskId
+    );
+    
+    return assignment && !assignment.isActive;
+  }, [row, availableAssignments]);
 
   // Get available clients and projects based on user assignments
   const availableClients = useMemo(() => {
@@ -138,7 +161,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <SelectTrigger 
             className={cn(
-              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+              hasLockedEntries && "cursor-not-allowed bg-gray-50"
             )}
             title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
           >
@@ -164,16 +187,33 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <SelectTrigger
             className={cn(
-              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+              hasLockedEntries && "cursor-not-allowed bg-gray-50"
             )}
             title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
           >
-            {row.projectId ? availableProjects.find(p => p.id === row.projectId)?.name : "Select Project"}
+            {row.projectId ? (
+              <div className="flex items-center gap-2">
+                <span>{availableProjects.find(p => p.id === row.projectId)?.name}</span>
+                {!projects.find(p => p.id === row.projectId)?.isActive && (
+                  <span className="text-xs text-red-500">(Inactive)</span>
+                )}
+              </div>
+            ) : "Select Project"}
           </SelectTrigger>
           <SelectContent>
             {availableProjects.map(project => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
+              <SelectItem 
+                key={project.id} 
+                value={project.id}
+                disabled={!project.isActive}
+                className={!project.isActive ? 'cursor-not-allowed' : ''}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{project.name}</span>
+                  {!project.isActive && (
+                    <span className="text-xs text-red-500">(Inactive)</span>
+                  )}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
@@ -189,16 +229,45 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <SelectTrigger
             className={cn(
-              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+              hasLockedEntries && "cursor-not-allowed bg-gray-50"
             )}
             title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
           >
-            {row.taskId ? availableTasks.find(t => t.id === row.taskId)?.name : "Select Task"}
+            {row.taskId ? (
+              <div className="flex items-center gap-2">
+                <span>{availableTasks.find(t => t.id === row.taskId)?.name}</span>
+                {!availableAssignments.find(a => 
+                  a.taskId === row.taskId && 
+                  a.projectId === row.projectId
+                )?.isActive && (
+                  <span className="text-xs text-red-500">(Inactive)</span>
+                )}
+              </div>
+            ) : "Select Task"}
           </SelectTrigger>
           <SelectContent>
             {availableTasks.map(task => (
-              <SelectItem key={task.id} value={task.id}>
-                {task.name}
+              <SelectItem 
+                key={task.id} 
+                value={task.id}
+                disabled={!availableAssignments.find(a => 
+                  a.taskId === task.id && 
+                  a.projectId === row.projectId
+                )?.isActive}
+                className={cn(!availableAssignments.find(a => 
+                  a.taskId === task.id && 
+                  a.projectId === row.projectId
+                )?.isActive && 'cursor-not-allowed')}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{task.name}</span>
+                  {!availableAssignments.find(a => 
+                    a.taskId === task.id && 
+                    a.projectId === row.projectId
+                  )?.isActive && (
+                    <span className="text-xs text-red-500">(Inactive)</span>
+                  )}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
@@ -216,11 +285,12 @@ export const TimesheetRow = memo(function TimesheetRow({
             <EditableTimeCell
               value={entry?.hours || null}
               onChange={(value) => onCellChange(dateStr, row, value)}
-              isEditing={editingCell === cellKey}
+              isEditing={editingCell === cellKey && !isInactiveAssignment}
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
-              isDisabled={!isRowComplete}
+              isDisabled={!isRowComplete || isInactiveAssignment}
               isLocked={isLocked}
+              tooltip={isInactiveAssignment ? "Cannot add time entries for inactive assignments" : undefined}
             />
           </Td>
         );
