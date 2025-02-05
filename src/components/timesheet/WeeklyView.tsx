@@ -33,6 +33,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     isOpen: false,
     index: null
   });
+
   const { 
     timeEntries,
     rows,
@@ -53,20 +54,6 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     dateRange 
   });
 
-  // Get projects and tasks where user is assigned
-  const getProjectsForClient = useCallback((clientId: string) => 
-    projects.filter(p => p.clientId === clientId),
-    [projects]
-  );
-
-  const getTasksForProject = useCallback((projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return [];
-    return project.tasks.filter(task => 
-      task.userAssignments?.some(a => a.userId === userId)
-    );
-  }, [projects, userId]);
-
   const weekDays = useMemo(() => {
     const days: Date[] = [];
     let currentDate = new Date(dateRange.start);
@@ -76,6 +63,63 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     }
     return days;
   }, [dateRange]);
+
+  const handleTabBetweenCells = useCallback((currentDate: string, shiftKey: boolean) => {
+    const currentDateIndex = weekDays.findIndex(date => format(date, 'yyyy-MM-dd') === currentDate);
+    
+    // Get current row and cell info
+    const [, projectId, taskId] = editingCell?.split('-') || [];
+    const currentRowIndex = rows.findIndex(r => 
+      r.projectId === projectId && r.taskId === taskId
+    );
+    
+    // Calculate next cell position
+    const nextDateIndex = shiftKey ? currentDateIndex - 1 : currentDateIndex + 1;
+    let nextRow = currentRowIndex;
+    let targetDateIndex = nextDateIndex;
+    
+    // Handle row transitions
+    if (nextDateIndex < 0 && currentRowIndex > 0) {
+      nextRow = currentRowIndex - 1;
+      targetDateIndex = weekDays.length - 1;
+    } else if (nextDateIndex >= weekDays.length && currentRowIndex < rows.length - 1) {
+      nextRow = currentRowIndex + 1;
+      targetDateIndex = 0;
+    } else if (nextDateIndex < 0 || nextDateIndex >= weekDays.length) {
+      return; // Don't move if we're at the edges
+    }
+
+    // Get target row and date
+    const targetRow = rows[nextRow];
+    const targetDate = format(weekDays[targetDateIndex], 'yyyy-MM-dd');
+
+    if (targetRow) {
+      const nextCellKey = `${targetDate}-${targetRow.projectId}-${targetRow.taskId}`;
+      setEditingCell(nextCellKey);
+      
+      // Focus the next input after a brief delay to ensure React has updated
+      setTimeout(() => {
+        const nextInput = document.querySelector(`input[data-cell-key="${nextCellKey}"]`) as HTMLInputElement;
+        if (nextInput) {
+          nextInput.focus();
+          nextInput.select();
+        }
+      }, 0);
+    }
+  }, [weekDays, editingCell, rows, setEditingCell]);
+
+  // Get projects and tasks where user is assigned
+  const getProjectsForClient = useCallback((clientId: string) => 
+    projects.filter(p => p.clientId === clientId),
+    [projects]
+  );
+  const getTasksForProject = useCallback((projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return [];
+    return project.tasks.filter(task => 
+      task.userAssignments?.some(a => a.userId === userId)
+    );
+  }, [projects, userId]);
 
   const weekKey = format(dateRange.start, 'yyyy-MM-dd');
 
@@ -144,6 +188,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 onUpdateRow={updateRow}
                 onRemoveRow={handleDeleteRow}
                 onCellChange={handleCellChange}
+                onTabBetweenCells={handleTabBetweenCells}
                 onStartEdit={setEditingCell}
                 onEndEdit={() => setEditingCell(null)}
                 userId={userId}

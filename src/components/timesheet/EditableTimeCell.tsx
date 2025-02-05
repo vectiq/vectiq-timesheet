@@ -11,7 +11,9 @@ interface EditableTimeCellProps {
   onEndEdit: () => void;
   isDisabled?: boolean;
   isLocked?: boolean;
+  onTab?: (shift: boolean) => void;
   tooltip?: string;
+  cellKey?: string;
 }
 
 export function EditableTimeCell({ 
@@ -22,23 +24,17 @@ export function EditableTimeCell({
   onEndEdit,
   isDisabled = false,
   isLocked,
-  tooltip
+  onTab,
+  tooltip,
+  cellKey
 }: EditableTimeCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [localValue, setLocalValue] = useState('');
+  const [localValue, setLocalValue] = useState(value?.toString() || '');
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
-    if (isEditing) {
-      setLocalValue(value?.toString() || '');
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          inputRef.current.select();
-        }
-      });
-    }
-  }, [isEditing, value]);
+    setLocalValue(value?.toString() || '');
+  }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -47,68 +43,66 @@ export function EditableTimeCell({
     }
   };
 
-  const handleBlur = () => {
+  const handleSave = () => {
     const numValue = localValue === '' ? null : parseFloat(localValue);
     if (numValue !== value) {
       onChange(numValue);
     }
+  };
+
+  const handleBlur = () => {
+    handleSave();
+    setIsFocused(false);
     onEndEdit();
+  };
+
+  const handleFocus = () => {
+    if (!isDisabled && !isLocked) {
+      setIsFocused(true);
+      onStartEdit();
+      if (inputRef.current) {
+        inputRef.current.select();
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      const numValue = localValue === '' ? null : parseFloat(localValue);
-      if (numValue !== value) {
-        onChange(numValue);
-      }
+      handleSave();
       onEndEdit();
+      e.currentTarget.blur();
     } else if (e.key === 'Escape') {
       setLocalValue(value?.toString() || '');
       onEndEdit();
+      e.currentTarget.blur();
+    } else if (e.key === 'Tab' && onTab) {
+      handleSave();
+      onEndEdit();
+      onTab(e.shiftKey);
     }
   };
 
-  return isEditing ? (
+  return (
     <Input
       ref={inputRef}
       aria-label="Time entry hours"
       type="text"
+      data-cell-key={cellKey}
       value={localValue}
+      disabled={isDisabled || isLocked}
       onChange={handleChange}
       onBlur={handleBlur}
+      onFocus={handleFocus}
       onKeyDown={handleKeyDown}
-      className="text-center"
-    />
-  ) : (
-    <div className="relative">
-      <div
-        onClick={(isDisabled || isLocked) ? undefined : onStartEdit}
-        role="button"
-        tabIndex={0}
-        aria-label={`${value?.toFixed(2) || '-'} hours`}
-        title={tooltip}
-        className={cn(
-          "py-2 text-center cursor-pointer rounded hover:bg-gray-50",
-          value === null && "text-gray-400",
-          (isDisabled || isLocked) && "cursor-not-allowed hover:bg-transparent",
-          isLocked && "bg-gray-50",
-          isDisabled && tooltip && "bg-red-50/30"
-        )}
-        title={isLocked ? `Time entries are locked` : tooltip}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            if (!isDisabled && !isLocked) {
-              onStartEdit();
-            }
-          }
-        }}
-      >
-        {value?.toFixed(2) || '-'}
-      </div>
-      {isLocked && (
-        <Lock className="h-3 w-3 text-gray-400 absolute -top-1 -right-1" />
+      className={cn(
+        "text-center h-10 px-2 py-1",
+        !isFocused && "bg-transparent border-transparent hover:border-gray-300 focus:border-indigo-500",
+        value === null && "text-gray-400",
+        isDisabled && "cursor-not-allowed opacity-50",
+        isLocked && "bg-gray-50",
+        isDisabled && tooltip && "bg-red-50/30"
       )}
-    </div>
+      title={isLocked ? `Time entries are locked` : tooltip}
+    />
   );
 }

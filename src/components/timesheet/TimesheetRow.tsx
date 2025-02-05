@@ -29,6 +29,7 @@ interface TimesheetRowProps {
   onCellChange: (date: string, row: any, value: number | null) => void;
   onStartEdit: (key: string) => void;
   onEndEdit: () => void;
+  onTabBetweenCells: (currentDate: string, shiftKey: boolean) => void;
   userId: string;
   availableAssignments: Array<{
     clientId: string;
@@ -53,6 +54,7 @@ export const TimesheetRow = memo(function TimesheetRow({
   onCellChange,
   onStartEdit,
   onEndEdit,
+  onTabBetweenCells,
   userId,
   availableAssignments
 }: TimesheetRowProps) {
@@ -288,9 +290,11 @@ export const TimesheetRow = memo(function TimesheetRow({
               isEditing={editingCell === cellKey && !isInactiveAssignment}
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
+              onTab={(shift) => onTabBetweenCells(dateStr, shift)}
               isDisabled={!isRowComplete || isInactiveAssignment}
               isLocked={isLocked}
               tooltip={isInactiveAssignment ? "Cannot add time entries for inactive assignments" : undefined}
+              cellKey={cellKey}
             />
           </Td>
         );
