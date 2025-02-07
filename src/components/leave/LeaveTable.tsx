@@ -63,7 +63,6 @@ export function LeaveTable({ onDelete }: LeaveTableProps) {
           <Th>Units</Th>
           <Th>Status</Th>
           <Th>Description</Th>
-          <Th className="text-right">Actions</Th>
         </tr>
       </TableHeader>
       <TableBody>
@@ -82,13 +81,6 @@ export function LeaveTable({ onDelete }: LeaveTableProps) {
               </Badge>
             </Td>
             <Td>{entry.description || '-'}</Td>
-            <Td className="text-right">
-              <div className="flex justify-end gap-2">
-                <Button variant="secondary" size="sm" onClick={() => onDelete(entry.id)}>
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </div>
-            </Td>
           </tr>))
         ) : (
           <tr>
