@@ -65,6 +65,7 @@ export function DateNavigation({
           size="sm" 
           onClick={onToday}
           className="flex items-center gap-1.5"
+          style={{minWidth: "6rem"}}
         >
           {isBeforeToday && <ArrowRight className="h-4 w-4 text-gray-500" />}
           {isAfterToday && <ArrowLeft className="h-4 w-4 text-gray-500" />}
@@ -74,7 +75,7 @@ export function DateNavigation({
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
-      <span className="text-lg font-medium">
+      <span className="text-lg font-medium" style={{minWidth: "11rem"}}>
         {formatDate(currentDate)}
       </span>
     </div>
