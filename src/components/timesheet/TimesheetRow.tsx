@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Td } from '@/components/ui/Table';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
@@ -31,6 +31,7 @@ interface TimesheetRowProps {
   onEndEdit: () => void;
   onTabBetweenCells: (currentDate: string, shiftKey: boolean) => void;
   userId: string;
+  committingCell: string | null;
   availableAssignments: Array<{
     clientId: string;
     projectId: string;
@@ -55,6 +56,7 @@ export const TimesheetRow = memo(function TimesheetRow({
   onStartEdit,
   onEndEdit,
   onTabBetweenCells,
+  committingCell,
   userId,
   availableAssignments
 }: TimesheetRowProps) {
@@ -119,6 +121,36 @@ export const TimesheetRow = memo(function TimesheetRow({
     return clients.filter(client => clientIds.has(client.id));
   }, [availableAssignments, clients]);
 
+  // Auto-select client if there's only one option
+  useEffect(() => {
+    if (availableClients.length === 1 && !row.clientId) {
+      onUpdateRow(index, {
+        clientId: availableClients[0].id,
+        projectId: '',
+        taskId: ''
+      });
+    }
+  }, [availableClients, row.clientId, index, onUpdateRow]);
+
+  // Auto-select project if there's only one option
+  useEffect(() => {
+    if (availableProjects.length === 1 && row.clientId && !row.projectId) {
+      onUpdateRow(index, {
+        projectId: availableProjects[0].id,
+        taskId: ''
+      });
+    }
+  }, [availableProjects, row.clientId, row.projectId, index, onUpdateRow]);
+
+  // Auto-select task if there's only one option
+  useEffect(() => {
+    if (availableTasks.length === 1 && row.projectId && !row.taskId) {
+      onUpdateRow(index, {
+        taskId: availableTasks[0].id
+      });
+    }
+  }, [availableTasks, row.projectId, row.taskId, index, onUpdateRow]);
+
   // Get row entries
   const rowEntries = !row.clientId || !row.projectId || !row.taskId 
     ? []
@@ -148,6 +180,17 @@ export const TimesheetRow = memo(function TimesheetRow({
 
   // Check if the entire row is locked
   const hasLockedEntries = weekApprovals?.some(approval => approval?.status === 'pending' || approval?.status === 'approved');
+
+  // Check if the task is inactive
+  const isTaskInactive = useMemo(() => {
+    if (!row.clientId || !row.projectId || !row.taskId) return false;
+    const assignment = availableAssignments.find(a => 
+      a.clientId === row.clientId && 
+      a.projectId === row.projectId && 
+      a.taskId === row.taskId
+    );
+    return assignment && !assignment.isActive;
+  }, [row, availableAssignments]);
 
   return (
     <tr>
@@ -291,6 +334,7 @@ export const TimesheetRow = memo(function TimesheetRow({
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
               onTab={(shift) => onTabBetweenCells(dateStr, shift)}
+              isCommitting={committingCell === cellKey}
               isDisabled={!isRowComplete || isInactiveAssignment}
               isLocked={isLocked}
               tooltip={isInactiveAssignment ? "Cannot add time entries for inactive assignments" : undefined}
@@ -306,12 +350,20 @@ export const TimesheetRow = memo(function TimesheetRow({
         <Button
           variant="secondary"
           size="sm"
-          disabled={hasLockedEntries}
-          title={hasLockedEntries ? "Cannot delete row with locked entries" : undefined}
+          disabled={hasLockedEntries || isTaskInactive}
+          title={
+            hasLockedEntries 
+              ? "Cannot delete row with locked entries" 
+              : isTaskInactive 
+                ? "Cannot delete row with inactive task"
+                : undefined
+          }
           onClick={() => onRemoveRow(index)}
-          className={hasLockedEntries ? "opacity-50 cursor-not-allowed" : ""}
+          className={cn(
+            (hasLockedEntries || isTaskInactive) && "opacity-50 cursor-not-allowed"
+          )}
         >
-          {hasLockedEntries ? (
+          {(hasLockedEntries || isTaskInactive) ? (
             <Lock className="h-4 w-4 text-gray-400" />
           ) : (
             <X className="h-4 w-4" />

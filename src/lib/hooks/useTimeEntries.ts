@@ -37,6 +37,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [manualRows, setManualRows] = useState<WeeklyRows>({});
   const [isCopying, setIsCopying] = useState(false);
+  const [committingCell, setCommittingCell] = useState<string | null>(null);
   const { projects } = useProjects();
   const { approvals } = useApprovals();
   const { effectiveTimesheetUser } = useEffectiveTimesheetUser();
@@ -157,6 +158,9 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
       e.projectId === row.projectId &&
       e.taskId === row.taskId
     );
+    
+    const cellKey = `${date}-${row.projectId}-${row.taskId}`;
+    setCommittingCell(cellKey);
 
     // Optimistically update local state
     const optimisticUpdate = {
@@ -235,8 +239,28 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         optimisticUpdate.queryKey,
         timeEntries
       );
-      console.error('Error updating time entry:', error);
+      if (error.code === 'not-found') {
+        // If entry not found, try to create a new one
+        try {
+          if (value !== null) {
+            await handleCreateEntry({
+              userId: effectiveUserId,
+              date,
+              clientId: row.clientId,
+              projectId: row.projectId,
+              taskId: row.taskId,
+              hours: value,
+              description: '',
+            });
+          }
+        } catch (createError) {
+          console.error('Error creating time entry after update failed:', createError);
+        }
+      } else {
+        console.error('Error updating time entry:', error);
+      }
     }
+    setCommittingCell(null);
   }, [effectiveUserId, timeEntries, dateRange, handleCreateEntry, handleUpdateEntry, handleDeleteEntry, queryClient]);
 
   const hasEntriesForCurrentWeek = useMemo(() => {
@@ -348,16 +372,13 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
 
   // Combine automatic and manual rows
   const rows = useMemo(() => {
-    const uniqueRowKeys = new Set();
-    const allRows: TimesheetRow[] = [];
-    const currentWeekManualRows = manualRows[weekKey] || [];
+    const uniqueRowMap = new Map<string, TimesheetRow>();
     
     // Only add rows from existing time entries
     timeEntries.forEach(entry => {
       const rowKey = `${entry.clientId}-${entry.projectId}-${entry.taskId}`;
-      if (!uniqueRowKeys.has(rowKey)) {
-        uniqueRowKeys.add(rowKey);
-        allRows.push({
+      if (!uniqueRowMap.has(rowKey)) {
+        uniqueRowMap.set(rowKey, {
           clientId: entry.clientId,
           projectId: entry.projectId,
           taskId: entry.taskId,
@@ -365,20 +386,22 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
       }
     });
     
-    // Add manually added rows
+    // Add manual rows that don't already exist
+    const currentWeekManualRows = manualRows[weekKey] || [];
     currentWeekManualRows.forEach(row => {
-      allRows.push(row);
+      const rowKey = `${row.clientId}-${row.projectId}-${row.taskId}`;
+      if (!uniqueRowMap.has(rowKey)) {
+        uniqueRowMap.set(rowKey, row);
+      }
     });
 
-    return allRows;
+    return Array.from(uniqueRowMap.values());
   }, [timeEntries, manualRows, weekKey]);
-
+  
   const addRow = useCallback(() => {
     // Check if there are any empty rows that need to be filled first
     const currentWeekManualRows = manualRows[weekKey] || [];
-    const hasEmptyRow = currentWeekManualRows.some(row => 
-      !row.clientId || !row.projectId || !row.taskId
-    );
+    const hasEmptyRow = currentWeekManualRows.some(row => !row.clientId);
     if (hasEmptyRow) return;
 
     // Get all existing combinations from both time entries and manual rows
@@ -527,7 +550,7 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     handleCellChange,
     setEditingCell,
     isCreating: createMutation.isPending,
-    isUpdating: updateMutation.isPending,
+    committingCell,
     isDeleting: deleteMutation.isPending,
   };
 }
