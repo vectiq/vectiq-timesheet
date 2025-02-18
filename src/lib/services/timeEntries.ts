@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   addDoc,
   getDocs,
   setDoc,
@@ -74,11 +75,22 @@ export async function createTimeEntry(entryData: Omit<TimeEntry, 'id'>): Promise
 
 export async function updateTimeEntry(id: string, data: Partial<TimeEntry>): Promise<void> {
   const entryRef = doc(db, COLLECTION, id);
-  const updateData = {
-    ...data,
-    updatedAt: new Date().toISOString(),
-  };
-  await updateDoc(entryRef, updateData);
+  try {
+    // Check if document exists first
+    const docSnap = await getDoc(entryRef);
+    if (!docSnap.exists()) {
+      throw new Error('Time entry not found');
+    }
+    
+    const updateData = {
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    await updateDoc(entryRef, updateData);
+  } catch (error) {
+    console.error('Error updating time entry:', error);
+    throw error;
+  }
 }
 
 export async function deleteTimeEntry(id: string): Promise<void> {

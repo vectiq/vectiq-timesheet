@@ -18,6 +18,7 @@ import {
 import { useTimeEntries } from '@/lib/hooks/useTimeEntries';
 import { useCallback } from 'react';
 import type { Project } from '@/types';
+import { LoadingScreen } from '../ui/LoadingScreen';
 
 interface WeeklyViewProps {
   projects: Project[];
@@ -40,6 +41,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
     availableAssignments,
     isLoading,
     isCopying,
+    committingCell,
     hasMonthlyApprovals,
     hasEntriesForCurrentWeek,
     copyFromPreviousWeek,
@@ -184,6 +186,7 @@ export const WeeklyView = memo(function WeeklyView({ projects, userId, dateRange
                 getProjectsForClient={getProjectsForClient}
                 getTasksForProject={getTasksForProject}
                 availableAssignments={availableAssignments}
+                committingCell={committingCell}
                 editingCell={editingCell}
                 onUpdateRow={updateRow}
                 onRemoveRow={handleDeleteRow}
