@@ -1,26 +1,10 @@
 import { useState, useEffect } from 'react';
 import { MobileNav } from './MobileNav'; 
-import { CommandPalette } from '@/components/ui/CommandPalette';
 import { UserMenu } from './UserMenu';
 import { Command } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 
 export function Navbar() {
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        setIsCommandPaletteOpen(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   return (
     <>
@@ -37,26 +21,11 @@ export function Navbar() {
           </div>
           
           <div className="flex items-center gap-x-4">
-            <NotificationDropdown />
-            <Button
-              variant="secondary"
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="hidden md:flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <Command className="h-4 w-4" />
-              <span>Quick Actions</span>
-              <kbd className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded">⌘K</kbd>
-            </Button>
             <UserMenu />
           </div>
         </div>
       </div>
       </nav>
-      
-      <CommandPalette 
-        open={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-      />
     </>
   );
 }

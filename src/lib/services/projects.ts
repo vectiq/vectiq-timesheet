@@ -33,16 +33,20 @@ export async function getProjects(): Promise<Project[]> {
 export async function createProject(projectData: Omit<Project, 'id'>): Promise<Project> {
   // Create project document
   const projectRef = doc(collection(db, COLLECTION));
+  const projectId = projectRef.id;
+
   const { tasks, ...projectFields } = projectData;
   const project = {
     ...projectFields,
+    id: projectId,
     tasks: (tasks || []).map(task => ({
       ...task,
       id: crypto.randomUUID(),
-      projectId: projectRef.id,
+      projectId,
       userAssignments: []
     })),
     approverEmail: projectData.approverEmail || '',
+    isActive: projectData.isActive ?? true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -51,7 +55,7 @@ export async function createProject(projectData: Omit<Project, 'id'>): Promise<P
 
   return {
     ...projectFields,
-    id: projectRef.id,
+    id: projectId,
     tasks: project.tasks,
   } as Project;
 }
@@ -89,6 +93,7 @@ export async function updateProject(projectData: Project): Promise<void> {
   const projectRef = doc(db, COLLECTION, id);
   const projectUpdate = cleanObject({
     ...projectFields, 
+    isActive: projectData.isActive ?? true, // Ensure isActive is always included
     tasks: cleanedTasks,
     updatedAt: serverTimestamp(),
   });

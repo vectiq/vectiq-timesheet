@@ -1,8 +1,8 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format, parseISO } from 'date-fns';
-import { doc, getDoc } from 'firebase/firestore';
 import { getWorkingDaysInPeriod } from '@/lib/utils/date';
+import { getFunctions, httpsCallable, HttpsCallableResult } from 'firebase/functions';
 import type { 
   ReportFilters, 
   ReportData, 
@@ -41,6 +41,22 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
   const clients = new Map(clientsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
   const approvals = approvalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+  // Helper function to get cost rate for a specific date
+  const getCostRateForDate = (user: User, date: string): number => {
+    if (!user.costRate || user.costRate.length === 0) return 0;
+    
+    // Sort cost rates by date descending
+    const sortedRates = [...user.costRate].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
+    // Find the first rate that is less than or equal to the entry date
+    const applicableRate = sortedRates.find(rate => 
+      new Date(rate.date) <= new Date(date)
+    );
+    
+    return applicableRate?.costRate || 0;
+  };
   // Filter and transform time entries
   const entries: ReportEntry[] = timeEntriesSnapshot.docs
     .map(doc => {
@@ -59,12 +75,11 @@ export async function generateReport(filters: ReportFilters): Promise<ReportData
       
       if (!project || !projectTask || !client || !user) return null;
 
-      // Get rates with proper fallback order:
-      // 1. Project task rates if defined AND not 0
-      // 2. User rates if not 0
-      // 3. Fallback to 0
-      const costRate = (projectTask?.costRate > 0 ? projectTask.costRate : user?.costRate || 0);
-      const sellRate = (projectTask?.sellRate > 0 ? projectTask.sellRate : user?.sellRate || 0);
+      // For cost rate, use task's cost rate if available and not 0, otherwise use user's historical cost rate
+      const costRate = projectTask?.costRate > 0 ? projectTask.costRate : getCostRateForDate(user, entry.date);
+      
+      // For sell rate, use task's sell rate
+      const sellRate = projectTask?.sellRate || 0;
 
       const hours = entry.hours || 0;
       const cost = hours * costRate;
@@ -142,15 +157,43 @@ export async function checkOvertimeSubmission(month: string): Promise<boolean> {
   return submissionDoc.exists();
 }
 
-export async function submitOvertime(data: OvertimeReportData, startDate: string, endDate: string, month: string): Promise<void> {
-  const submissionRef = doc(db, 'overtimeSubmissions', month);
-  await setDoc(submissionRef, {
-    data,
-    startDate,
-    endDate,
-    submittedAt: new Date().toISOString()
-  });
+export async function submitOvertime(
+  data: OvertimeReportData, 
+  startDate: string, 
+  endDate: string, 
+  month: string,
+  payRunId: string
+): Promise<void> {
+    // First check if already submitted
+    const submissionRef = collection(db, 'overtimeSubmissions');
+    const q = query(
+      submissionRef,
+      where('submissionMonth', '==', month)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      throw new Error('Overtime has already been submitted for this month');
+    }
+    // Get all users
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const users = usersSnapshot.docs;
+    const overtimeEntries = data.entries.map(entry => ({
+      ...entry,
+      xeroEmployeeId: users.find(u => u.id === entry.userId)?.data().xeroEmployeeId,
+    }));
+
+    // Call Firebase function to process overtime
+    const functions = getFunctions();
+    const processOvertime = httpsCallable(functions, 'processOvertime');
+    await processOvertime({ 
+      overtimeEntries: overtimeEntries,
+      startDate,
+      endDate,
+      payRunId
+    });
 }
+
 async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeReportData> {
   // Get all required data
   const [usersSnapshot, timeEntriesSnapshot, projectsSnapshot, approvalsSnapshot] = await Promise.all([
@@ -196,15 +239,13 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
     const project = projects.get(entry.projectId) as Project;
     const entryDate = parseISO(entry.date);
     
-    if (!user || !project) return;
-
-    // Skip users with no overtime
-    if (user.overtime === 'no') return;
+    if (!user || !project || user.overtime === 'no') return null;
 
     // For eligible overtime, only include overtime-inclusive projects
-    if (user.overtime === 'eligible' && !project.overtimeInclusive) return;
+    if (user.overtime === 'eligible' && !project.overtimeInclusive) return null;
 
-    // For projects requiring approval, only count approved hours
+    // Get approval status for projects requiring approval
+    let approvalStatus = 'unsubmitted';
     if (project.requiresApproval) {
       const approval = approvals.find(a => 
         a.project.id === project.id &&
@@ -212,7 +253,9 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
         parseISO(a.startDate) <= entryDate &&
         parseISO(a.endDate) >= entryDate
       );
-      if (!approval) return;
+      if (approval) {
+        approvalStatus = approval.status;
+      }
     }
 
     // Track total hours for the user
@@ -248,12 +291,19 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
           const project = projects.get(projectId);
           const projectOvertimeHours = (hours / projectHoursTotal) * userOvertimeHours;
           
-          // Check approval status for this project
-          const approval = approvals.find(a => 
-            a.project.id === projectId &&
-            a.userId === user.id &&
-            a.status === 'approved'
-          );
+          // Get approval status for this project
+          let approvalStatus = 'unsubmitted';
+          if (project?.requiresApproval) {
+            const approval = approvals.find(a => 
+              a.project.id === projectId &&
+              a.userId === user.id &&
+              parseISO(a.startDate) <= parseISO(filters.startDate) &&
+              parseISO(a.endDate) >= parseISO(filters.endDate)
+            );
+            if (approval) {
+              approvalStatus = approval.status;
+            }
+          }
           
           return {
             projectId,
@@ -261,7 +311,7 @@ async function generateOvertimeReport(filters: ReportFilters): Promise<OvertimeR
             hours,
             overtimeHours: projectOvertimeHours,
             requiresApproval: project?.requiresApproval || false,
-            isApproved: !!approval || !project?.requiresApproval
+            approvalStatus: project?.requiresApproval ? approvalStatus : 'not required'
           };
         })
         .sort((a, b) => b.hours - a.hours);

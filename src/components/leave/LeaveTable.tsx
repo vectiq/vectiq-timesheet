@@ -1,4 +1,4 @@
-import { Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, RefreshCw } from 'lucide-react';
 import { Table, TableHeader, TableBody, Th, Td } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -8,11 +8,10 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import type { Leave } from '@/types';
 
 interface LeaveTableProps {
-  onEdit: (leave: Leave) => void;
   onDelete: (id: string) => void;
 }
 
-export function LeaveTable({ onEdit, onDelete }: LeaveTableProps) {
+export function LeaveTable({ onDelete }: LeaveTableProps) {
   const { 
     leave,
     isLoading,
@@ -64,7 +63,6 @@ export function LeaveTable({ onEdit, onDelete }: LeaveTableProps) {
           <Th>Units</Th>
           <Th>Status</Th>
           <Th>Description</Th>
-          <Th className="text-right">Actions</Th>
         </tr>
       </TableHeader>
       <TableBody>
@@ -83,16 +81,6 @@ export function LeaveTable({ onEdit, onDelete }: LeaveTableProps) {
               </Badge>
             </Td>
             <Td>{entry.description || '-'}</Td>
-            <Td className="text-right">
-              <div className="flex justify-end gap-2">
-                <Button variant="secondary" size="sm" onClick={() => onEdit(entry)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => onDelete(entry.id)}>
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </div>
-            </Td>
           </tr>))
         ) : (
           <tr>

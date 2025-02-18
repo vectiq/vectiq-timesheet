@@ -1,7 +1,7 @@
 /* Import Aeonik font variants */
 @font-face {
   font-family: 'Aeonik';
-  src: url('/fonts/AeonikPro-Light.otf') format('opentype');
+  src: url('@fonts/AeonikPro-Light.otf') format('opentype');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
@@ -25,7 +25,7 @@
 
 @font-face {
   font-family: 'Aeonik';
-  src: url('/fonts/AeonikPro-Bold.otf') format('opentype');
+  src: url('@fonts/AeonikPro-Bold.otf') format('opentype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -34,7 +34,7 @@
 /* Italic variants */
 @font-face {
   font-family: 'Aeonik';
-  src: url('/fonts/AeonikPro-LightItalic.otf') format('opentype');
+  src: url('@fonts/AeonikPro-LightItalic.otf') format('opentype');
   font-weight: 300;
   font-style: italic;
   font-display: swap;
@@ -42,23 +42,23 @@
 
 @font-face {
   font-family: 'Aeonik';
-  src: url('/fonts/AeonikPro-RegularItalic.otf') format('opentype');
+  src: url('@fonts/AeonikPro-RegularItalic.otf') format('opentype');
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 
-@font-face {
+/* @font-face {
   font-family: 'Aeonik';
-  src: url('/fonts/AeonikPro-MediumItalic.otf') format('opentype');
+  src: url('@fonts/AeonikPro-MediumItalic.otf') format('opentype');
   font-weight: 500;
   font-style: italic;
   font-display: swap;
-}
+} */
 
 @font-face {
   font-family: 'Aeonik';
-  src: url('/fonts/AeonikPro-BoldItalic.otf') format('opentype');
+  src: url('@fonts/AeonikPro-BoldItalic.otf') format('opentype');
   font-weight: 700;
   font-style: italic;
   font-display: swap;
@@ -108,28 +108,28 @@
 
 /* Apply font family to all elements */
 @layer base {
-  html {
-    font-family: 'Aeonik', system-ui, sans-serif !important;
-    letter-spacing: 0.05em;
+  * {
+    font-family: 'Aeonik', sans-serif !important;
+    letter-spacing: 0.025em;
     line-height: 1.5;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
     line-height: 1.25;
   }
 
   p {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
     line-height: 1.625;
   }
 
   .text-sm {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
   }
 
   .text-xs {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
   }
 }
 

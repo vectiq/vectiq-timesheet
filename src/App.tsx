@@ -4,21 +4,11 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { RoleProtectedRoute } from '@/components/auth/RoleProtectedRoute';
 import { Layout } from '@/components/layout/Layout';
 import Login from '@/pages/Login';
-import TimeEntries from '@/pages/TimeEntries';
-import Leave from '@/pages/Leave';
-import MonthlyProcessing from '@/pages/MonthlyProcessing';
-import Reports from '@/pages/Reports';
-import Forecast from '@/pages/Forecast';
-import ForecastReport from '@/pages/ForecastReport';
-import Projects from '@/pages/Projects';
-import Clients from '@/pages/Clients';
-import Users from '@/pages/Users';
-import Teams from '@/pages/Teams';
+import TimeEntries from '@/pages/TimeEntries'; 
+import Leave from '@/pages/Leave'; 
 import Help from '@/pages/Help';
-import Admin from '@/pages/Admin';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
 import { EffectiveTimesheetUserProvider } from './lib/contexts/EffectiveTimesheetUserContext';
@@ -60,8 +50,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/reject" element={<RejectTimesheet />} />
-
+          <Route path="/reject" element={<EffectiveTimesheetUserProvider><RejectTimesheet /></EffectiveTimesheetUserProvider>} />
           {/* Protected Routes */}
           <Route
             path="/"
@@ -71,77 +60,14 @@ export default function App() {
               </ProtectedRoute>
             }
           >
+
             <Route index element={
               <EffectiveTimesheetUserProvider>
                 <TimeEntries />
               </EffectiveTimesheetUserProvider>
-              } />
+            } />
             <Route path="profile" element={<Profile />} />
             <Route path="leave" element={<Leave />} />
-            <Route
-              path="processing"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <MonthlyProcessing />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="forecast"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Forecast />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="reports"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Reports />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="projects"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Projects />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="clients"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Clients />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="users"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Users />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="teams"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Teams />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="admin"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Admin />
-                </RoleProtectedRoute>
-              }
-            />
             <Route path="help" element={<Help />} />
           </Route>
 

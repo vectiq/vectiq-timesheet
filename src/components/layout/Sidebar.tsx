@@ -56,46 +56,15 @@ export function Sidebar() {
                           )}
                         />
                         <span className={cn(
-                          "font-medium tracking-wider",
+                          "font-medium tracking-wide",
                         )}>{item.name}</span>
-                        {isActive && (
-                          <>
-                            <span className="absolute left-0 inset-y-2 w-1 bg-indigo-600 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.5)] animate-slide-in" />
-                          </>
-                        )}
                       </Link>
                     </li>
                   );
                 })}
               </ul>
             </li>
-            <li className="mt-auto pb-4">
-              <div className="rounded-lg bg-gray-50 p-4 shadow-sm border border-gray-100 relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center"
-                  )}>
-                    <span className={cn(
-                      "text-indigo-600 text-sm font-medium"
-                    )}>
-                      {currentUser?.name?.[0]?.toUpperCase() || '?'}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-sm font-medium text-gray-900 truncate tracking-wide"
-                    )}>
-                      {currentUser?.name || 'User'}
-                    </p>
-                    <p className={cn(
-                      "text-xs text-gray-500 truncate"
-                    )}>
-                      {currentUser?.email || ''}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </li>
+            
           </ul>
         </nav>
       </div>

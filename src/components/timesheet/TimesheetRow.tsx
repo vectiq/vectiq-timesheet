@@ -29,7 +29,15 @@ interface TimesheetRowProps {
   onCellChange: (date: string, row: any, value: number | null) => void;
   onStartEdit: (key: string) => void;
   onEndEdit: () => void;
+  onTabBetweenCells: (currentDate: string, shiftKey: boolean) => void;
   userId: string;
+  availableAssignments: Array<{
+    clientId: string;
+    projectId: string;
+    taskId: string;
+    projectName: string;
+    taskName: string;
+  }>;
 }
 
 export const TimesheetRow = memo(function TimesheetRow({
@@ -46,7 +54,9 @@ export const TimesheetRow = memo(function TimesheetRow({
   onCellChange,
   onStartEdit,
   onEndEdit,
-  userId
+  onTabBetweenCells,
+  userId,
+  availableAssignments
 }: TimesheetRowProps) {
   const { projects } = useProjects();
   const { clients } = useClients();
@@ -55,37 +65,59 @@ export const TimesheetRow = memo(function TimesheetRow({
   // Get available projects for selected client
   const availableProjects = useMemo(() => {
     if (!row.clientId) return [];
-    // Only return projects where user has task assignments
-    return getProjectsForClient(row.clientId).filter(project =>
-      project.tasks.some(task => 
-        task.userAssignments?.some(a => a.userId === userId)
-      )
+    // Filter using availableAssignments
+    const projectIds = new Set(
+      availableAssignments
+        .filter(a => a.clientId === row.clientId)
+        .map(a => a.projectId)
     );
-  }, [row.clientId, getProjectsForClient, userId]);
+    
+    return getProjectsForClient(row.clientId).filter(p => projectIds.has(p.id));
+  }, [row.clientId, getProjectsForClient, availableAssignments]);
 
   // Get available tasks for selected project
   const availableTasks = useMemo(() => {
     if (!row.projectId) return [];
-    return getTasksForProject(row.projectId);
-  }, [row.projectId, getTasksForProject]);
+    // Filter using availableAssignments
+    const taskIds = new Set(
+      availableAssignments
+        .filter(a => a.projectId === row.projectId)
+        .map(a => a.taskId)
+    );
+    
+    return getTasksForProject(row.projectId)
+      .filter(t => taskIds.has(t.id))
+      .map(t => ({
+        ...t,
+        isActive: availableAssignments.find(a => 
+          a.projectId === row.projectId && 
+          a.taskId === t.id
+        )?.isActive ?? true
+      }));
+  }, [row.projectId, getTasksForProject, availableAssignments]);
+
+  // Check if current row combination is inactive
+  const isInactiveAssignment = useMemo(() => {
+    if (!row.clientId || !row.projectId || !row.taskId) return false;
+    
+    const assignment = availableAssignments.find(a => 
+      a.clientId === row.clientId && 
+      a.projectId === row.projectId && 
+      a.taskId === row.taskId
+    );
+    
+    return assignment && !assignment.isActive;
+  }, [row, availableAssignments]);
 
   // Get available clients and projects based on user assignments
   const availableClients = useMemo(() => {
     if (!userId || !projects) return [];
     
-    // Get unique client IDs from projects where user has task assignments
-    const clientIds = new Set(
-      projects
-        .filter(project => 
-          project.tasks.some(task => 
-            task.userAssignments?.some(a => a.userId === userId)
-          )
-        )
-        .map(p => p.clientId)
-    );
+    // Get unique client IDs from availableAssignments
+    const clientIds = new Set(availableAssignments.map(a => a.clientId));
     
     return clients.filter(client => clientIds.has(client.id));
-  }, [userId, projects, clients]);
+  }, [availableAssignments, clients]);
 
   // Get row entries
   const rowEntries = !row.clientId || !row.projectId || !row.taskId 
@@ -99,13 +131,19 @@ export const TimesheetRow = memo(function TimesheetRow({
   // Calculate row total
   const rowTotal = rowEntries.reduce((sum, entry) => sum + entry.hours, 0);
 
-  // Query approvals for each date in the week
+  // Get all approvals for this project
+  const projectApprovals = approvals.filter(approval => 
+    approval.project?.id === row.projectId &&
+    (approval.status === 'pending' || approval.status === 'approved')
+  );
+
+  // Check if each date is locked by an approval
   const weekApprovals = weekDays.map(date => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return approvals.find((approval) => 
-      approval.project.id === row.projectId &&
-      dateStr >= approval.startDate &&
-      dateStr <= approval.endDate);
+    return projectApprovals.find(approval => 
+      dateStr >= approval.startDate && 
+      dateStr <= approval.endDate
+    );
   });
 
   // Check if the entire row is locked
@@ -125,7 +163,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <SelectTrigger 
             className={cn(
-              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+              hasLockedEntries && "cursor-not-allowed bg-gray-50"
             )}
             title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
           >
@@ -151,16 +189,33 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <SelectTrigger
             className={cn(
-              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+              hasLockedEntries && "cursor-not-allowed bg-gray-50"
             )}
             title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
           >
-            {row.projectId ? availableProjects.find(p => p.id === row.projectId)?.name : "Select Project"}
+            {row.projectId ? (
+              <div className="flex items-center gap-2">
+                <span>{availableProjects.find(p => p.id === row.projectId)?.name}</span>
+                {!projects.find(p => p.id === row.projectId)?.isActive && (
+                  <span className="text-xs text-red-500">(Inactive)</span>
+                )}
+              </div>
+            ) : "Select Project"}
           </SelectTrigger>
           <SelectContent>
             {availableProjects.map(project => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
+              <SelectItem 
+                key={project.id} 
+                value={project.id}
+                disabled={!project.isActive}
+                className={!project.isActive ? 'cursor-not-allowed' : ''}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{project.name}</span>
+                  {!project.isActive && (
+                    <span className="text-xs text-red-500">(Inactive)</span>
+                  )}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
@@ -176,16 +231,45 @@ export const TimesheetRow = memo(function TimesheetRow({
         >
           <SelectTrigger
             className={cn(
-              hasLockedEntries && "opacity-50 cursor-not-allowed bg-gray-50"
+              hasLockedEntries && "cursor-not-allowed bg-gray-50"
             )}
             title={hasLockedEntries ? "Cannot modify row with pending or approved entries" : undefined}
           >
-            {row.taskId ? availableTasks.find(t => t.id === row.taskId)?.name : "Select Task"}
+            {row.taskId ? (
+              <div className="flex items-center gap-2">
+                <span>{availableTasks.find(t => t.id === row.taskId)?.name}</span>
+                {!availableAssignments.find(a => 
+                  a.taskId === row.taskId && 
+                  a.projectId === row.projectId
+                )?.isActive && (
+                  <span className="text-xs text-red-500">(Inactive)</span>
+                )}
+              </div>
+            ) : "Select Task"}
           </SelectTrigger>
           <SelectContent>
             {availableTasks.map(task => (
-              <SelectItem key={task.id} value={task.id}>
-                {task.name}
+              <SelectItem 
+                key={task.id} 
+                value={task.id}
+                disabled={!availableAssignments.find(a => 
+                  a.taskId === task.id && 
+                  a.projectId === row.projectId
+                )?.isActive}
+                className={cn(!availableAssignments.find(a => 
+                  a.taskId === task.id && 
+                  a.projectId === row.projectId
+                )?.isActive && 'cursor-not-allowed')}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{task.name}</span>
+                  {!availableAssignments.find(a => 
+                    a.taskId === task.id && 
+                    a.projectId === row.projectId
+                  )?.isActive && (
+                    <span className="text-xs text-red-500">(Inactive)</span>
+                  )}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
@@ -203,11 +287,14 @@ export const TimesheetRow = memo(function TimesheetRow({
             <EditableTimeCell
               value={entry?.hours || null}
               onChange={(value) => onCellChange(dateStr, row, value)}
-              isEditing={editingCell === cellKey}
+              isEditing={editingCell === cellKey && !isInactiveAssignment}
               onStartEdit={() => onStartEdit(cellKey)}
               onEndEdit={onEndEdit}
-              isDisabled={!isRowComplete}
+              onTab={(shift) => onTabBetweenCells(dateStr, shift)}
+              isDisabled={!isRowComplete || isInactiveAssignment}
               isLocked={isLocked}
+              tooltip={isInactiveAssignment ? "Cannot add time entries for inactive assignments" : undefined}
+              cellKey={cellKey}
             />
           </Td>
         );

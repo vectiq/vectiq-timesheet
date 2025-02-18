@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Aeonik', 'system-ui', 'sans-serif']
+        sans: ['Aeonik', 'sans-serif']
       },
       letterSpacing: {
         'tighter': '-0.05em',
