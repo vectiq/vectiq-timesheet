@@ -375,7 +375,9 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
     const uniqueRowMap = new Map<string, TimesheetRow>();
     
     // Only add rows from existing time entries
-    timeEntries.forEach(entry => {
+    timeEntries.sort((a,b)=>{
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    }).forEach(entry => {
       const rowKey = `${entry.clientId}-${entry.projectId}-${entry.taskId}`;
       if (!uniqueRowMap.has(rowKey)) {
         uniqueRowMap.set(rowKey, {
@@ -394,7 +396,6 @@ export function useTimeEntries({ userId, dateRange }: UseTimeEntriesOptions = {}
         uniqueRowMap.set(rowKey, row);
       }
     });
-
     return Array.from(uniqueRowMap.values());
   }, [timeEntries, manualRows, weekKey]);
   
