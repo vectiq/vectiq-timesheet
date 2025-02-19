@@ -29,6 +29,7 @@ export interface ProjectTask {
 }
 
 export interface UserAssignment {
+  isActive: boolean;
   id: string;
   userId: string;
   userName: string;
@@ -50,6 +51,7 @@ export interface ProjectWithStatus {
 }
 
 export interface Project {
+  isActive: any;
   id: string;
   name: string;
   clientId: string;
@@ -66,6 +68,7 @@ export interface Project {
 }
 
 export interface TimeEntry {
+  createdAt: Date;
   id: string;
   userId: string;
   clientId: string;
