@@ -101,7 +101,7 @@ export const TimesheetRow = memo(function TimesheetRow({
         a.taskId === row.taskId
     );
 
-    return assignment && !assignment.isActive;
+    return assignment === undefined || !assignment.isActive;
   }, [row, availableAssignments]);
 
   // Get available clients and projects based on user assignments
@@ -326,9 +326,9 @@ export const TimesheetRow = memo(function TimesheetRow({
             {row.taskId ? (
               <div className="flex items-center gap-2">
                 <span>
-                  {availableTasks.find((t) => t.id === row.taskId)?.name}
+                  {availableTasks.find((t) => t.id === row.taskId)?.name} 
                 </span>
-                {!availableTasks.find((t) => t.id === row.taskId)?.isActive && (
+                {isInactiveAssignment && (
                   <span className="text-xs text-red-500">(Inactive)</span>
                 )}
               </div>
@@ -347,7 +347,7 @@ export const TimesheetRow = memo(function TimesheetRow({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <span>{task.name}</span>
+                  <span>{task.name}{123}123</span>
                   {!task.isActive && (
                     <span className="text-xs text-red-500">(Inactive)</span>
                   )}
