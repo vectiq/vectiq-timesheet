@@ -11,7 +11,7 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from "firebase/functions";
+import {  httpsCallable } from "firebase/functions";
 import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -19,7 +19,7 @@ import {
   onAuthStateChanged,
   getAuth,
 } from 'firebase/auth';
-import { db } from '@/lib/firebase';
+import { db, functions } from '@/lib/firebase';
 import { generatePassword } from '@/lib/utils/password';
 import { calculateCostRate } from '@/lib/utils/costRate';
 import type { User, ProjectAssignment } from '@/types';
@@ -65,7 +65,6 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
   const auth = getAuth();
   const idToken = await auth.currentUser.getIdToken(true);
-  const functions = getFunctions();
   const tempPassword = generatePassword();
 
   // Create the user in Firebase Auth
@@ -186,7 +185,6 @@ export async function updateUser(id: string, data: Partial<User>): Promise<void>
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  const functions = getFunctions();
   const deleteUserFunction = httpsCallable(functions, 'deleteUser');
 
   // Delete the auth user first

@@ -12,9 +12,9 @@ import {
   orderBy,
   limit,
 } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { httpsCallable } from 'firebase/functions';
 import { format } from 'date-fns';
-import { db } from '@/lib/firebase';
+import { db, functions } from '@/lib/firebase';
 import { formatTimesheetBreakdown } from '@/lib/utils/timesheet';
 import type { TimeEntry, Project, Client, Approval } from '@/types';
 import CryptoJS from 'crypto-js';
@@ -94,7 +94,6 @@ export async function withdrawApproval(approvalId: string) {
   });
 
   // Send email notification
-  const functions = getFunctions();
   const sendEmail = httpsCallable(functions, 'sendEmail');
   
   const emailHtml = `
@@ -210,7 +209,6 @@ export async function submitTimesheetApproval(request: ApprovalRequest) {
     `;
 
   // Send approval email
-  const functions = getFunctions();
   const sendEmail = httpsCallable(functions, 'sendEmail');
   await sendEmail({
     recipient: project.approverEmail,
@@ -271,7 +269,6 @@ export async function rejectTimesheet(approval) {
     `;
 
   // Send rejection email
-  const functions = getFunctions();
   const sendEmail = httpsCallable(functions, 'sendEmail');
   await sendEmail({
     recipient: user.email,

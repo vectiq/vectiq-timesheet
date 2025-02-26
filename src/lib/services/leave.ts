@@ -9,14 +9,13 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { db } from '@/lib/firebase';
+import {  httpsCallable } from 'firebase/functions';
+import { db, functions } from '@/lib/firebase';
 import { auth } from '@/lib/firebase'; 
 import type { Leave, XeroLeaveResponse, LeaveBalance } from '@/types';
 
 const COLLECTION = 'employeeLeave';
 const CACHE_TIME = 60 * 60 * 1000; // 1 hour in milliseconds
-const functions = getFunctions();
 
 function parseXeroDate(xeroDate: string): string {
   // Extract timestamp from "/Date(1234567890000+0000)/" format
