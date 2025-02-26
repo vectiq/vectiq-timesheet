@@ -1,5 +1,22 @@
 {
   "projects": {
-    "default": "vectiq-timesheet"
+    "default": "vectiq-timesheet-dev",
+    "production": "vectiq-timesheet"
+  },
+  "targets": {
+    "vectiq-timesheet-dev": {
+      "hosting": {
+        "dev": [
+          "vectiq-timesheet-dev"
+        ]
+      }
+    },
+    "vectiq-timesheet": {
+      "hosting": {
+        "production": [
+          "vectiq-timesheet"
+        ]
+      }
+    }
   }
 }
