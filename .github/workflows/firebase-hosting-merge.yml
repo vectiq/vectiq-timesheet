@@ -15,7 +15,8 @@ env:
   VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID}}
   VITE_FIREBASE_API_URL: "https://australia-southeast1-vectiq-timesheet.cloudfunctions.net"
   VITE_APP_URL: "http://staging.timesheet.vectiq.digital"
-  VITE_EMAIL_SECRET: ${{ secrets.VITE_EMAIL_SECRET}}
+  VITE_EMAIL_SECRET: ${{ secrets.VITE_EMAIL_SECRET}},
+  VITE_REGION: "australia-southeast1"
 jobs:
   build_and_deploy:
     environment: Staging
