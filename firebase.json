@@ -14,7 +14,7 @@
       }
     ]
   },{
-    "target": "dev",
+    "target": "staging",
     "public": "dist",
     "ignore": [
       "firebase.json",

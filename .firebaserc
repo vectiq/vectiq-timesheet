@@ -1,20 +1,20 @@
 {
   "projects": {
-    "default": "vectiq-timesheet-dev",
-    "production": "vectiq-timesheet"
+    "staging": "vectiq-timesheet",
+    "production": "vectiq-erp-prod"
   },
   "targets": {
-    "vectiq-timesheet-dev": {
+    "vectiq-timesheet": {
       "hosting": {
-        "dev": [
-          "vectiq-timesheet-dev"
+        "staging": [
+          "vectiq-timesheet"
         ]
       }
     },
-    "vectiq-timesheet": {
+    "vectiq-erp-prod": {
       "hosting": {
         "production": [
-          "vectiq-timesheet"
+          "vectiq-timesheet-prod"
         ]
       }
     }

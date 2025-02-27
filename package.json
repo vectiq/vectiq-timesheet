@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "deploy-prod": "vite build && firebase deploy --only hosting:production",
-    "deploy-dev": "vite build && firebase deploy --only hosting:dev --project vectiq-timesheet-dev",
+    "deploy-prod": "vite build --mode production && firebase deploy --only hosting:production --project production",
+    "deploy-staging": "vite build  --mode staging && firebase deploy --only hosting:staging --project staging",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
