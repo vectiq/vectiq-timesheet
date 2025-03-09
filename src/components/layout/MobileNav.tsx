@@ -1,6 +1,6 @@
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/Sheet';
 import { Menu } from 'lucide-react';
-import { navigationItems } from '@/lib/constants/navigation';
+import { getNavigationItems } from '@/lib/constants/navigation';
 import { Link, useLocation } from 'react-router-dom';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,7 @@ export function MobileNav() {
 
   // Filter navigation items based on user role
   const allowedItems = useMemo(() => 
-    navigationItems.filter(item =>
+    getNavigationItems(currentUser).filter(item =>
       item.roles.includes(currentUser?.role || 'user')
     ),
     [currentUser?.role]

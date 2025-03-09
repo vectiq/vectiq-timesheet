@@ -37,7 +37,7 @@ export function Layout() {
 
       <Navbar />
       <Sidebar />
-      <main className="lg:pl-72 pt-16">
+      <main className="lg:pl-16 pt-16">
         <div className={cn(
           "px-4 py-8 sm:px-6 lg:px-8",
           "relative z-10"

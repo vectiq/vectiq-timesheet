@@ -1,7 +1,9 @@
-import { Clock, CalendarDays, HelpCircle } from 'lucide-react';
+import { Clock, CalendarDays } from 'lucide-react';
+import { User } from '@/types';
 
-export const navigationItems = [
+export const getNavigationItems = (user?: User | null) => [
   { name: 'Timesheet', href: '/', icon: Clock, roles: ['user', 'admin'] },
-  { name: 'Leave', href: '/leave', icon: CalendarDays, roles: ['user', 'admin'] },
-  { name: 'Help & Support', href: '/help', icon: HelpCircle, roles: ['user', 'admin'] }
-] as const;
+  ...(user?.employeeType === 'employee' ? [
+    { name: 'Leave', href: '/leave', icon: CalendarDays, roles: ['user', 'admin'] }
+  ] : [])
+]

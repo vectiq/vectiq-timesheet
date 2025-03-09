@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { navigationItems } from '@/lib/constants/navigation';
+import { getNavigationItems } from '@/lib/constants/navigation';
 import { useUsers } from '@/lib/hooks/useUsers';
 import { useMemo } from 'react';
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from '@/components/ui/Tooltip';
 import { cn } from '@/lib/utils/styles';
 
 export function Sidebar() {
@@ -10,14 +11,14 @@ export function Sidebar() {
 
   // Filter navigation items based on user role
   const allowedItems = useMemo(() => 
-    navigationItems.filter(item =>
+    getNavigationItems(currentUser).filter(item =>
       item.roles.includes(currentUser?.role || 'user')
     ),
     [currentUser?.role]
   );
 
   return (
-    <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-72 lg:flex-col">
+    <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-16 lg:flex-col">
       <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4 pt-20 shadow-xl relative">
         {/* Color bursts */}
         <div className="absolute bottom-0 left-0 right-0 h-96 overflow-hidden pointer-events-none">
@@ -29,42 +30,47 @@ export function Sidebar() {
         <nav className="flex flex-1 flex-col">
           <ul role="list" className="flex flex-1 flex-col gap-y-7">
             <li>
-              <ul role="list" className="-mx-2 space-y-1">
+              <ul role="list" className="-mx-6 space-y-1">
                 {allowedItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.href;
 
                   return (
                     <li key={item.name}>
-                      <Link
-                        to={item.href}
-                        className={cn(
-                          'group flex gap-x-3 rounded-lg p-2 pl-4 text-sm leading-6 transition-all duration-300',
-                          'hover:bg-gray-50',
-                          isActive
-                            ? 'bg-gray-50 text-indigo-600 font-medium'
-                            : 'text-gray-700 hover:text-gray-900 font-medium'
-                        )}
-                      >
-                        <Icon
-                          className={cn(
-                            'h-6 w-6 shrink-0',
-                            'transition-all duration-300 group-hover:scale-110 group-hover:rotate-3',
-                            isActive
-                              ? 'text-indigo-600'
-                              : 'text-gray-500 group-hover:text-gray-900'
-                          )}
-                        />
-                        <span className={cn(
-                          "font-medium tracking-wide",
-                        )}>{item.name}</span>
-                      </Link>
+                      <TooltipProvider>
+                        <TooltipRoot>
+                          <TooltipTrigger asChild>
+                            <Link
+                              to={item.href}
+                              className={cn(
+                                'group flex items-center justify-center rounded-lg p-2 transition-all duration-300',
+                                'hover:bg-gray-50',
+                                isActive
+                                  ? 'bg-gray-50 text-indigo-600'
+                                  : 'text-gray-700 hover:text-gray-900'
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  'h-6 w-6 shrink-0',
+                                  'transition-all duration-300 group-hover:scale-110 group-hover:rotate-3',
+                                  isActive
+                                    ? 'text-indigo-600'
+                                    : 'text-gray-500 group-hover:text-gray-900'
+                                )}
+                              />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {item.name}
+                          </TooltipContent>
+                        </TooltipRoot>
+                      </TooltipProvider>
                     </li>
                   );
                 })}
               </ul>
             </li>
-            
           </ul>
         </nav>
       </div>

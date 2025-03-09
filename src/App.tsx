@@ -7,8 +7,8 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Layout } from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import TimeEntries from '@/pages/TimeEntries'; 
+import { TooltipProvider } from '@/components/ui/Tooltip';
 import Leave from '@/pages/Leave'; 
-import Help from '@/pages/Help';
 import Profile from '@/pages/Profile';
 import RejectTimesheet from '@/pages/RejectTimesheet';
 import { EffectiveTimesheetUserProvider } from './lib/contexts/EffectiveTimesheetUserContext';
@@ -48,8 +48,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+        <TooltipProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
           <Route path="/reject" element={<EffectiveTimesheetUserProvider><RejectTimesheet /></EffectiveTimesheetUserProvider>} />
           {/* Protected Routes */}
           <Route
@@ -68,12 +69,12 @@ export default function App() {
             } />
             <Route path="profile" element={<Profile />} />
             <Route path="leave" element={<Leave />} />
-            <Route path="help" element={<Help />} />
-          </Route>
 
           {/* Catch all route - must be last */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            </Route>
+          </Routes>
+        </TooltipProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
