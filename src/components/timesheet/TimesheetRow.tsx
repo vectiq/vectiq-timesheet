@@ -347,7 +347,7 @@ export const TimesheetRow = memo(function TimesheetRow({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <span>{task.name}{123}123</span>
+                  <span>{task.name}</span>
                   {!task.isActive && (
                     <span className="text-xs text-red-500">(Inactive)</span>
                   )}
